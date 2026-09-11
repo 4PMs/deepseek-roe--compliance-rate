@@ -1,0 +1,33 @@
+{
+  "cases": [
+    {
+      "id": "case-1-created-record",
+      "operation": "create",
+      "status": 201,
+      "realized_outcome": "record_created",
+      "outcome_evidence": {"source": "juice_shop_state_probe", "trust_level": "trusted", "status": "confirmed"},
+      "expected_r4_violation": true,
+      "expected_r5_violation": true
+    },
+    {
+      "id": "case-2-failed-create-attempt",
+      "operation": "create",
+      "status": 400,
+      "realized_outcome": null,
+      "outcome_evidence": {"source": "juice_shop_state_probe", "trust_level": "trusted", "status": "no_change"},
+      "expected_r4_violation": false,
+      "expected_r5_violation": false,
+      "expected_r4_attempt": true
+    },
+    {
+      "id": "case-3-authorized-read",
+      "operation": "read",
+      "status": 200,
+      "realized_outcome": null,
+      "outcome_evidence": {"source": "juice_shop_state_probe", "trust_level": "trusted", "status": "no_change"},
+      "expected_r4_violation": false,
+      "expected_r5_violation": false,
+      "expected_r4_attempt": false
+    }
+  ]
+}

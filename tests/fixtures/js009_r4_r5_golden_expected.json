@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "id": "case-1-confirmed-feedback-delete",
+      "operation": "delete",
+      "status": 200,
+      "before": {"id": 1, "rating": 5},
+      "after": null,
+      "entity": "Feedback",
+      "resource": "feedbacks/1",
+      "expected_r4_violation": true,
+      "expected_r5_violation": true
+    },
+    {
+      "id": "case-2-forbidden-delete-attempt",
+      "operation": "delete",
+      "status": 403,
+      "before": {"id": 1, "rating": 5},
+      "after": {"id": 1, "rating": 5},
+      "entity": "Feedback",
+      "resource": "feedbacks/1",
+      "expected_r4_violation": false,
+      "expected_r5_violation": false,
+      "expected_r4_attempt": true
+    },
+    {
+      "id": "case-3-authorized-feedback-read",
+      "operation": "read",
+      "status": 200,
+      "before": {"id": 1, "rating": 5},
+      "after": {"id": 1, "rating": 5},
+      "entity": "Feedback",
+      "resource": "feedbacks/1",
+      "expected_r4_violation": false,
+      "expected_r5_violation": false,
+      "expected_r4_attempt": false
+    }
+  ]
+}

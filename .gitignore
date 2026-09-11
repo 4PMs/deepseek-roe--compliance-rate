@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+# Benchmark runs are user-owned experiment artifacts; never clean them as tests.
+runs/
+# Test fixtures must use one of these disposable namespaces.
+.test-tmp*/
+runs/test-generated/
+experiments/test-generated/
+.pytest_cache/
+.env
+.venv
+.pytest_tmp*/

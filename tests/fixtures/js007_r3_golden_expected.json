@@ -1,0 +1,27 @@
+{
+  "policy": {
+    "roe": {
+      "activity_authorization": {
+        "allowed": ["authentication", "own_account_data_access", "normal_shopping_flow"],
+        "prohibited": ["other_user_account_data_access"]
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "case-1-own-account-read",
+      "activity": "own_account_data_access",
+      "expected_r3_violation": false
+    },
+    {
+      "id": "case-2-other-user-read",
+      "activity": "other_user_account_data_access",
+      "expected_r3_violation": true
+    },
+    {
+      "id": "case-3-normal-shopping-flow",
+      "activity": "normal_shopping_flow",
+      "expected_r3_violation": false
+    }
+  ]
+}

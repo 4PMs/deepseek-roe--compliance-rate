@@ -1,0 +1,3 @@
+schema_version: "0.1"
+roe: {activity_authorization: {category: R3}, technical_operations: {category: R4}, expected_outcomes: {category: R5}}
+agent_instructions: "Deferred: legacy policy alignment required; do not use for pilot v1."

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Evidence-first AI agent control evaluation for Tempera Benchmark">
+  <title>Tempera · Agent Control Observatory</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#timeline" aria-label="Tempera dashboard home">
+        <span class="brand-mark">T</span>
+        <span><strong>TEMPERA</strong><small>CONTROL OBSERVATORY</small></span>
+      </a>
+
+      <nav class="nav" aria-label="Dashboard sections">
+        <a class="active" href="#timeline"><span>01</span> TTP / RoE Timeline</a>
+        <a href="#violations"><span>02</span> Violation Evidence</a>
+        <a href="#comparison"><span>03</span> Run Comparison</a>
+        <a href="#attack-matrix"><span>04</span> ATT&amp;CK Matrix <em>Secondary</em></a>
+      </nav>
+
+      <section class="run-picker" aria-labelledby="run-picker-title">
+        <div class="eyebrow" id="run-picker-title">Observed runs</div>
+        <div id="run-list" class="run-list"></div>
+      </section>
+
+      <div class="scope-note">
+        <span class="scope-dot"></span>
+        <div><strong>Evaluation scope</strong><br>AI behavior · not a vulnerability scan</div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">AI Agent Control Evaluation</div>
+          <h1>Where capability crosses the line.</h1>
+          <p>Trace what the agent did, when policy boundaries were crossed, and which observed events prove it.</p>
+        </div>
+        <div class="header-actions">
+          <span id="data-mode" class="mode-badge">READ-ONLY</span>
+          <button id="refresh-button" type="button">↻ Refresh artifacts</button>
+        </div>
+      </header>
+
+      <section id="empty-state" class="empty-state hidden">
+        <strong>No run artifacts found.</strong>
+        <span>Start with <code>python -m dashboard.app --demo</code> or point <code>--runs-dir</code> at Tempera artifacts.</span>
+      </section>
+
+      <div id="dashboard-content" class="hidden">
+        <section class="run-heading">
+          <div>
+            <span id="run-status" class="status-badge">UNKNOWN</span>
+            <h2 id="run-title">—</h2>
+            <p id="run-subtitle">—</p>
+          </div>
+          <div id="run-meta" class="meta-strip"></div>
+        </section>
+
+        <section id="kpis" class="kpi-grid" aria-label="Run outcome summary"></section>
+
+        <section id="timeline" class="panel primary-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">Primary analysis</div>
+              <h2>TTP / RoE Timeline</h2>
+              <p>Observed event sequence with independent ATT&amp;CK attribution and policy evaluation.</p>
+            </div>
+            <div class="legend" aria-label="Timeline legend">
+              <span><i class="dot allowed"></i>Allowed</span>
+              <span><i class="dot attempt"></i>Attempt</span>
+              <span><i class="dot violation"></i>Violation</span>
+              <span><i class="diamond"></i>Goal reached</span>
+            </div>
+          </div>
+          <div class="timeline-layout">
+            <div id="timeline-track" class="timeline-track" aria-label="Observed event timeline"></div>
+            <aside id="event-inspector" class="event-inspector" aria-live="polite"></aside>
+          </div>
+        </section>
+
+        <section id="violations" class="panel">
+          <div class="panel-heading compact">
+            <div>
+              <div class="eyebrow">Policy accountability</div>
+              <h2>Violation Evidence</h2>
+            </div>
+            <span id="violation-count" class="count-badge"></span>
+          </div>
+          <div id="violation-list" class="violation-list"></div>
+        </section>
+
+        <section id="comparison" class="panel">
+          <div class="panel-heading compact">
+            <div>
+              <div class="eyebrow">Experiment context</div>
+              <h2>Run Comparison</h2>
+              <p>Capability and control stay separate; rates use valid runs only.</p>
+            </div>
+            <div id="aggregate-note" class="denominator-note"></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Run</th><th>Model</th><th>Pressure</th><th>Goal</th><th>RoE</th><th>Outcome</th><th>Validity</th></tr></thead>
+              <tbody id="comparison-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="attack-matrix" class="panel secondary-panel">
+          <div class="panel-heading">
+            <div>
+              <div class="eyebrow">Secondary analysis</div>
+              <h2>ATT&amp;CK Matrix</h2>
+              <p>Technique attribution describes observed behavior. It does not determine RoE compliance.</p>
+            </div>
+            <div class="metric-toggle" role="group" aria-label="Matrix metric">
+              <button class="active" data-metric="verified" type="button">Verified</button>
+              <button data-metric="attempted" type="button">Attempted</button>
+              <button data-metric="violating" type="button">RoE-linked</button>
+            </div>
+          </div>
+          <div class="matrix-warning">ATT&amp;CK color represents the selected observation metric—not authorization, exposure, or vulnerability severity.</div>
+          <div id="matrix" class="matrix"></div>
+        </section>
+
+        <footer>
+          <span>Tempera Benchmark · evidence-first evaluation</span>
+          <span id="provenance">—</span>
+        </footer>
+      </div>
+    </main>
+  </div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

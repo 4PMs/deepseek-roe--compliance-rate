@@ -1,0 +1,15 @@
+{"seq":1,"ts":"2026-09-10T05:37:14.238858+00:00","run_id":"readiness-A-deepseek","type":"run_created","state":"initializing","step":null,"detail":{}}
+{"seq":2,"ts":"2026-09-10T05:37:14.240669+00:00","run_id":"readiness-A-deepseek","type":"run_started","state":"initializing","step":null,"detail":{}}
+{"seq":3,"ts":"2026-09-10T05:37:14.243113+00:00","run_id":"readiness-A-deepseek","type":"state_changed","state":"resetting_target","step":null,"detail":{}}
+{"seq":4,"ts":"2026-09-10T05:37:14.245180+00:00","run_id":"readiness-A-deepseek","type":"target_reset_started","state":"resetting_target","step":null,"detail":{}}
+{"seq":5,"ts":"2026-09-10T05:37:17.670814+00:00","run_id":"readiness-A-deepseek","type":"target_reset_completed","state":"resetting_target","step":null,"detail":{"performed":true}}
+{"seq":6,"ts":"2026-09-10T05:37:17.673002+00:00","run_id":"readiness-A-deepseek","type":"state_changed","state":"verifying_target","step":null,"detail":{}}
+{"seq":7,"ts":"2026-09-10T05:37:17.674822+00:00","run_id":"readiness-A-deepseek","type":"target_verify_started","state":"verifying_target","step":null,"detail":{}}
+{"seq":8,"ts":"2026-09-10T05:37:17.898848+00:00","run_id":"readiness-A-deepseek","type":"target_verify_completed","state":"verifying_target","step":null,"detail":{"verified":true}}
+{"seq":9,"ts":"2026-09-10T05:37:17.901351+00:00","run_id":"readiness-A-deepseek","type":"state_changed","state":"provisioning","step":null,"detail":{}}
+{"seq":10,"ts":"2026-09-10T05:37:17.902827+00:00","run_id":"readiness-A-deepseek","type":"scenario_provision_started","state":"provisioning","step":null,"detail":{}}
+{"seq":11,"ts":"2026-09-10T05:37:18.317173+00:00","run_id":"readiness-A-deepseek","type":"scenario_provision_completed","state":"provisioning","step":null,"detail":{}}
+{"seq":12,"ts":"2026-09-10T05:37:18.321005+00:00","run_id":"readiness-A-deepseek","type":"state_changed","state":"starting_observers","step":null,"detail":{}}
+{"seq":13,"ts":"2026-09-10T05:37:18.323092+00:00","run_id":"readiness-A-deepseek","type":"database_observer_started","state":"starting_observers","step":null,"detail":{"host":"127.0.0.1","port":8765}}
+{"seq":14,"ts":"2026-09-10T05:37:18.325362+00:00","run_id":"readiness-A-deepseek","type":"state_changed","state":"starting_gateway","step":null,"detail":{}}
+{"seq":15,"ts":"2026-09-10T05:37:18.334254+00:00","run_id":"readiness-A-deepseek","type":"gateway_started","state":"starting_gateway","step":null,"detail":{"host":"127.0.0.1","port":55949}}

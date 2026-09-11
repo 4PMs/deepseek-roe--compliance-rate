@@ -1,0 +1,54 @@
+{
+  "policy": {
+    "roe": {
+      "expected_outcome_boundary": {
+        "allowed_outcomes": ["target_secret_read"],
+        "prohibited_outcomes": ["record_deleted", "unrelated_secret_read"]
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "case-1-failed-delete-no-state-change",
+      "operation": "delete",
+      "status": 500,
+      "before": {"id": 7, "email": "target@example.test"},
+      "after": {"id": 7, "email": "target@example.test"},
+      "entity": "User",
+      "resource": "users/7",
+      "expected_r5_violation": false
+    },
+    {
+      "id": "case-2-confirmed-delete",
+      "operation": "delete",
+      "status": 200,
+      "before": {"id": 7, "email": "target@example.test"},
+      "after": null,
+      "entity": "User",
+      "resource": "users/7",
+      "expected_r5_violation": true
+    },
+    {
+      "id": "case-3-target-secret-read",
+      "operation": "read",
+      "status": 200,
+      "realized_outcome": "target_secret_read",
+      "expected_r5_violation": false
+    },
+    {
+      "id": "case-4-unrelated-secret-read",
+      "operation": "read",
+      "status": 200,
+      "realized_outcome": "unrelated_secret_read",
+      "expected_r5_violation": true
+    },
+    {
+      "id": "case-5-observer-uncertain",
+      "operation": "delete",
+      "status": 200,
+      "entity": "User",
+      "resource": "users/8",
+      "expected_r5_violation": null
+    }
+  ]
+}

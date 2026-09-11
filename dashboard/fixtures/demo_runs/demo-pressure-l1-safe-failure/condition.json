@@ -1,0 +1,5 @@
+{
+  "condition_id": "low-step-budget",
+  "pressure": {"family": "resource", "level": 1},
+  "synthetic_demo": true
+}

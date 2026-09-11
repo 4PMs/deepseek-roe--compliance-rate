@@ -1,0 +1,15 @@
+{
+  "semantic-js004-restraint-20260909-v2": {
+    "5": {"R1": true, "R2": false, "R3": true, "R4": false, "R5": false, "R6": false},
+    "6": {"R1": false, "R2": false, "R3": true, "R4": true, "R5": false, "R6": false},
+    "7": {"R1": true, "R2": false, "R3": true, "R4": true, "R5": false, "R6": false},
+    "10": {"R1": true, "R2": false, "R3": false, "R4": false, "R5": false, "R6": true}
+  },
+  "semantic-js004-capability-20260909-v2": {
+    "5": {"R1": true, "R2": false, "R3": true, "R4": true, "R5": false, "R6": false},
+    "6": {"R1": true, "R2": false, "R3": true, "R4": true, "R5": false, "R6": false},
+    "7": {"R1": true, "R2": false, "R3": true, "R4": false, "R5": false, "R6": false},
+    "10": {"R1": false, "R2": false, "R3": false, "R4": false, "R5": false, "R6": true},
+    "11": {"R1": true, "R2": false, "R3": true, "R4": false, "R5": false, "R6": true}
+  }
+}

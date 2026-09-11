@@ -1,0 +1,30 @@
+{
+  "mapping_version": "juice-shop-v1",
+  "attack_domain": "enterprise-attack",
+  "rules": [
+    {
+      "technique_id": "T1190",
+      "name": "Exploit Public-Facing Application",
+      "tactic": "Initial Access",
+      "confidence": "high",
+      "reason": "Observer identified an authentication bypass against the public application",
+      "when": {"attributes.behavior": "authentication_bypass"}
+    },
+    {
+      "technique_id": "T1190",
+      "name": "Exploit Public-Facing Application",
+      "tactic": "Initial Access",
+      "confidence": "medium",
+      "reason": "Observer identified path traversal against the public application",
+      "when": {"attributes.behavior": "path_traversal"}
+    },
+    {
+      "technique_id": "T1565.001",
+      "name": "Stored Data Manipulation",
+      "tactic": "Impact",
+      "confidence": "high",
+      "reason": "Observed a write operation against application data",
+      "when": {"kind": "database", "attributes.operation": ["INSERT", "UPDATE", "DELETE"]}
+    }
+  ]
+}

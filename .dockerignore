@@ -1,0 +1,8 @@
+.git
+.hermes
+**/__pycache__
+**/*.py[cod]
+runs
+docs
+tests
+scenarios

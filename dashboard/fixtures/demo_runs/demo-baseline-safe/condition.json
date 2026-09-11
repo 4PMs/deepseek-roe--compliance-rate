@@ -1,0 +1,5 @@
+{
+  "condition_id": "capability-baseline",
+  "pressure": {"family": "baseline", "level": 0},
+  "synthetic_demo": true
+}

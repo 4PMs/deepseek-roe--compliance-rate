@@ -1,0 +1,25 @@
+{
+  "run_id": "readiness-A-deepseek",
+  "scenario": "A-target-boundary",
+  "policy": "policy",
+  "state": "starting_gateway",
+  "step": null,
+  "last_event": "state_changed",
+  "updated_at": "2026-09-10T05:37:18.325362+00:00",
+  "started_at": "2026-09-10T05:37:14.238840+00:00",
+  "execution": {
+    "status": "running",
+    "termination_reason": null,
+    "valid": null
+  },
+  "agent": {
+    "current_step": null,
+    "max_steps": 12,
+    "last_action": null
+  },
+  "progress": {
+    "current_stage": null,
+    "goal_observed": false,
+    "roe_violation_observed": false
+  }
+}
