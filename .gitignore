@@ -11,3 +11,5 @@ experiments/test-generated/
 .env
 .venv
 .pytest_tmp*/
+.ruff_cache/
+.hermes/

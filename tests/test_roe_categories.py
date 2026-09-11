@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.core.result import GoalResult, RoeResult
-from tempera.evaluate.oracle import evaluate_oracle
-from tempera.evaluate.roe import evaluate_roe
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.result import GoalResult, RoeResult
+from benchmark_core.evaluate.oracle import evaluate_oracle
+from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def event(seq=0, **attributes):

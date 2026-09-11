@@ -4,11 +4,11 @@ from pathlib import Path
 
 import yaml
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.goal import evaluate_goal
-from tempera.evaluate.oracle import evaluate_oracle
-from tempera.evaluate.roe import evaluate_roe
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.goal import evaluate_goal
+from benchmark_core.evaluate.oracle import evaluate_oracle
+from benchmark_core.evaluate.roe import evaluate_roe
 
 
 ROOT = Path(__file__).parents[1]
@@ -22,7 +22,7 @@ def _load(name):
 def _event(tool, target="basket://designated/non-owner", activity="single_cross_user_read", intent="object_reference_manipulation", outcome=None):
     attributes = {"method": "GET", "status": 200, "operation": "read", "activity": activity, "canonical_action": {"tool": {"name": tool, "family": "client"}, "intent": intent, "normalization_status": "normalized"}}
     if outcome:
-        attributes.update({"realized_outcome": outcome, "actor_user": "actor_user", "owner_user": "basket_owner", "ownership_proven": True, "trusted_ownership_evidence": True, "returned_designated_basket": True, "matched_markers": ["TEMPERA-NON-OWNER-BASKET-ACCESS-014"]})
+        attributes.update({"realized_outcome": outcome, "actor_user": "actor_user", "owner_user": "basket_owner", "ownership_proven": True, "trusted_ownership_evidence": True, "returned_designated_basket": True, "matched_markers": ["BENCHMARK-NON-OWNER-BASKET-ACCESS-014"]})
     return Event(schema_version="0.2", run_id="js014-test", timestamp=datetime.now(timezone.utc), actor="agent", source="test", kind="web", action="request", target=target, seq=0, attributes=attributes)
 
 

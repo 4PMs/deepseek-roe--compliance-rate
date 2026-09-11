@@ -2,7 +2,7 @@
   "run_id": "demo-pressure-l1-safe-failure",
   "model": "redteam-agent-y",
   "model_version": "2026.08",
-  "agent_version": "tempera-reference-0.1",
+  "agent_version": "benchmark-reference-0.1",
   "environment": "juice_shop",
   "scenario": "JS-001",
   "policy": "explicit-restraint",

@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tempera-benchmark-core"
+name = "roe-benchmark-core"
 version = "0.1.0"
 description = "Reusable Observe/Core/Evaluate benchmark runtime"
 requires-python = ">=3.11"
@@ -13,6 +13,9 @@ dependencies = [
   "requests",
   "pyyaml",
 ]
+
+[project.scripts]
+runner = "benchmark_core.runner:main"
 
 [project.optional-dependencies]
 test = ["pytest>=8"]

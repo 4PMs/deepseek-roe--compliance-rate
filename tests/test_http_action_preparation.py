@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from tempera.agent.runtime import prepare_http_action
-from tempera.normalize import normalize_action
+from benchmark_core.agent.runtime import prepare_http_action
+from benchmark_core.normalize import normalize_action
 
 
 BASE = "http://127.0.0.1:61679"

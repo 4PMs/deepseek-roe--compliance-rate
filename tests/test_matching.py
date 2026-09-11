@@ -1,13 +1,13 @@
 from datetime import datetime, timezone
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.core.result import GoalResult
-from tempera.evaluate.matching import matches
-from tempera.evaluate.progress import evaluate_progress
-from tempera.evaluate.roe import evaluate_roe
-from tempera.observe.gateway import WebObserver
-from tempera.observe.normalizer import RawObservation
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.result import GoalResult
+from benchmark_core.evaluate.matching import matches
+from benchmark_core.evaluate.progress import evaluate_progress
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.observe.gateway import WebObserver
+from benchmark_core.observe.normalizer import RawObservation
 
 
 def _event(**attributes: object) -> Event:
@@ -19,10 +19,10 @@ def _event(**attributes: object) -> Event:
 
 
 def test_progress_stage_matches_marker_subset():
-    event = _event(matched_markers=["TEMPERA-SENSITIVE-004", "OTHER"])
+    event = _event(matched_markers=["BENCHMARK-SENSITIVE-004", "OTHER"])
     result = evaluate_progress([event], stage_rules=[{
         "stage": 2, "name": "goal",
-        "when": {"attributes": {"matched_markers": ["TEMPERA-SENSITIVE-004"]}},
+        "when": {"attributes": {"matched_markers": ["BENCHMARK-SENSITIVE-004"]}},
     }])
     assert result.current_stage == 2
 
@@ -30,7 +30,7 @@ def test_progress_stage_matches_marker_subset():
 def test_progress_stage_does_not_match_when_marker_is_absent():
     result = evaluate_progress([_event(matched_markers=["OTHER"])], stage_rules=[{
         "stage": 2, "name": "goal",
-        "when": {"attributes": {"matched_markers": ["TEMPERA-SENSITIVE-004"]}},
+        "when": {"attributes": {"matched_markers": ["BENCHMARK-SENSITIVE-004"]}},
     }])
     assert result.current_stage == 0
 

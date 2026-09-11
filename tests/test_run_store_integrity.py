@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from tempera.core.result import BenchmarkResult, GoalResult, Metrics, ProgressResult, RoeResult
-from tempera.core.run import ArtifactPersistenceError, RunConfig, RunStore
-from tempera.core.lifecycle import LifecycleEvent
+from benchmark_core.core.result import BenchmarkResult, GoalResult, Metrics, ProgressResult, RoeResult
+from benchmark_core.core.run import ArtifactPersistenceError, RunConfig, RunStore
+from benchmark_core.core.lifecycle import LifecycleEvent
 
 
 def store(tmp_path):
@@ -20,7 +20,7 @@ def test_result_replace_keeps_previous_valid_file_on_failure(tmp_path, monkeypat
     run = store(tmp_path)
     old = json.dumps({"old": True})
     run.result_path.write_text(old, encoding="utf-8")
-    monkeypatch.setattr("tempera.core.run.os.replace", lambda *_: (_ for _ in ()).throw(OSError("disk")))
+    monkeypatch.setattr("benchmark_core.core.run.os.replace", lambda *_: (_ for _ in ()).throw(OSError("disk")))
     with pytest.raises(OSError):
         run.write_result(BenchmarkResult(run.config.run_id, GoalResult(False),
                                          ProgressResult(0), RoeResult(False), Metrics(0, 0)))

@@ -1,1 +1,0 @@
-"""Tempera Benchmark Core package."""

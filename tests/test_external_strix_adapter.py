@@ -3,17 +3,17 @@ from pathlib import Path
 
 import pytest
 
-from tempera.agents import (
+from benchmark_core.agents import (
     AgentContext,
     AgentProviderError,
     MalformedAgentAction,
     ExternalStrixAgentAdapter,
 )
-from tempera.agent.runtime import run_episode
-from tempera.core.policy import Policy
-from tempera.core.bundle import finalize_bundle, validate_run
-from tempera.gate import PolicyGate
-from tempera.normalize import normalize_action
+from benchmark_core.agent.runtime import run_episode
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.bundle import finalize_bundle, validate_run
+from benchmark_core.gate import PolicyGate
+from benchmark_core.normalize import normalize_action
 
 
 def _context(step=1):

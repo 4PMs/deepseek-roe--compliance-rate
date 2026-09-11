@@ -1,6 +1,6 @@
-# Tempera Agent Control Dashboard
+# ROE Benchmark Agent Control Dashboard
 
-Tempera 실행 아티팩트를 읽어 AI 레드팀 에이전트의 **Goal 수행과 RoE 준수 여부를 증거 중심으로 탐색**하는 read-only 대시보드입니다.
+ROE Benchmark 실행 아티팩트를 읽어 AI 레드팀 에이전트의 **Goal 수행과 RoE 준수 여부를 증거 중심으로 탐색**하는 read-only 대시보드입니다.
 
 이 화면은 Juice Shop의 취약점을 진단하는 스캐너가 아닙니다. 기본 화면은 개별 Run의 관측 이벤트, ATT&CK TTP, Goal 도달점, RoE 위반 구간을 하나의 시간선으로 보여줍니다. 전체 ATT&CK Matrix는 보조 분석 화면입니다.
 
@@ -16,7 +16,7 @@ python -m dashboard.app --demo
 
 브라우저에서 <http://127.0.0.1:8766>을 엽니다. `dashboard/fixtures/demo_runs/`의 데이터는 UI 검증용 합성 자료이며 실제 실험 결과가 아닙니다.
 
-### 실제 Tempera 결과
+### 실제 ROE Benchmark 결과
 
 저장소 루트에서 실행하면 기본적으로 `runs/`를 읽습니다.
 
@@ -62,7 +62,7 @@ runs/<run_id>/
 dashboard/
 ├── app.py                         # read-only HTTP API + 정적 UI 서버
 ├── backend/
-│   ├── adapters/tempera_v01.py    # Tempera 0.1 artifact adapter
+│   ├── adapters/benchmark_v01.py    # ROE Benchmark 0.1 artifact adapter
 │   ├── domain/models.py           # UI와 독립된 안정적 내부 모델
 │   └── services/
 │       ├── analytics.py           # 유효 Run 기준 Goal/RoE 집계
@@ -77,9 +77,9 @@ dashboard/
 데이터 흐름:
 
 ```text
-Tempera JSON/JSONL
+ROE Benchmark JSON/JSONL
       ↓ read-only
-TemperaV01Adapter
+BenchmarkV01Adapter
       ↓
 DashboardRun / TimelineEvent
       ├── ATT&CK attribution

@@ -6,7 +6,7 @@ This document describes the prerequisites for the optional live Juice Shop E2E r
 
 - Python 3.11+ with the package installed: `python -m pip install -e ".[test,dev]"`
 - Docker Desktop (Windows) or Docker Engine (Linux), running and reachable by `docker info`
-- `TEMPERA_DB_OBSERVER_TOKEN`: the same non-empty local token passed to the target container and observer configuration
+- `DB_OBSERVER_TOKEN`: the same non-empty local token passed to the target container and observer configuration
 - For DeepSeek runs only: `DEEPSEEK_API_KEY`; Ollama runs require a locally running model instead
 
 Do not commit either token or API key. Use a process-local environment variable or a local `.env` file.
@@ -17,21 +17,21 @@ From the repository root:
 
 ```text
 docker network create target-net
-docker build -f docker/juice-shop.Dockerfile -t tempera-juice-shop .
+docker build -f docker/juice-shop.Dockerfile -t juice-shop .
 ```
 
 Windows CMD:
 
 ```bat
-set TEMPERA_DB_OBSERVER_TOKEN=secret-local-token
-docker run -d --name tempera-juice --network target-net -e NODE_ENV=ctf -e CTF_KEY=tempera-test-001 -e TEMPERA_DB_OBSERVER_TOKEN=%TEMPERA_DB_OBSERVER_TOKEN% -p 127.0.0.1:3001:3000 tempera-juice-shop
+set DB_OBSERVER_TOKEN=secret-local-token
+docker run -d --name juice-shop --network target-net -e NODE_ENV=ctf -e CTF_KEY=benchmark-test-001 -e DB_OBSERVER_TOKEN=%DB_OBSERVER_TOKEN% -p 127.0.0.1:3001:3000 juice-shop
 ```
 
 Linux/macOS shell:
 
 ```sh
-export TEMPERA_DB_OBSERVER_TOKEN=secret-local-token
-docker run -d --name tempera-juice --network target-net -e NODE_ENV=ctf -e CTF_KEY=tempera-test-001 -e TEMPERA_DB_OBSERVER_TOKEN="$TEMPERA_DB_OBSERVER_TOKEN" -p 127.0.0.1:3001:3000 tempera-juice-shop
+export DB_OBSERVER_TOKEN=secret-local-token
+docker run -d --name juice-shop --network target-net -e NODE_ENV=ctf -e CTF_KEY=benchmark-test-001 -e DB_OBSERVER_TOKEN="$DB_OBSERVER_TOKEN" -p 127.0.0.1:3001:3000 juice-shop
 ```
 
 Verify `http://127.0.0.1:3001` before starting the runner. When `--reset-target` is used, the target must be reachable and the adapter's reset/provision prerequisites must be available; reset verification is intentionally performed before the agent starts.
@@ -39,7 +39,7 @@ Verify `http://127.0.0.1:3001` before starting the runner. When `--reset-target`
 ## Expected command and skip reasons
 
 ```text
-python -B -m tempera.runner run --scenario JS-001 --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001 --reset-target
+python -B -m benchmark_core.runner run --scenario JS-001 --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001 --reset-target
 ```
 
 The live E2E is skipped when Docker is unavailable, the target image is not built, port 3001 is occupied/unreachable, the observer token is missing, or the selected provider is not configured. A skip is an environment prerequisite result, not a benchmark pass or a policy verdict.
@@ -52,7 +52,7 @@ Completed runs write `manifest.json` plus derived evidence under `evidence/`.
 Validate one run without rewriting its existing artifacts:
 
 ```text
-python -B -m tempera.runner validate-run --run <run_id>
+python -B -m benchmark_core.runner validate-run --run <run_id>
 ```
 
 The command exits non-zero on missing or modified required artifacts,

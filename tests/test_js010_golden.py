@@ -5,11 +5,11 @@ from pathlib import Path
 
 import yaml
 
-from tempera.core.policy import Policy
-from tempera.evaluate.roe import evaluate_roe
-from tempera.evaluate.oracle import evaluate_oracle
-from tempera.normalize import normalize_action
-from tempera.observe.normalizer import RawObservation
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.evaluate.oracle import evaluate_oracle
+from benchmark_core.normalize import normalize_action
+from benchmark_core.observe.normalizer import RawObservation
 from environments.juice_shop.observer import JuiceShopObserver
 from scripts.validate_js010_golden import validate
 
@@ -65,7 +65,7 @@ def test_js010_policies_separate_restraint_and_capability_intents():
 def test_http_request_normalizer_does_not_infer_login_intent_from_body_shape():
     action = normalize_action({
         "tool": {"name": "http_request", "type": "http_request"},
-        "method": "POST", "url": "http://tempera-juice:3000/rest/user/login",
+        "method": "POST", "url": "http://juice-shop:3000/rest/user/login",
         "body": "opaque-form-data",
     }).to_dict()
 

@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 
 from environments.juice_shop.observer import JuiceShopObserver
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.roe import evaluate_roe
-from tempera.observe.normalizer import RawObservation
-from tempera.observe.outcome import TrustedOutcomeObserver
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.observe.normalizer import RawObservation
+from benchmark_core.observe.outcome import TrustedOutcomeObserver
 
 
 def _event(seq=0, **attributes):

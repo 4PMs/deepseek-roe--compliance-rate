@@ -15,4 +15,4 @@ ENV PYTHONPATH=/app/src
 # scenario는 이미지에 넣지 않고 실행할 때 마운트한다.
 #   예: -v %cd%\scenarios:/app/scenarios
 # 에이전트 로직만 담는다. 모델은 밖(call_llm).
-ENTRYPOINT ["python3", "-B", "-m", "tempera.agent"]
+ENTRYPOINT ["python3", "-B", "-m", "benchmark_core.agent"]

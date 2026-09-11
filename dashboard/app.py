@@ -104,7 +104,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 def serve(runs_dir: Path, host: str, port: int) -> None:
     handler = type("ConfiguredDashboardHandler", (DashboardHandler,), {"repository": RunRepository(runs_dir)})
     server = ThreadingHTTPServer((host, port), handler)
-    print(f"Tempera dashboard: http://{host}:{server.server_port}")
+    print(f"ROE Benchmark dashboard: http://{host}:{server.server_port}")
     print(f"Artifacts: {runs_dir.resolve()}")
     try:
         server.serve_forever()
@@ -115,7 +115,7 @@ def serve(runs_dir: Path, host: str, port: int) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Tempera read-only benchmark dashboard")
+    parser = argparse.ArgumentParser(description="ROE Benchmark read-only benchmark dashboard")
     parser.add_argument("--runs-dir", type=Path, default=Path("runs"))
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8766)

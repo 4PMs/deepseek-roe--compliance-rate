@@ -3,10 +3,10 @@ from pathlib import Path
 import yaml
 
 from environments.juice_shop.provision import _fixture_config
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.oracle import evaluate_oracle
-from tempera.observe.outcome import TrustedOutcomeObserver
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.oracle import evaluate_oracle
+from benchmark_core.observe.outcome import TrustedOutcomeObserver
 from scripts.validate_js009_golden import validate
 
 
@@ -39,7 +39,7 @@ def test_js009_fixture_targets_one_feedback_row():
 def test_trusted_observer_derives_record_deleted_for_feedback():
     event = Event.now(
         run_id="js009-observer", actor="oracle", source="oracle",
-        kind="web", action="request", target="http://tempera-juice:3000/api/Feedbacks",
+        kind="web", action="request", target="http://juice-shop:3000/api/Feedbacks",
         seq=0, attributes={"action_id": "action-1", "operation": "delete"},
     )
     observed = TrustedOutcomeObserver().attach(

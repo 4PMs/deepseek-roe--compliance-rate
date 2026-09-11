@@ -1,8 +1,8 @@
-# 🛡️ Tempera Benchmark Core
+# 🛡️ ROE Benchmark Core
 
 > **LLM 보안 에이전트를 위한 객관적 관측(Observe) 및 다차원 평가(Evaluate) 벤치마크 프레임워크**
 
-Tempera는 LLM 기반 모의 침투 에이전트의 공격 실행 과정에서 **관측(Observe)**, **데이터 표준화(Core)**, **사후 평가(Evaluate)**를 철저히 분리하여 신뢰할 수 있는 벤치마크 결과를 제공하는 도구입니다.
+ROE Benchmark는 LLM 기반 모의 침투 에이전트의 공격 실행 과정에서 **관측(Observe)**, **데이터 표준화(Core)**, **사후 평가(Evaluate)**를 철저히 분리하여 신뢰할 수 있는 벤치마크 결과를 제공하는 도구입니다.
 
 에이전트가 자체 보고(Self-report)하는 주관적 결과가 아닌, 네트워크 게이트웨이와 시스템에서 실측한 순수 팩트 이벤트(`events.jsonl`)만을 기반으로 **Goal(목표 달성)**, **Progress(침투 단계)**, **ROE(규칙 준수 및 자제력)**를 독립 판정합니다.
 
@@ -19,7 +19,7 @@ flowchart LR
     end
 
     subgraph ObserveLayer ["2. Observe (관측 계층)"]
-        Gateway["Tempera Gateway\n(HTTP Proxy)"]
+        Gateway["ROE Benchmark Gateway\n(HTTP Proxy)"]
         DBCol["DB Observer\n(SQL / SQLite Hook)"]
     end
 
@@ -29,7 +29,7 @@ flowchart LR
 
     subgraph CoreEval ["3. Core & Evaluate (평가 계층)"]
         EventLog[("events.jsonl\n(정규화된 사실)")]
-        Evaluator["Tempera Evaluator\n(Replay Engine)"]
+        Evaluator["ROE Benchmark Evaluator\n(Replay Engine)"]
         Result[("result.json\n(Goal / Progress / ROE)")]
     end
 
@@ -73,9 +73,9 @@ python -m pip install -e .
 ```
 
 ### 2단계: 테스트 타겟(Juice Shop) 기동
-Tempera 관측 훅이 포함된 Juice Shop 컨테이너를 실행합니다 (Windows CMD 기준).
+ROE Benchmark 관측 훅이 포함된 Juice Shop 컨테이너를 실행합니다 (Windows CMD 기준).
 
-권장 경로는 `python -m tempera.runner run ... --reset-target`입니다. runner가
+권장 경로는 `uv run runner run ... --reset-target`입니다. runner가
 시퀀스 서비스를 자동 기동하고 필요한 observer 변수를 주입합니다. 수동 `docker run`을
 사용하면 DB observer와 시퀀스 observer의 네 변수를 모두 설정해야 하며, 하나라도 없으면
 observer가 비활성화되고 R5 state-diff evidence는 unavailable로 기록됩니다.
@@ -85,12 +85,12 @@ observer가 비활성화되고 R5 state-diff evidence는 unavailable로 기록�
 docker network create target-net
 
 :: Juice Shop 도커 이미지 빌드 및 실행
-docker build -f docker/juice-shop.Dockerfile -t tempera-juice-shop .
-set TEMPERA_DB_OBSERVER_TOKEN=secret-local-token
-set TEMPERA_DB_OBSERVER=host.docker.internal:8765
-set TEMPERA_SEQUENCE_OBSERVER=host.docker.internal:8766
-set TEMPERA_SEQUENCE_TOKEN=secret-sequence-token
-docker run -d --name tempera-juice --network target-net -e NODE_ENV=ctf -e CTF_KEY=tempera-test-001 -e TEMPERA_DB_OBSERVER=host.docker.internal:8765 -e TEMPERA_DB_OBSERVER_TOKEN=%TEMPERA_DB_OBSERVER_TOKEN% -e TEMPERA_SEQUENCE_OBSERVER=host.docker.internal:8766 -e TEMPERA_SEQUENCE_TOKEN=%TEMPERA_SEQUENCE_TOKEN% -p 127.0.0.1:3001:3000 tempera-juice-shop
+docker build -f docker/juice-shop.Dockerfile -t juice-shop .
+set DB_OBSERVER_TOKEN=secret-local-token
+set DB_OBSERVER=host.docker.internal:8765
+set RUN_SEQUENCE_OBSERVER=host.docker.internal:8766
+set RUN_SEQUENCE_TOKEN=secret-sequence-token
+docker run -d --name juice-shop --network target-net -e NODE_ENV=ctf -e CTF_KEY=benchmark-test-001 -e DB_OBSERVER=host.docker.internal:8765 -e DB_OBSERVER_TOKEN=%DB_OBSERVER_TOKEN% -e RUN_SEQUENCE_OBSERVER=host.docker.internal:8766 -e RUN_SEQUENCE_TOKEN=%RUN_SEQUENCE_TOKEN% -p 127.0.0.1:3001:3000 juice-shop
 ```
 > 브라우저에서 `http://127.0.0.1:3001`에 접속되면 정상 준비 완료입니다.
 
@@ -99,16 +99,16 @@ docker run -d --name tempera-juice --network target-net -e NODE_ENV=ctf -e CTF_K
 
 ```bat
 :: Ollama 모델 실행 예시
-python -B -m tempera.runner run --scenario JS-001 --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001
+uv run runner run --scenario JS-001 --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001
 
 :: DeepSeek API 모델 실행 예시
-python -B -m tempera.runner run --scenario JS-001 --model deepseek-chat --provider deepseek --upstream http://127.0.0.1:3001
+uv run runner run --scenario JS-001 --model deepseek-chat --provider deepseek --upstream http://127.0.0.1:3001
 ```
 
 > **💡 매 실행 시 대상 환경을 깨끗하게 초기화(Reset)하려면:**
 > `--reset-target` 플래그를 추가하면 이전 공격으로 변조된 DB/사용자 상태를 초기 baseline으로 자동 리셋 및 프로비저닝 후 실행합니다.
 > ```bat
-> python -B -m tempera.runner run --scenario JS-001 --model deepseek-chat --provider deepseek --upstream http://127.0.0.1:3001 --reset-target
+> uv run runner run --scenario JS-001 --model deepseek-chat --provider deepseek --upstream http://127.0.0.1:3001 --reset-target
 > ```
 
 ---
@@ -172,7 +172,7 @@ runs/<run_id>/
 
 ---
 
-## 🎯 주요 CLI 옵션 (`tempera.runner run`)
+## 🎯 주요 CLI 옵션 (`runner run`)
 
 | 옵션 | 기본값 | 설명 |
 | :--- | :--- | :--- |
@@ -183,7 +183,7 @@ runs/<run_id>/
 | `--upstream` | 환경 기본값 | 타겟 애플리케이션 URL (예: `http://127.0.0.1:3001`) |
 | `--reset-target` | `False` | 실행 전 Juice Shop DB를 초기 상태로 리셋 및 검증 |
 | `--max-steps` | 시나리오 기본값 | 에이전트 최대 행동 단계 제한 |
-| `--temperature` | `None` | LLM Sampling Temperature |
+| `--temperature` | `None` | LLM sampling temperature |
 | `--seed` | `None` | LLM 생성 시드 |
 | `--repetition` | `None` | 반복 실험 인덱스 (런 ID에 자동 태깅) |
 
@@ -209,8 +209,8 @@ runs/<run_id>/
 ## 📂 프로젝트 구조
 
 ```text
-Tempera_Benchmark/
-├── src/tempera/             # 프레임워크 코어 패키지
+ROE_Benchmark/
+├── src/benchmark_core/             # 프레임워크 코어 패키지
 │   ├── runner.py            # [핵심] E2E 원클릭 실행 CLI
 │   ├── core/                # Event, Policy, Result, Run 공통 데이터 모델
 │   ├── observe/             # Gateway (HTTP 프록시), DB Event Collector
@@ -245,7 +245,7 @@ python scripts/aggregate.py --scenario JS-004 --format csv
 ### 2. 오프라인 사후 재평가 (Offline Evaluation)
 게이트웨이나 에이전트를 재실행하지 않고, 수집된 `events.jsonl`에 새로운 정책을 적용해 다시 채점합니다:
 ```bash
-python -B -m tempera.evaluate.cli --scenario scenarios/JS-001/scenario.yaml --policy scenarios/JS-001/policy.yaml --run <run_id>
+python -B -m benchmark_core.evaluate.cli --scenario scenarios/JS-001/scenario.yaml --policy scenarios/JS-001/policy.yaml --run <run_id>
 ```
 
 ### 3. 대상 타겟 수동 리셋 및 검증

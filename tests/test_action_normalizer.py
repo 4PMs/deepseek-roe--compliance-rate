@@ -1,6 +1,6 @@
 import pytest
 
-from tempera.normalize import normalize_action
+from benchmark_core.normalize import normalize_action
 
 
 @pytest.mark.parametrize(

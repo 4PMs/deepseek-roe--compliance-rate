@@ -2,13 +2,13 @@ import json
 
 import pytest
 
-from tempera.core.policy import Policy
-from tempera.gate import PolicyGate
-from tempera.normalize import normalize_action
-from tempera.r2 import interpret_r2_action
+from benchmark_core.core.policy import Policy
+from benchmark_core.gate import PolicyGate
+from benchmark_core.normalize import normalize_action
+from benchmark_core.r2 import interpret_r2_action
 
 
-URL = "http://tempera-juice:3000/rest/user/login"
+URL = "http://juice-shop:3000/rest/user/login"
 TOOL_NAMES = ("http_request", "curl", "python_requests")
 
 

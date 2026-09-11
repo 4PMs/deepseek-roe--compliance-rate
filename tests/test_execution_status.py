@@ -9,11 +9,11 @@ import unittest
 from unittest.mock import Mock, patch
 
 from scripts.aggregate import summarize
-from tempera.agent.runtime import GatewayError, run_episode
-from tempera.core.result import BenchmarkResult
-from tempera.core.run import RunConfig
-from tempera.progress import read_progress
-from tempera.runner import _empty_result, _run_pipeline
+from benchmark_core.agent.runtime import GatewayError, run_episode
+from benchmark_core.core.result import BenchmarkResult
+from benchmark_core.core.run import RunConfig
+from benchmark_core.progress import read_progress
+from benchmark_core.runner import _empty_result, _run_pipeline
 
 
 def _config() -> RunConfig:
@@ -38,8 +38,8 @@ def _args(directory: str, run: str, *, reset_target: bool) -> SimpleNamespace:
 
 class EpisodeTerminationTest(unittest.TestCase):
     def _result(self, raw: str, *, max_steps: int = 2, http=None):
-        with patch("tempera.agent.runtime.call_llm", return_value=raw), patch(
-            "tempera.agent.runtime.do_http", side_effect=http or ["ok", "ok"]
+        with patch("benchmark_core.agent.runtime.call_llm", return_value=raw), patch(
+            "benchmark_core.agent.runtime.do_http", side_effect=http or ["ok", "ok"]
         ):
             outcome = run_episode("mission", "http://gateway", max_steps)
         return _empty_result(_config(), outcome)
@@ -65,7 +65,7 @@ class EpisodeTerminationTest(unittest.TestCase):
                 ))
 
     def test_provider_and_gateway_failures_are_invalid(self):
-        with patch("tempera.agent.runtime.call_llm", side_effect=TimeoutError("down")):
+        with patch("benchmark_core.agent.runtime.call_llm", side_effect=TimeoutError("down")):
             provider = _empty_result(_config(), run_episode("mission", "gateway", 1))
         gateway = self._result(
             '{"action":"http_request","path":"/"}', http=GatewayError("down")
@@ -93,7 +93,7 @@ class InfrastructureFailureTest(unittest.TestCase):
             args = _args(directory, "run-target-failure", reset_target=True)
             adapter = Mock()
             adapter.reset.side_effect = RuntimeError("baseline mismatch")
-            with patch("tempera.runner._load_adapter", return_value=adapter), self.assertRaises(RuntimeError):
+            with patch("benchmark_core.runner._load_adapter", return_value=adapter), self.assertRaises(RuntimeError):
                 _run_pipeline(args)
             run_dir = Path(directory) / args.run
             result = json.loads((run_dir / "result.json").read_text())
@@ -114,11 +114,11 @@ class InfrastructureFailureTest(unittest.TestCase):
                 serve_forever=lambda: None,
                 shutdown=lambda: None,
             )
-            with patch("tempera.runner.make_server", return_value=server), patch(
-                "tempera.runner.run_episode",
+            with patch("benchmark_core.runner.make_server", return_value=server), patch(
+                "benchmark_core.runner.run_episode",
                 return_value={"reason": "agent_done", "step": 1, "detail": None},
-            ), patch("tempera.runner.evaluate_run", side_effect=ValueError("bad trace")), patch.dict(
-                "os.environ", {"TEMPERA_DB_OBSERVER_TOKEN": ""}
+            ), patch("benchmark_core.runner.evaluate_run", side_effect=ValueError("bad trace")), patch.dict(
+                "os.environ", {"DB_OBSERVER_TOKEN": ""}
             ), self.assertRaises(ValueError):
                 _run_pipeline(args)
             run_dir = Path(directory) / args.run

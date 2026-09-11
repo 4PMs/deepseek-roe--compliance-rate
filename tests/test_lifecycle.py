@@ -1,16 +1,16 @@
 import pytest
 
-from tempera.agent.runtime import run_episode
-from tempera.core.lifecycle import LifecycleEvent, validate_lifecycle
+from benchmark_core.agent.runtime import run_episode
+from benchmark_core.core.lifecycle import LifecycleEvent, validate_lifecycle
 
 
 def test_lifecycle_schema_correlation_and_order(monkeypatch):
     monkeypatch.setattr(
-        "tempera.agent.runtime.call_llm",
+        "benchmark_core.agent.runtime.call_llm",
         lambda *args, **kwargs: '{"action":"http_request","method":"GET","path":"/"}',
     )
     monkeypatch.setattr(
-        "tempera.agent.runtime.do_http",
+        "benchmark_core.agent.runtime.do_http",
         lambda action, gateway: "status=200",
     )
     lifecycle = []

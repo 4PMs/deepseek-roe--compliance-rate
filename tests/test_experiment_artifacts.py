@@ -1,6 +1,6 @@
 import json
 
-from tempera.experiment import _order_for, load_experiment_aggregate
+from benchmark_core.experiment import _order_for, load_experiment_aggregate
 
 
 def summary(experiment_id, order):

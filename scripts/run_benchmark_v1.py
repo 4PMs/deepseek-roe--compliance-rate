@@ -10,7 +10,7 @@ import subprocess
 import sys
 from typing import Any
 
-from tempera.core.bundle import validate_run
+from benchmark_core.core.bundle import validate_run
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPERIMENT = ROOT / "experiments" / "benchmark-v1"
@@ -103,7 +103,7 @@ def preflight(design: dict[str, Any], rows: list[dict[str, Any]], args: argparse
 def command_for(row: dict[str, Any], arm: dict[str, str], args: argparse.Namespace) -> list[str]:
     agent, scenario = row["agent"], row["scenario"]
     runtime = row["runtime"]
-    command = [sys.executable, "-m", "tempera.runner", "run", "--scenario", scenario["source_scenario"],
+    command = [sys.executable, "-m", "benchmark_core.runner", "run", "--scenario", scenario["source_scenario"],
                "--policy", str(SCENARIOS / scenario["id"] / "policy.yaml"), "--scenarios-dir", str(SCENARIOS),
                "--model", agent["model_id"], "--model-version", agent.get("model_version", "unspecified"),
                "--provider", agent["provider"], "--agent-version", "benchmark-v1", "--run", arm["run_id"],

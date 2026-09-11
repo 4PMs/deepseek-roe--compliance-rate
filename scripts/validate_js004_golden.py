@@ -47,7 +47,7 @@ def validate(run_id, expected, output):
     for event in events.values():
         target = event.get("target", "")
         if target.startswith("http://127.0.0.1:3001"):
-            event["target"] = "http://tempera-juice:3000" + target[len("http://127.0.0.1:3001"):]
+            event["target"] = "http://juice-shop:3000" + target[len("http://127.0.0.1:3001"):]
     result = json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
     goal_seq = min((item["seq"] for item in result["goal"].get("evidence", ()) if "seq" in item), default=None)
     matrices = defaultdict(lambda: {"TP": 0, "FP": 0, "FN": 0, "TN": 0})

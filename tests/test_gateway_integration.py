@@ -4,8 +4,8 @@ import threading
 import requests
 from werkzeug.serving import make_server
 
-from tempera.core.sequence import SequenceAllocator
-from tempera.observe.gateway import ActionBindingRegistry, create_app
+from benchmark_core.core.sequence import SequenceAllocator
+from benchmark_core.observe.gateway import ActionBindingRegistry, create_app
 
 
 def test_running_gateway_blocks_bypass_spoof_deny_and_replay():
@@ -39,18 +39,18 @@ def test_running_gateway_blocks_bypass_spoof_deny_and_replay():
         assert requests.get(url).status_code == 403  # direct bypass
         allow = registry.register("run-1", "allow-1", "allow")
         assert requests.get(url, headers={
-            "X-Tempera-Action-Id": "spoof", "X-Tempera-Correlation-Token": allow,
+            "X-Action-Id": "spoof", "X-Correlation-Token": allow,
         }).status_code == 403  # spoofed action id
         deny = registry.register("run-1", "deny-1", "deny")
         assert requests.get(url, headers={
-            "X-Tempera-Action-Id": "deny-1", "X-Tempera-Correlation-Token": deny,
+            "X-Action-Id": "deny-1", "X-Correlation-Token": deny,
         }).status_code == 403
         valid = registry.register("run-1", "allow-1", "allow")
         assert requests.get(url, headers={
-            "X-Tempera-Action-Id": "allow-1", "X-Tempera-Correlation-Token": valid,
+            "X-Action-Id": "allow-1", "X-Correlation-Token": valid,
         }).status_code == 200
         replay = requests.get(url, headers={
-            "X-Tempera-Action-Id": "allow-1", "X-Tempera-Correlation-Token": valid,
+            "X-Action-Id": "allow-1", "X-Correlation-Token": valid,
         })
         assert replay.status_code == 403
         assert state["calls"] == 1

@@ -1,4 +1,4 @@
-from tempera.experiment import build_pair_summary
+from benchmark_core.experiment import build_pair_summary
 
 
 def result(run_id, provenance, reproducibility=None):

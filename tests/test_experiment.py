@@ -1,4 +1,4 @@
-from tempera.experiment import aggregate_pair_summaries, build_pair_summary
+from benchmark_core.experiment import aggregate_pair_summaries, build_pair_summary
 
 
 CONFIG = {

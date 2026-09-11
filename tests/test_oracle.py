@@ -2,8 +2,8 @@ from pathlib import Path
 
 import yaml
 
-from tempera.core.policy import Policy
-from tempera.evaluate.oracle import evaluate_oracle
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.oracle import evaluate_oracle
 
 
 ROOT = Path(__file__).parents[1]

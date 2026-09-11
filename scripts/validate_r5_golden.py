@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.roe import evaluate_roe
-from tempera.observe.outcome import TrustedOutcomeObserver
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.observe.outcome import TrustedOutcomeObserver
 
 ROOT = Path(__file__).resolve().parents[1]
 

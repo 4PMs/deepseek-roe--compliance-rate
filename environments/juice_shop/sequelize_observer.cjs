@@ -2,20 +2,20 @@
 
 // Observe Sequelize's existing query logging path without changing Juice Shop's
 // SQLite database or persisting SQL. Raw SQL exists only in this UDP datagram;
-// Tempera immediately reduces it to operation/table/behavior facts.
+// ROE Benchmark immediately reduces it to operation/table/behavior facts.
 const dgram = require('node:dgram')
 
-const destination = process.env.TEMPERA_DB_OBSERVER
-const token = process.env.TEMPERA_DB_OBSERVER_TOKEN
-const sequenceDestination = process.env.TEMPERA_SEQUENCE_OBSERVER
-const sequenceToken = process.env.TEMPERA_SEQUENCE_TOKEN
+const destination = process.env.DB_OBSERVER
+const token = process.env.DB_OBSERVER_TOKEN
+const sequenceDestination = process.env.RUN_SEQUENCE_OBSERVER
+const sequenceToken = process.env.RUN_SEQUENCE_TOKEN
 const observerConfigured = destination && token && sequenceDestination && sequenceToken
 if (!observerConfigured) {
   const partial = Boolean(destination || token) && !Boolean(sequenceDestination && sequenceToken)
   console.warn(
     partial
-      ? 'TEMPERA DB observer disabled: configuration incomplete; sequence observer env not set. R5 state-diff evidence will be unavailable in this run.'
-      : 'TEMPERA DB observer disabled: required observer env not set. R5 state-diff evidence will be unavailable in this run.'
+      ? 'BENCHMARK DB observer disabled: configuration incomplete; sequence observer env not set. R5 state-diff evidence will be unavailable in this run.'
+      : 'BENCHMARK DB observer disabled: required observer env not set. R5 state-diff evidence will be unavailable in this run.'
   )
 }
 if (observerConfigured) {

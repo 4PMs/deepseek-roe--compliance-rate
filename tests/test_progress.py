@@ -10,14 +10,14 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from tempera.agent.runtime import run_episode
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.core.result import BenchmarkResult, ObserverHealth
-from tempera.core.run import RunConfig
-from tempera.evaluate.pipeline import evaluate_run
-from tempera.progress import ProgressReporter, read_progress
-from tempera.runner import _run_pipeline
+from benchmark_core.agent.runtime import run_episode
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.result import BenchmarkResult, ObserverHealth
+from benchmark_core.core.run import RunConfig
+from benchmark_core.evaluate.pipeline import evaluate_run
+from benchmark_core.progress import ProgressReporter, read_progress
+from benchmark_core.runner import _run_pipeline
 
 
 def _args(directory: str, run: str, *, reset_target: bool = False) -> SimpleNamespace:
@@ -82,7 +82,7 @@ class ProgressReporterTest(unittest.TestCase):
 
     def test_status_snapshot_uses_atomic_replace(self):
         with tempfile.TemporaryDirectory() as directory, patch(
-            "tempera.progress.os.replace", wraps=os.replace,
+            "benchmark_core.progress.os.replace", wraps=os.replace,
         ) as replace_file:
             run_dir = Path(directory) / "run-1"
             reporter = ProgressReporter(
@@ -96,7 +96,7 @@ class ProgressReporterTest(unittest.TestCase):
     def test_sensitive_values_and_query_values_are_not_persisted(self):
         secrets = [
             "Bearer auth-value", "deepseek-key-value", "eyJabc.def.ghi",
-            "raw-password", "TEMPERA-SENSITIVE-004", "raw-request-body",
+            "raw-password", "BENCHMARK-SENSITIVE-004", "raw-request-body",
         ]
         with tempfile.TemporaryDirectory() as directory:
             run_dir = Path(directory) / "run-1"
@@ -134,11 +134,11 @@ class RunnerProgressTest(unittest.TestCase):
                 '{"action":"http_request","method":"GET","path":"/api/Users/24"}',
                 '{"action":"done"}',
             ]
-            with patch("tempera.runner._load_adapter", return_value=adapter), patch(
-                "tempera.runner.make_server", return_value=_server(),
-            ), patch("tempera.agent.runtime.call_llm", side_effect=actions), patch(
-                "tempera.agent.runtime.do_http", return_value="status=200\nbody=ok",
-            ), patch.dict("os.environ", {"TEMPERA_DB_OBSERVER_TOKEN": ""}):
+            with patch("benchmark_core.runner._load_adapter", return_value=adapter), patch(
+                "benchmark_core.runner.make_server", return_value=_server(),
+            ), patch("benchmark_core.agent.runtime.call_llm", side_effect=actions), patch(
+                "benchmark_core.agent.runtime.do_http", return_value="status=200\nbody=ok",
+            ), patch.dict("os.environ", {"DB_OBSERVER_TOKEN": ""}):
                 store = _run_pipeline(args)
 
             events = read_progress(store.progress_path)
@@ -181,12 +181,12 @@ class RunnerProgressTest(unittest.TestCase):
     def test_database_observer_creation_failure_is_saved_as_invalid(self):
         with tempfile.TemporaryDirectory() as directory:
             args = _args(directory, "run-observer-creation-failure")
-            with patch("tempera.runner.DatabaseEventCollector", side_effect=OSError("busy")), \
-                 patch("tempera.runner.make_server", return_value=_server()), \
-                 patch("tempera.runner.run_episode", return_value={
+            with patch("benchmark_core.runner.DatabaseEventCollector", side_effect=OSError("busy")), \
+                 patch("benchmark_core.runner.make_server", return_value=_server()), \
+                 patch("benchmark_core.runner.run_episode", return_value={
                      "reason": "agent_done", "step": 1, "detail": None,
                  }), \
-                 patch.dict("os.environ", {"TEMPERA_DB_OBSERVER_TOKEN": "token"}):
+                 patch.dict("os.environ", {"DB_OBSERVER_TOKEN": "token"}):
                 store = _run_pipeline(args)
             result = json.loads(store.result_path.read_text(encoding="utf-8"))
         self.assertEqual("observer_failed:database", result["validity"]["reason"])
@@ -225,26 +225,26 @@ class RunnerProgressTest(unittest.TestCase):
     def test_sequence_environment_is_hidden_during_agent_and_restored(self):
         seen = []
         with patch.dict(os.environ, {
-            "TEMPERA_SEQUENCE_TOKEN": "secret",
-            "TEMPERA_SEQUENCE_OBSERVER": "host.docker.internal:1234",
-        }), patch("tempera.runner.run_episode", side_effect=lambda *args, **kwargs: (
-            seen.append((os.environ.get("TEMPERA_SEQUENCE_TOKEN"),
-                         os.environ.get("TEMPERA_SEQUENCE_OBSERVER")))
+            "RUN_SEQUENCE_TOKEN": "secret",
+            "RUN_SEQUENCE_OBSERVER": "host.docker.internal:1234",
+        }), patch("benchmark_core.runner.run_episode", side_effect=lambda *args, **kwargs: (
+            seen.append((os.environ.get("RUN_SEQUENCE_TOKEN"),
+                         os.environ.get("RUN_SEQUENCE_OBSERVER")))
             or {"reason": "agent_done", "step": 1, "detail": None}
         )):
-            from tempera import runner
+            from benchmark_core import runner
             with runner._hide_sequence_environment():
                 runner.run_episode("mission", "gateway", 1)
             self.assertEqual([(None, None)], seen)
-            self.assertEqual("secret", os.environ["TEMPERA_SEQUENCE_TOKEN"])
-            self.assertEqual("host.docker.internal:1234", os.environ["TEMPERA_SEQUENCE_OBSERVER"])
+            self.assertEqual("secret", os.environ["RUN_SEQUENCE_TOKEN"])
+            self.assertEqual("host.docker.internal:1234", os.environ["RUN_SEQUENCE_OBSERVER"])
 
     def test_keyboard_interrupt_finishes_with_run_interrupted(self):
         with tempfile.TemporaryDirectory() as directory:
             args = _args(directory, "run-interrupted")
-            with patch("tempera.runner.make_server", return_value=_server()), patch(
-                "tempera.agent.runtime.call_llm", side_effect=KeyboardInterrupt,
-            ), patch.dict("os.environ", {"TEMPERA_DB_OBSERVER_TOKEN": ""}), self.assertRaises(
+            with patch("benchmark_core.runner.make_server", return_value=_server()), patch(
+                "benchmark_core.agent.runtime.call_llm", side_effect=KeyboardInterrupt,
+            ), patch.dict("os.environ", {"DB_OBSERVER_TOKEN": ""}), self.assertRaises(
                 KeyboardInterrupt
             ):
                 _run_pipeline(args)
@@ -269,7 +269,7 @@ class AgentProgressTerminationTest(unittest.TestCase):
         for raw, expected in cases:
             emitted = []
             with self.subTest(event=expected), patch(
-                "tempera.agent.runtime.call_llm", return_value=raw,
+                "benchmark_core.agent.runtime.call_llm", return_value=raw,
             ):
                 run_episode(
                     "mission", "gateway", 1,
@@ -279,7 +279,7 @@ class AgentProgressTerminationTest(unittest.TestCase):
 
         emitted = []
         with patch(
-            "tempera.agent.runtime.call_llm", side_effect=TimeoutError("down"),
+            "benchmark_core.agent.runtime.call_llm", side_effect=TimeoutError("down"),
         ):
             run_episode(
                 "mission", "gateway", 1,
@@ -289,9 +289,9 @@ class AgentProgressTerminationTest(unittest.TestCase):
 
         emitted = []
         with patch(
-            "tempera.agent.runtime.call_llm",
+            "benchmark_core.agent.runtime.call_llm",
             return_value='{"action":"http_request","path":"/"}',
-        ), patch("tempera.agent.runtime.do_http", return_value="status=200"):
+        ), patch("benchmark_core.agent.runtime.do_http", return_value="status=200"):
             run_episode(
                 "mission", "gateway", 1,
                 on_progress=lambda event, step, detail: emitted.append(event),
@@ -300,9 +300,9 @@ class AgentProgressTerminationTest(unittest.TestCase):
 
         emitted = []
         with patch(
-            "tempera.agent.runtime.call_llm",
+            "benchmark_core.agent.runtime.call_llm",
             return_value='{"action":"http_request","path":"/"}',
-        ), patch("tempera.agent.runtime.do_http", return_value="status=200" ):
+        ), patch("benchmark_core.agent.runtime.do_http", return_value="status=200" ):
             run_episode(
                 "mission", "gateway", 1,
                 on_progress=lambda event, step, detail: emitted.append(event),
@@ -310,7 +310,7 @@ class AgentProgressTerminationTest(unittest.TestCase):
         self.assertIn("max_steps_reached", emitted)
 
         emitted = []
-        with patch("tempera.agent.runtime.call_llm", side_effect=TimeoutError):
+        with patch("benchmark_core.agent.runtime.call_llm", side_effect=TimeoutError):
             run_episode(
                 "mission", "gateway", 1,
                 on_progress=lambda event, step, detail: emitted.append(event),

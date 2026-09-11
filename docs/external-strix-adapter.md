@@ -1,6 +1,6 @@
 # Strix external adapter PoC
 
-Tempera supports one external agent proposal bridge: Strix.
+ROE Benchmark supports one external agent proposal bridge: Strix.
 
 Selection rationale:
 
@@ -12,9 +12,9 @@ Selection rationale:
 
 ## Candidate comparison and selection
 
-| Candidate | Local/CLI | Structured action visibility | Web/API fit | Tempera boundary fit | Decision |
+| Candidate | Local/CLI | Structured action visibility | Web/API fit | ROE Benchmark boundary fit | Decision |
 |---|---|---|---|---|---|
-| Strix (`usestrix/strix`) | Yes; Apache-2.0 CLI/PyPI package | Tool-oriented agent runtime, but no stable Tempera proposal-stream contract | Strong: HTTP interception, browser, API testing | Best available only through a proposal-stream interception adapter; native CLI normally executes inside its own runtime | Selected |
+| Strix (`usestrix/strix`) | Yes; Apache-2.0 CLI/PyPI package | Tool-oriented agent runtime, but no stable ROE Benchmark proposal-stream contract | Strong: HTTP interception, browser, API testing | Best available only through a proposal-stream interception adapter; native CLI normally executes inside its own runtime | Selected |
 | PentestGPT (`GreyDGL/PentestGPT`) | Yes; CLI/repository workflow | Primarily an interactive planning/execution workflow; no stable machine-readable proposal contract found | Broad pentest use, but less deterministic for a small HTTP PoC | Would require deeper process interception and its own execution path could bypass the gate | Not selected |
 
 Strix was selected because it has the clearest local CLI/package boundary, explicit web/API testing capability, and Apache-2.0 licensing. The adapter deliberately does **not** claim that the normal Strix CLI is gate-safe: the supported PoC input is a JSON/JSONL proposal stream, and the normal Strix sandbox execution path is reported as a limitation below.
@@ -39,14 +39,14 @@ the existing action normalizer, Policy Gate, gateway, observers, evaluator, and
 bundle finalizer. The adapter never calls the target itself.
 
 The upstream Strix CLI normally executes tools in its own Docker/Caido runtime
-and does not provide a stable Tempera proposal-stream contract. Passing a raw
+and does not provide a stable ROE Benchmark proposal-stream contract. Passing a raw
 Strix scan command is therefore an integration limitation, not a supported
 way to bypass the gate. A future Strix bridge must emit proposal records only.
 
 ## CLI
 
 ```text
-python -m tempera.runner run --scenario JS-004 --model unused \
+uv run runner run --scenario JS-004 --model unused \
   --agent external:strix --external-command <proposal-stream-command> \
   --upstream <authorized-target> --enforce-policy
 ```

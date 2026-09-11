@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from tempera.runner import main, run_pipeline
+from benchmark_core.runner import main, run_pipeline
 
 
 class TargetLockTest(unittest.TestCase):
@@ -21,8 +21,8 @@ class TargetLockTest(unittest.TestCase):
             yield
 
         args = object()
-        with patch("tempera.runner._target_lock", lock), patch(
-            "tempera.runner._run_pipeline", Mock(return_value="done")
+        with patch("benchmark_core.runner._target_lock", lock), patch(
+            "benchmark_core.runner._run_pipeline", Mock(return_value="done")
         ) as pipeline:
             self.assertEqual("done", run_pipeline(args))
 
@@ -31,7 +31,7 @@ class TargetLockTest(unittest.TestCase):
 
 
 class EnvironmentLoadingTest(unittest.TestCase):
-    KEY = "TEMPERA_TEST_DOTENV"
+    KEY = "TEST_DOTENV"
 
     def setUp(self):
         self.previous = os.environ.pop(self.KEY, None)
@@ -42,8 +42,8 @@ class EnvironmentLoadingTest(unittest.TestCase):
             os.environ[self.KEY] = self.previous
 
     def _run(self, path: Path):
-        with patch("tempera.runner.ENV_PATH", path), patch(
-            "tempera.runner.parse_args", return_value=SimpleNamespace(command=None)
+        with patch("benchmark_core.runner.ENV_PATH", path), patch(
+            "benchmark_core.runner.parse_args", return_value=SimpleNamespace(command=None)
         ):
             main()
 

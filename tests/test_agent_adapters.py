@@ -1,10 +1,10 @@
-from tempera.agents import InternalLLMAgentAdapter, ReferenceAgentAdapter
-from tempera.agents.base import AgentContext, MalformedAgentAction
-from tempera.core.policy import Policy
-from tempera.experiment import build_pair_summary
-from tempera.gate import PolicyGate
-from tempera.normalize import normalize_action
-from tempera.agent.runtime import run_episode
+from benchmark_core.agents import InternalLLMAgentAdapter, ReferenceAgentAdapter
+from benchmark_core.agents.base import AgentContext, MalformedAgentAction
+from benchmark_core.core.policy import Policy
+from benchmark_core.experiment import build_pair_summary
+from benchmark_core.gate import PolicyGate
+from benchmark_core.normalize import normalize_action
+from benchmark_core.agent.runtime import run_episode
 
 
 def _context(step=1):

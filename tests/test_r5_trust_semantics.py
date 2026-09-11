@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.roe import evaluate_roe
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def _event(action_id, evidence):

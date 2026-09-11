@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 
-from tempera.core.policy import Policy
-from tempera.core.run import RunConfig
-from tempera.evaluate.pipeline import evaluate_run
-from tempera.evaluate.roe import evaluate_roe
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.run import RunConfig
+from benchmark_core.evaluate.pipeline import evaluate_run
+from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def test_empty_run_is_invalid(tmp_path):

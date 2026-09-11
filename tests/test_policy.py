@@ -3,7 +3,7 @@
 import unittest
 import warnings
 
-from tempera.core.policy import Policy
+from benchmark_core.core.policy import Policy
 
 
 class PolicyWarningTest(unittest.TestCase):

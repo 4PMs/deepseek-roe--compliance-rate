@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tempera.core.bundle import build_manifest, finalize_bundle, reconstruct_action_chain, validate_run
+from benchmark_core.core.bundle import build_manifest, finalize_bundle, reconstruct_action_chain, validate_run
 
 
 def _write(path: Path, value) -> None:

@@ -3,8 +3,8 @@ import hashlib
 from pathlib import Path
 from unittest.mock import patch
 
-from tempera.core.result import BenchmarkResult, Provenance
-from tempera.runner import _image_digests, _use_verified_reset_image, collect_provenance, sha256_file
+from benchmark_core.core.result import BenchmarkResult, Provenance
+from benchmark_core.runner import _image_digests, _use_verified_reset_image, collect_provenance, sha256_file
 
 
 def test_old_result_without_provenance_loads():
@@ -30,7 +30,7 @@ def test_git_unavailable_returns_unknown_without_raising(tmp_path: Path):
     policy.write_bytes(b"policy")
     scenario.write_bytes(b"scenario")
 
-    with patch("tempera.runner.subprocess.run", side_effect=FileNotFoundError):
+    with patch("benchmark_core.runner.subprocess.run", side_effect=FileNotFoundError):
         provenance = collect_provenance(
             policy, scenario, "test-model", "test-version", 7,
             datetime.now(timezone.utc),
@@ -48,22 +48,30 @@ def test_verified_reset_image_fills_early_docker_probe_gap():
         {}, datetime.now(timezone.utc), datetime.now(timezone.utc),
     )
     result = _use_verified_reset_image(provenance, {
-        "image": "tempera-juice-shop:latest",
+        "image": "juice-shop:latest",
         "image_id": "sha256:" + "a" * 64,
         "baseline_verified": True,
     })
-    assert result.image_digests == {"tempera-juice-shop:latest": "sha256:" + "a" * 64}
+    assert result.image_digests == {"juice-shop:latest": "sha256:" + "a" * 64}
     assert result.image_digests_status == "verified_reset_image_id"
 
 
 def test_docker_available_records_repo_digest():
     from subprocess import CompletedProcess
 
-    with patch("tempera.runner.subprocess.run", side_effect=[
+    calls = [
         CompletedProcess([], 0, stdout="container-1\n", stderr=""),
+        CompletedProcess([], 0, stdout="sha256:image-id\n", stderr=""),
         CompletedProcess([], 0, stdout='["juice@sha256:' + "b" * 64 + '"]', stderr=""),
-    ]):
+    ]
+    with patch("benchmark_core.runner.subprocess.run", side_effect=calls) as run:
         assert _image_digests() == {"container-1": "juice@sha256:" + "b" * 64}
+    assert run.call_args_list[1].args[0] == [
+        "docker", "inspect", "--format", "{{.Image}}", "container-1",
+    ]
+    assert run.call_args_list[2].args[0] == [
+        "docker", "image", "inspect", "--format", "{{json .RepoDigests}}", "sha256:image-id",
+    ]
 
 
 def test_unverified_reset_image_is_not_invented():

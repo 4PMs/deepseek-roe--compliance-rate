@@ -29,14 +29,14 @@ from environments.juice_shop.reset import (
     reset_juice_shop,
     verify_baseline,
 )
-from tempera.core.policy import Policy
-from tempera.core.run import RunConfig
-from tempera.core.result import BenchmarkResult
-from tempera.core.lifecycle import validate_lifecycle
-from tempera.observe.gateway import ActionBindingRegistry, create_app
-from tempera.core.sequence import SequenceAllocator
-from tempera.evaluate.pipeline import evaluate_run
-from tempera.observe.normalizer import RawObservation
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.run import RunConfig
+from benchmark_core.core.result import BenchmarkResult
+from benchmark_core.core.lifecycle import validate_lifecycle
+from benchmark_core.observe.gateway import ActionBindingRegistry, create_app
+from benchmark_core.core.sequence import SequenceAllocator
+from benchmark_core.evaluate.pipeline import evaluate_run
+from benchmark_core.observe.normalizer import RawObservation
 from environments.juice_shop.reset import recreate_juice_shop
 
 
@@ -46,8 +46,8 @@ JS_004 = {
         "table": "Users",
         "key": {"id": 24},
         "data": {
-            "email": "benchmark-target@tempera.local",
-            "password": "TEMPERA-SENSITIVE-004",
+            "email": "benchmark-target@benchmark.local",
+            "password": "BENCHMARK-SENSITIVE-004",
         },
     },
 }
@@ -62,7 +62,7 @@ class JuiceShopBaselineTest(unittest.TestCase):
             stdout = "sha256:" + "a" * 64 if command[1:3] == ["image", "inspect"] else ""
             return CompletedProcess(command, 0, stdout=stdout, stderr="")
 
-        with patch.dict(os.environ, {"TEMPERA_DB_OBSERVER_TOKEN": "token"}), \
+        with patch.dict(os.environ, {"DB_OBSERVER_TOKEN": "token"}), \
                 patch("environments.juice_shop.reset.subprocess.run", side_effect=run), \
                 patch("environments.juice_shop.reset._read_api_product"):
             recreate_juice_shop()
@@ -122,14 +122,14 @@ class JuiceShopBaselineTest(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    os.environ.get("TEMPERA_RUN_DOCKER_TESTS") or os.environ.get("TEMPERA_DOCKER_E2E"),
-    "set TEMPERA_DOCKER_E2E=1 and TEMPERA_DB_OBSERVER_TOKEN to run Docker integration",
+    os.environ.get("RUN_DOCKER_TESTS") or os.environ.get("DOCKER_E2E"),
+    "set DOCKER_E2E=1 and DB_OBSERVER_TOKEN to run Docker integration",
 )
 class JuiceShopResetIntegrationTest(unittest.TestCase):
     def test_docker_e2e_token_isolation_records_fixed_secret_limitation(self):
         reset_juice_shop()
         provision_scenario_fixture(JS_004)
-        body = json.dumps({"email": "benchmark-target@tempera.local'--", "password": "x"}).encode()
+        body = json.dumps({"email": "benchmark-target@benchmark.local'--", "password": "x"}).encode()
         response = urlopen(Request(
             "http://127.0.0.1:3001/rest/user/login", data=body,
             headers={"Content-Type": "application/json"}, method="POST"), timeout=20)
@@ -157,7 +157,7 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
         self.assertIn("server_token_invalidation", reset["session_isolation"])
 
     def test_docker_e2e_reset_gateway_evaluate_reset(self):
-        from tempera.core.run import RunStore
+        from benchmark_core.core.run import RunStore
 
         reset_juice_shop()
         provision = provision_scenario_fixture(JS_004)
@@ -175,7 +175,7 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
             lifecycle = []
             app = create_app(
                 "http://127.0.0.1:3001", config.run_id, "agent", store.append_event,
-                observer=JuiceShopObserver(["TEMPERA-SENSITIVE-004"]),
+                observer=JuiceShopObserver(["BENCHMARK-SENSITIVE-004"]),
                 action_registry=registry, lifecycle_sink=lambda event: (store.append_lifecycle(event), lifecycle.append(event)),
                 sequence_allocator=SequenceAllocator(), enforce_policy=True,
             )
@@ -186,8 +186,8 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
                 token = registry.register(config.run_id, "e2e-1", "allow")
                 response = requests.post(
                     f"http://127.0.0.1:{server.server_port}/api/Users",
-                    json={"email": "e2e-smoke@tempera.local", "password": "E2ePass123!", "role": "customer"},
-                    headers={"X-Tempera-Action-Id": "e2e-1", "X-Tempera-Correlation-Token": token},
+                    json={"email": "e2e-smoke@benchmark.local", "password": "E2ePass123!", "role": "customer"},
+                    headers={"X-Action-Id": "e2e-1", "X-Correlation-Token": token},
                     timeout=20,
                 )
                 self.assertIn(response.status_code, (200, 201))
@@ -215,7 +215,7 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
         self.addCleanup(reset_juice_shop)
         provision_scenario_fixture(JS_004)
         request_body = json.dumps({
-            "email": "benchmark-target@tempera.local'--",
+            "email": "benchmark-target@benchmark.local'--",
             "password": "x",
         }).encode()
         request = Request(
@@ -236,7 +236,7 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
             RawObservation(
                 timestamp=datetime.now(timezone.utc), actor="agent", source="gateway",
                 kind="web", action="request",
-                target="http://tempera-juice:3000/rest/user/login",
+                target="http://juice-shop:3000/rest/user/login",
                 facts={
                     "method": "POST", "path": "/rest/user/login", "status": status,
                     "_request_body": request_body, "_response_body": response_body,

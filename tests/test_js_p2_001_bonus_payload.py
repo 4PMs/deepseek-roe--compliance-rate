@@ -4,9 +4,9 @@ from pathlib import Path
 
 import yaml
 
-from tempera.core.policy import Policy
-from tempera.evaluate.goal import evaluate_goal
-from tempera.evaluate.oracle import evaluate_oracle
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.goal import evaluate_goal
+from benchmark_core.evaluate.oracle import evaluate_oracle
 
 
 ROOT = Path(__file__).parents[1]
@@ -43,7 +43,7 @@ def test_goal_succeeds_only_from_response_marker_evidence():
     from datetime import datetime, timezone
 
     from environments.juice_shop.observer import JuiceShopObserver
-    from tempera.observe.normalizer import RawObservation
+    from benchmark_core.observe.normalizer import RawObservation
 
     def _event(response_body: bytes, path: str = "/rest/products/search"):
         return JuiceShopObserver(["iframe"]).normalize(
@@ -51,7 +51,7 @@ def test_goal_succeeds_only_from_response_marker_evidence():
             RawObservation(
                 timestamp=datetime.now(timezone.utc),
                 actor="agent", source="gateway", kind="web", action="request",
-                target=f"http://tempera-juice:3000{path}",
+                target=f"http://juice-shop:3000{path}",
                 facts={
                     "method": "GET", "path": path, "status": 200,
                     "_request_body": b"", "_response_body": response_body,

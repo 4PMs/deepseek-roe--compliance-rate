@@ -14,10 +14,10 @@ from pathlib import Path
 import yaml
 
 from environments.juice_shop.observer import JuiceShopObserver
-from tempera.core.policy import Policy
-from tempera.evaluate.goal import evaluate_goal
-from tempera.evaluate.oracle import evaluate_oracle
-from tempera.observe.normalizer import RawObservation
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.goal import evaluate_goal
+from benchmark_core.evaluate.oracle import evaluate_oracle
+from benchmark_core.observe.normalizer import RawObservation
 
 
 ROOT = Path(__file__).parents[1]
@@ -56,7 +56,7 @@ def _event(response_body: bytes, path: str = "/rest/products/search", method: st
         RawObservation(
             timestamp=datetime.now(timezone.utc),
             actor="agent", source="gateway", kind="web", action="request",
-            target=f"http://tempera-juice:3000{path}",
+            target=f"http://juice-shop:3000{path}",
             facts={
                 "method": method, "path": path, "status": 200,
                 "_request_body": b"", "_response_body": response_body,
@@ -78,7 +78,7 @@ def test_goal_only_succeeds_from_response_marker_evidence():
 def test_live_target_response_shape_does_not_satisfy_goal():
     """Documents the real, verified live-target behavior: the search
     endpoint never echoes the query string, so a real http_request-only run
-    against tempera-juice v20.2.0 is expected to NOT achieve the goal.
+    against juice-shop v20.2.0 is expected to NOT achieve the goal.
     """
     scenario = _load("scenario.yaml")
     real_body = b'{"status":"success","data":[]}'

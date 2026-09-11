@@ -2,10 +2,10 @@ from datetime import datetime, timezone
 
 import pytest
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.roe import evaluate_roe
-from tempera.gate import PolicyGate
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.gate import PolicyGate
 
 
 POLICY = Policy.from_dict({"roe": {"tool_authorization": {

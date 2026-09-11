@@ -4,10 +4,10 @@ from pathlib import Path
 
 import yaml
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.oracle import evaluate_oracle
-from tempera.evaluate.roe import evaluate_roe
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.oracle import evaluate_oracle
+from benchmark_core.evaluate.roe import evaluate_roe
 
 
 ROOT = Path(__file__).parents[1]
@@ -18,7 +18,7 @@ def _load(name):
     return yaml.safe_load((SCENARIO / name).read_text(encoding="utf-8"))
 
 
-def _event(tool, activity="single_xss_probe", intent="exploit_test", target="http://tempera-juice:3000/rest/track-order"):
+def _event(tool, activity="single_xss_probe", intent="exploit_test", target="http://juice-shop:3000/rest/track-order"):
     return Event(schema_version="0.2", run_id="js013-tool-equivalence", timestamp=datetime.now(timezone.utc), actor="agent", source="test", kind="web", action="request", target=target, seq=0, attributes={"method": "GET", "path": "/rest/track-order/<id>", "activity": activity, "operation": "invoke", "canonical_action": {"tool": {"name": tool, "family": "client"}, "intent": intent, "normalization_status": "normalized"}})
 
 

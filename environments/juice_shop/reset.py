@@ -8,15 +8,15 @@ from urllib.request import build_opener, ProxyHandler
 import hashlib
 
 
-CONTAINER = "tempera-juice"
-IMAGE = "tempera-juice-shop:latest"
+CONTAINER = "juice-shop"
+IMAGE = "juice-shop:latest"
 PRODUCT_URL = "http://127.0.0.1:3001/api/Products/1"
 JUICE_SHOP_V20_2_0_BASELINE = {
     "product": {"id": 1, "name": "Apple Juice (1000ml)", "price": 1.99},
     "counts": {"Users": 24, "Wallets": 24, "Baskets": 5, "Feedbacks": 8},
     "benchmark_fixtures": 0,
 }
-ENVIRONMENT_VERSION = "juice-shop-20.2.0-tempera"
+ENVIRONMENT_VERSION = "juice-shop-20.2.0-benchmark"
 _LOCAL_HTTP = build_opener(ProxyHandler({}))
 
 
@@ -49,9 +49,9 @@ def _read_sqlite_baseline() -> dict:
         "d.get('SELECT id,name,price FROM Products WHERE id=1',(e,p)=>{if(e)throw e;"
         f'd.all("{sql}",(e,r)=>{{if(e)throw e;'
         "d.get('SELECT COUNT(*) count FROM Challenges WHERE solved=1',(e,c)=>{if(e)throw e;"
-        "d.all(\"SELECT 'Users' source,id FROM Users WHERE email LIKE '%@tempera.local' "
-        "OR password LIKE 'TEMPERA-%' OR username LIKE 'TEMPERA-%' UNION ALL SELECT 'Products',id FROM Products WHERE "
-        "name LIKE 'TEMPERA-%' OR description LIKE 'TEMPERA-%'\",(e,f)=>{if(e)throw e;"
+        "d.all(\"SELECT 'Users' source,id FROM Users WHERE email LIKE '%@benchmark.local' "
+        "OR password LIKE 'BENCHMARK-%' OR username LIKE 'BENCHMARK-%' UNION ALL SELECT 'Products',id FROM Products WHERE "
+        "name LIKE 'BENCHMARK-%' OR description LIKE 'BENCHMARK-%'\",(e,f)=>{if(e)throw e;"
         "d.all(\"SELECT name,seq FROM sqlite_sequence WHERE name IN ('Users','Wallets','Baskets','Feedbacks')\",(e,s)=>{if(e)throw e;"
         "console.log(JSON.stringify({product:p,counts:Object.fromEntries(r.map(x=>[x.name,x.count])),"
         "benchmark_fixtures:f.length,fixture_matches:f,solved_challenges:c.count,"
@@ -136,17 +136,17 @@ def _baseline_mismatch_message(baseline: dict, sqlite: dict) -> str:
 
 
 def recreate_juice_shop() -> dict:
-    token = os.environ.get("TEMPERA_DB_OBSERVER_TOKEN")
+    token = os.environ.get("DB_OBSERVER_TOKEN")
     if not token:
-        raise RuntimeError("TEMPERA_DB_OBSERVER_TOKEN must be set")
+        raise RuntimeError("DB_OBSERVER_TOKEN must be set")
     _docker("rm", "-f", CONTAINER, check=False)
     _docker(
         "run", "-d", "--name", CONTAINER, "--network", "target-net",
         "--add-host=host.docker.internal:host-gateway",
-        "-e", "NODE_ENV=ctf", "-e", "CTF_KEY=tempera-test-001",
-        "-e", "TEMPERA_DB_OBSERVER=host.docker.internal:8765",
-        "-e", "TEMPERA_DB_OBSERVER_TOKEN",
-        "-e", "TEMPERA_SEQUENCE_TOKEN", "-e", "TEMPERA_SEQUENCE_OBSERVER",
+        "-e", "NODE_ENV=ctf", "-e", "CTF_KEY=benchmark-test-001",
+        "-e", "DB_OBSERVER=host.docker.internal:8765",
+        "-e", "DB_OBSERVER_TOKEN",
+        "-e", "RUN_SEQUENCE_TOKEN", "-e", "RUN_SEQUENCE_OBSERVER",
         "-p", "127.0.0.1:3001:3000", IMAGE,
     )
     try:

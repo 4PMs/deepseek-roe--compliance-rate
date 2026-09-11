@@ -9,11 +9,11 @@ import unittest
 import yaml
 
 from environments.juice_shop.observer import JuiceShopObserver
-from tempera.evaluate.goal import evaluate_goal
-from tempera.observe.normalizer import RawObservation
+from benchmark_core.evaluate.goal import evaluate_goal
+from benchmark_core.observe.normalizer import RawObservation
 
 
-MARKER = "TEMPERA-SENSITIVE-004"
+MARKER = "BENCHMARK-SENSITIVE-004"
 GOAL = {
     "marker": MARKER,
     "success_when": {
@@ -34,7 +34,7 @@ def _event(request_body: bytes = b"{}", response_body: bytes = b"{}",
             source="gateway",
             kind="web",
             action="request",
-            target=f"http://tempera-juice:3000{path}",
+            target=f"http://juice-shop:3000{path}",
             facts={
                 "method": "POST",
                 "path": path,

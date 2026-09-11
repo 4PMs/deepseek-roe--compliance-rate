@@ -3,11 +3,11 @@ from pathlib import Path
 
 import yaml
 
-from tempera.core.policy import Policy
-from tempera.evaluate.oracle import evaluate_oracle
-from tempera.evaluate.roe import evaluate_roe
-from tempera.observe.outcome import TrustedOutcomeObserver
-from tempera.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.oracle import evaluate_oracle
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.observe.outcome import TrustedOutcomeObserver
+from benchmark_core.core.event import Event
 from scripts.validate_js008_golden import validate
 
 
@@ -46,7 +46,7 @@ def test_js008_oracle_positive_and_negative_controls_pass():
 def test_js008_live_state_probe_derives_record_created_without_fixture():
     event = Event(
         "0.2", "js008-live", datetime.now(timezone.utc), "agent", "gateway",
-        "web", "request", "http://tempera-juice:3000/api/Users", 3,
+        "web", "request", "http://juice-shop:3000/api/Users", 3,
         {"action_id": "action-live-1", "method": "POST", "path": "/api/Users",
          "status": 201, "operation": "create", "activity": "own_account_setup"},
     )

@@ -1,6 +1,6 @@
-from tempera.agent.runtime import run_episode
-from tempera.core.policy import Policy
-from tempera.gate import PolicyGate, summarize_control_effectiveness
+from benchmark_core.agent.runtime import run_episode
+from benchmark_core.core.policy import Policy
+from benchmark_core.gate import PolicyGate, summarize_control_effectiveness
 
 
 POLICY = Policy.from_dict({"roe": {
@@ -43,12 +43,12 @@ def test_gate_denies_prohibited_tool_and_intent():
 
 def test_gate_deny_prevents_target_call_and_records_terminal_lifecycle(monkeypatch):
     monkeypatch.setattr(
-        "tempera.agent.runtime.call_llm",
+        "benchmark_core.agent.runtime.call_llm",
         lambda *args, **kwargs: '{"action":"http_request","method":"GET","path":"/"}',
     )
     target_calls = []
     monkeypatch.setattr(
-        "tempera.agent.runtime.do_http",
+        "benchmark_core.agent.runtime.do_http",
         lambda action, gateway: target_calls.append(action) or "status=200",
     )
     lifecycle = []
@@ -73,12 +73,12 @@ def test_allowed_action_reaches_target_when_enforcement_is_enabled(monkeypatch):
         },
     }})
     monkeypatch.setattr(
-        "tempera.agent.runtime.call_llm",
+        "benchmark_core.agent.runtime.call_llm",
         lambda *args, **kwargs: '{"action":"http_request","method":"GET","path":"/"}',
     )
     target_calls = []
     monkeypatch.setattr(
-        "tempera.agent.runtime.do_http",
+        "benchmark_core.agent.runtime.do_http",
         lambda action, gateway: target_calls.append(action) or "status=200",
     )
 
@@ -97,10 +97,10 @@ def test_disabled_enforcement_still_measures_attempted_violation(monkeypatch):
         },
     }})
     monkeypatch.setattr(
-        "tempera.agent.runtime.call_llm",
+        "benchmark_core.agent.runtime.call_llm",
         lambda *args, **kwargs: '{"action":"http_request","method":"GET","path":"/"}',
     )
-    monkeypatch.setattr("tempera.agent.runtime.do_http", lambda action, gateway: "status=200")
+    monkeypatch.setattr("benchmark_core.agent.runtime.do_http", lambda action, gateway: "status=200")
 
     result = run_episode("mission", "http://gateway", 1, policy=policy, enforce_policy=False)
 
@@ -176,7 +176,7 @@ def test_unclassified_action_is_denied_fail_closed():
 
 def test_unknown_action_is_not_an_attempted_r2_violation(monkeypatch):
     monkeypatch.setattr(
-        "tempera.agent.runtime.call_llm",
+        "benchmark_core.agent.runtime.call_llm",
         lambda *args, **kwargs: '{"action":"mystery"}',
     )
     result = run_episode("mission", "http://gateway", 1, policy=POLICY, enforce_policy=True)
@@ -188,7 +188,7 @@ def test_unknown_action_is_not_an_attempted_r2_violation(monkeypatch):
 
 def test_done_is_not_target_executed_or_escaped(monkeypatch):
     monkeypatch.setattr(
-        "tempera.agent.runtime.call_llm",
+        "benchmark_core.agent.runtime.call_llm",
         lambda *args, **kwargs: '{"action":"done"}',
     )
     result = run_episode("mission", "http://gateway", 1, policy=POLICY, enforce_policy=True)

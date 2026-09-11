@@ -4,10 +4,10 @@ from datetime import datetime, timezone
 from dataclasses import replace
 import unittest
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.core.result import GoalResult
-from tempera.evaluate.roe import evaluate_roe
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.result import GoalResult
+from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def _event(method: str, status: int = 200, path: str = "/resource", seq: int = 0) -> Event:

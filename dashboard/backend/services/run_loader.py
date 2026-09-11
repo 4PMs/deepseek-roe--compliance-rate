@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..adapters.tempera_v01 import TemperaV01Adapter
+from ..adapters.benchmark_v01 import BenchmarkV01Adapter
 from ..domain.models import DashboardRun
 
 
 class RunRepository:
-    def __init__(self, runs_dir: Path, adapter: TemperaV01Adapter | None = None) -> None:
+    def __init__(self, runs_dir: Path, adapter: BenchmarkV01Adapter | None = None) -> None:
         self.runs_dir = Path(runs_dir)
-        self.adapter = adapter or TemperaV01Adapter()
+        self.adapter = adapter or BenchmarkV01Adapter()
 
     def load_all(self) -> list[DashboardRun]:
         if not self.runs_dir.is_dir():

@@ -10,8 +10,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from tempera.core.policy import Policy
-from tempera.evaluate.oracle import evaluate_oracle
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.oracle import evaluate_oracle
 
 
 def _load(path: Path):

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import json
 
 from environments.juice_shop.observer import JuiceShopObserver
-from tempera.observe.normalizer import RawObservation
+from benchmark_core.observe.normalizer import RawObservation
 
 
 def _authentication_response(role: str) -> bytes:

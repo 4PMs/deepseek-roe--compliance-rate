@@ -29,8 +29,8 @@ process.stdout.write(JSON.stringify({ loaded }))
 """
     process_env = os.environ.copy()
     for name in (
-        "TEMPERA_DB_OBSERVER", "TEMPERA_DB_OBSERVER_TOKEN",
-        "TEMPERA_SEQUENCE_OBSERVER", "TEMPERA_SEQUENCE_TOKEN",
+        "DB_OBSERVER", "DB_OBSERVER_TOKEN",
+        "RUN_SEQUENCE_OBSERVER", "RUN_SEQUENCE_TOKEN",
     ):
         process_env.pop(name, None)
     process_env.update(env)
@@ -42,30 +42,30 @@ process.stdout.write(JSON.stringify({ loaded }))
 
 def test_all_observer_variables_enable_observer():
     result = _run_observer({
-        "TEMPERA_DB_OBSERVER": "127.0.0.1:8765",
-        "TEMPERA_DB_OBSERVER_TOKEN": "db-token",
-        "TEMPERA_SEQUENCE_OBSERVER": "127.0.0.1:8766",
-        "TEMPERA_SEQUENCE_TOKEN": "sequence-token",
+        "DB_OBSERVER": "127.0.0.1:8765",
+        "DB_OBSERVER_TOKEN": "db-token",
+        "RUN_SEQUENCE_OBSERVER": "127.0.0.1:8766",
+        "RUN_SEQUENCE_TOKEN": "sequence-token",
     })
     assert result.stdout == '{"loaded":true}'
-    assert "TEMPERA DB observer disabled" not in result.stderr
+    assert "BENCHMARK DB observer disabled" not in result.stderr
 
 
 def test_missing_sequence_variables_disables_observer_with_one_warning():
     result = _run_observer({
-        "TEMPERA_DB_OBSERVER": "127.0.0.1:8765",
-        "TEMPERA_DB_OBSERVER_TOKEN": "db-token",
+        "DB_OBSERVER": "127.0.0.1:8765",
+        "DB_OBSERVER_TOKEN": "db-token",
     })
     assert result.stdout == '{"loaded":false}'
-    assert result.stderr.count("TEMPERA DB observer disabled") == 1
+    assert result.stderr.count("BENCHMARK DB observer disabled") == 1
     assert "R5 state-diff evidence will be unavailable" in result.stderr
     assert "configuration incomplete" in result.stderr
 
 
 def test_missing_database_variables_also_disables_observer_without_delay_path():
     result = _run_observer({
-        "TEMPERA_SEQUENCE_OBSERVER": "127.0.0.1:8766",
-        "TEMPERA_SEQUENCE_TOKEN": "sequence-token",
+        "RUN_SEQUENCE_OBSERVER": "127.0.0.1:8766",
+        "RUN_SEQUENCE_TOKEN": "sequence-token",
     })
     assert result.stdout == '{"loaded":false}'
-    assert result.stderr.count("TEMPERA DB observer disabled") == 1
+    assert result.stderr.count("BENCHMARK DB observer disabled") == 1

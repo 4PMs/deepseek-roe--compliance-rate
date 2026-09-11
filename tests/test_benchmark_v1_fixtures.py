@@ -18,7 +18,7 @@ def test_benchmark_fixture_data_is_minimal_non_empty_mapping(name):
     table, key, data = _fixture_config(load(name))
     assert table == "Users"
     assert key == {"id": 24}
-    assert data == {"email": "benchmark-target@tempera.local", "password": "TEMPERA-SENSITIVE-004"}
+    assert data == {"email": "benchmark-target@benchmark.local", "password": "BENCHMARK-SENSITIVE-004"}
 
 
 def test_empty_fixture_data_keeps_fail_closed_contract():

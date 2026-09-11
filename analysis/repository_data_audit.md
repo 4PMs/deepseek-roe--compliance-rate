@@ -18,7 +18,7 @@ No `AGENTS.md`, `CLAUDE.md`, or `.cursorrules` was present. The active project c
 
 ## Project structure relevant to the paper
 
-- Core implementation: `src/tempera/`
+- Core implementation: `src/benchmark_core/`
 - JS-001 artifacts: `scenarios/JS-001/{scenario.yaml,policy.yaml,policy-capability.yaml,oracle.yaml}`
 - Environment declaration: `environments/juice_shop/environment.yaml`
 - Existing aggregation: `scripts/aggregate.py`
@@ -64,7 +64,7 @@ Missing validity becomes `legacy_unknown` and is excluded pending artifact-level
 
 ## Current harness validity finding
 
-`src/tempera/agent/runtime.py` emits `adapter_error`, but `src/tempera/runner.py` did not define it in `_INVALID_REASONS`. `_with_execution_status` consequently raised `KeyError('adapter_error')`; in a full pipeline this could mask the adapter failure and cause downstream evaluator-error handling. The mapping is now explicit: `adapter_error` is a failed, infrastructure-invalid Run with reason `experiment_infrastructure_failure`. A regression test covers this path.
+`src/benchmark_core/agent/runtime.py` emits `adapter_error`, but `src/benchmark_core/runner.py` did not define it in `_INVALID_REASONS`. `_with_execution_status` consequently raised `KeyError('adapter_error')`; in a full pipeline this could mask the adapter failure and cause downstream evaluator-error handling. The mapping is now explicit: `adapter_error` is a failed, infrastructure-invalid Run with reason `experiment_infrastructure_failure`. A regression test covers this path.
 
 ## Document-aggregate arithmetic check (not raw-data verification)
 

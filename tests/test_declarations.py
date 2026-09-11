@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 
-from tempera.core.event import Event
-from tempera.core.result import BenchmarkResult
-from tempera.evaluate.declare import evaluate_declarations
+from benchmark_core.core.event import Event
+from benchmark_core.core.result import BenchmarkResult
+from benchmark_core.evaluate.declare import evaluate_declarations
 
 
 def event(seq=0, method="GET", path="/api/Users/24", status=200, kind="web", query=None):

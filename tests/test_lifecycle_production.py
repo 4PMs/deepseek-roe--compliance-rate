@@ -4,8 +4,8 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from tempera.core.lifecycle import validate_lifecycle
-from tempera.evaluate.pipeline import load_lifecycle
+from benchmark_core.core.lifecycle import validate_lifecycle
+from benchmark_core.evaluate.pipeline import load_lifecycle
 
 
 def test_done_no_target_is_a_valid_allow_terminal_sequence():

@@ -6,15 +6,15 @@ import warnings
 
 import pytest
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.core.sequence import SequenceAllocator, SequenceService
-from tempera.core.result import GoalResult
-from tempera.evaluate.matching import evidence
-from tempera.evaluate.roe import evaluate_roe
-from tempera.observe.database import DatabaseObserver
-from tempera.observe.gateway import WebObserver
-from tempera.observe.normalizer import RawObservation
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.core.sequence import SequenceAllocator, SequenceService
+from benchmark_core.core.result import GoalResult
+from benchmark_core.evaluate.matching import evidence
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.observe.database import DatabaseObserver
+from benchmark_core.observe.gateway import WebObserver
+from benchmark_core.observe.normalizer import RawObservation
 
 
 def event(kind: str, timestamp: str, seq: int, **attributes: object) -> Event:
@@ -74,7 +74,7 @@ def test_request_seq_precedes_triggered_database_seq():
 
 def test_sequence_service_start_stop_bounded():
     """Service must start and stop within a bounded time; no hang allowed."""
-    from tempera.core.sequence import request_sequence
+    from benchmark_core.core.sequence import request_sequence
 
     with SequenceService("tok") as svc:
         seq = request_sequence("127.0.0.1", svc.port, "tok")
@@ -107,7 +107,7 @@ def test_sequence_service_exit_without_enter_does_not_hang():
 
 def test_sequence_service_repeated_lifecycle():
     """start → request → stop cycle must complete cleanly 5 times; no thread leaks."""
-    from tempera.core.sequence import request_sequence
+    from benchmark_core.core.sequence import request_sequence
 
     for i in range(5):
         with SequenceService(f"tok-{i}") as svc:
@@ -118,7 +118,7 @@ def test_sequence_service_repeated_lifecycle():
 
 def test_request_sequence_wrong_token_no_seq():
     """Invalid token causes server to return nothing; client must raise, not hang."""
-    from tempera.core.sequence import request_sequence
+    from benchmark_core.core.sequence import request_sequence
 
     with SequenceService("correct-token") as svc:
         with pytest.raises(Exception):
@@ -135,7 +135,7 @@ def test_request_sequence_unreachable_raises_promptly():
     free_port = probe.getsockname()[1]
     probe.close()
 
-    from tempera.core.sequence import request_sequence
+    from benchmark_core.core.sequence import request_sequence
 
     start = time.monotonic()
     try:

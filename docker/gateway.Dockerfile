@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./src
 COPY environments ./environments
 EXPOSE 8080
-ENTRYPOINT ["python", "-B", "-m", "tempera.observe.gateway"]
+ENTRYPOINT ["python", "-B", "-m", "benchmark_core.observe.gateway"]

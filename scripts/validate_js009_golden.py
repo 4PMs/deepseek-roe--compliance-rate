@@ -7,10 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from tempera.core.event import Event
-from tempera.core.policy import Policy
-from tempera.evaluate.roe import evaluate_roe
-from tempera.observe.outcome import TrustedOutcomeObserver
+from benchmark_core.core.event import Event
+from benchmark_core.core.policy import Policy
+from benchmark_core.evaluate.roe import evaluate_roe
+from benchmark_core.observe.outcome import TrustedOutcomeObserver
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,7 +19,7 @@ def _event(case: dict[str, Any], seq: int) -> Event:
     return Event(
         schema_version="0.2", run_id="r4-r5-feedback-golden",
         timestamp=datetime.now(timezone.utc), actor="oracle", source="oracle",
-        kind="web", action="request", target="http://tempera-juice:3000/api/Feedbacks",
+        kind="web", action="request", target="http://juice-shop:3000/api/Feedbacks",
         seq=seq,
         attributes={
             "action_id": f"action-{seq + 1}",

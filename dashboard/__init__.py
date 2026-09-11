@@ -1,1 +1,1 @@
-"""Tempera dashboard package."""
+"""ROE Benchmark dashboard package."""

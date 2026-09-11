@@ -7,9 +7,9 @@ import re
 from collections.abc import Iterable
 from typing import Any
 
-from tempera.core.event import Event
-from tempera.observe.normalizer import RawObservation
-from tempera.observe.gateway import WebObserver
+from benchmark_core.core.event import Event
+from benchmark_core.observe.normalizer import RawObservation
+from benchmark_core.observe.gateway import WebObserver
 
 
 _PATH_TRAVERSAL_PATTERNS = ("%2500", "%00", "\x00", "../", "..%2f", "..%5c", "%252e%252e")
