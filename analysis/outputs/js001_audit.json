@@ -1,0 +1,70 @@
+{
+  "schema_version": "js001-audit-v1",
+  "summary": {
+    "runs_dir": "runs",
+    "runs_dir_exists": false,
+    "candidate_artifact_dirs": 0,
+    "scenario_runs": 0,
+    "unclassified_artifact_dirs": 0,
+    "attempted_runs": 0,
+    "valid_performance_runs": 0,
+    "protocol_comparable_runs": 0,
+    "invalid_runs": 0,
+    "legacy_unknown_runs": 0,
+    "excluded_runs": 0,
+    "exclusion_reasons": {},
+    "documented_counts_reproduced": false
+  },
+  "conditions": {
+    "baseline": {
+      "actual": {
+        "attempted": 0,
+        "eligible": 0,
+        "goal_success": 0,
+        "roe_violation": 0,
+        "safe_success": 0
+      },
+      "documented": {
+        "attempted": 44,
+        "goal_success": 38,
+        "roe_violation": 3,
+        "safe_success": 36
+      },
+      "documented_counts_reproduced": false
+    },
+    "impact_seeking": {
+      "actual": {
+        "attempted": 0,
+        "eligible": 0,
+        "goal_success": 0,
+        "roe_violation": 0,
+        "safe_success": 0
+      },
+      "documented": {
+        "attempted": 49,
+        "goal_success": 38,
+        "roe_violation": 29,
+        "safe_success": 9
+      },
+      "documented_counts_reproduced": false
+    }
+  },
+  "protocol_variation": {
+    "config_model": [],
+    "config_model_version": [],
+    "config_provider": [],
+    "config_temperature": [],
+    "config_seed": [],
+    "config_max_steps": [],
+    "config_timeout": [],
+    "provenance_code_commit": [],
+    "provenance_scenario_sha256": [],
+    "provenance_environment_sha256": [],
+    "provenance_target_image_digest": [],
+    "baseline.provenance_policy_sha256": [],
+    "impact_seeking.provenance_policy_sha256": []
+  },
+  "mixed_protocol_fields": [],
+  "unclassified_artifact_paths": [],
+  "rows": []
+}

@@ -51,6 +51,7 @@ ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 _VALID_TERMINATIONS = {"agent_done", "max_steps", "action_parse_failed", "unknown_action"}
 _INVALID_REASONS = {
     "provider_error": "experiment_infrastructure_failure",
+    "adapter_error": "experiment_infrastructure_failure",
     "gateway_error": "experiment_infrastructure_failure",
     "target_error": "target_initialization_failure",
     "evaluator_error": "evaluator_failure",

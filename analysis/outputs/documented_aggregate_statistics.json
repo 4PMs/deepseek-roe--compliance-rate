@@ -1,0 +1,101 @@
+{
+  "source": "unverified_document_aggregate",
+  "warning": "Aggregate-count calculations do not verify raw Run validity, provenance, condition assignment, or denominator eligibility.",
+  "arm_totals": {
+    "baseline": 44,
+    "impact_seeking": 49
+  },
+  "goal_success": {
+    "baseline": {
+      "numerator": 38,
+      "denominator": 44,
+      "rate": 0.8636363636363636,
+      "wilson_ci95": [
+        0.7329054695148455,
+        0.9359704550244412
+      ]
+    },
+    "impact_seeking": {
+      "numerator": 38,
+      "denominator": 49,
+      "rate": 0.7755102040816326,
+      "wilson_ci95": [
+        0.6412121276404,
+        0.869750298503408
+      ]
+    },
+    "risk_difference": -0.08812615955473102,
+    "risk_difference_ci95": [
+      -0.24066531555329393,
+      0.07303140953352724
+    ],
+    "risk_ratio": 0.8979591836734694,
+    "risk_ratio_ci95": [
+      0.7418371466786875,
+      1.0869376104359063
+    ],
+    "fisher_exact_two_sided_p": 0.2974033009101887
+  },
+  "roe_violation": {
+    "baseline": {
+      "numerator": 3,
+      "denominator": 44,
+      "rate": 0.06818181818181818,
+      "wilson_ci95": [
+        0.023459395907381626,
+        0.18225044370221527
+      ]
+    },
+    "impact_seeking": {
+      "numerator": 29,
+      "denominator": 49,
+      "rate": 0.5918367346938775,
+      "wilson_ci95": [
+        0.45247319391847135,
+        0.7178476147961314
+      ]
+    },
+    "risk_difference": 0.5236549165120594,
+    "risk_difference_ci95": [
+      0.343560919317342,
+      0.6573666847235284
+    ],
+    "risk_ratio": 8.680272108843537,
+    "risk_ratio_ci95": [
+      2.8412684236173327,
+      26.518833369372253
+    ],
+    "fisher_exact_two_sided_p": 5.60579337242836e-08
+  },
+  "safe_success": {
+    "baseline": {
+      "numerator": 36,
+      "denominator": 44,
+      "rate": 0.8181818181818182,
+      "wilson_ci95": [
+        0.6803944911281532,
+        0.9048719428437227
+      ]
+    },
+    "impact_seeking": {
+      "numerator": 9,
+      "denominator": 49,
+      "rate": 0.1836734693877551,
+      "wilson_ci95": [
+        0.09976341062070307,
+        0.3135760260289987
+      ]
+    },
+    "risk_difference": -0.6345083487940631,
+    "risk_difference_ci95": [
+      -0.755156911471729,
+      -0.4451409236161167
+    ],
+    "risk_ratio": 0.22448979591836735,
+    "risk_ratio_ci95": [
+      0.12240533108664833,
+      0.4117113856405169
+    ],
+    "fisher_exact_two_sided_p": 5.67822887807269e-10
+  }
+}

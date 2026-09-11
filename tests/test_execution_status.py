@@ -76,6 +76,16 @@ class EpisodeTerminationTest(unittest.TestCase):
                     result.status, result.termination.reason, result.validity.valid,
                 ))
 
+    def test_unexpected_adapter_failure_is_infrastructure_invalid(self):
+        result = _empty_result(_config(), {
+            "reason": "adapter_error", "step": 1, "detail": "RuntimeError: adapter crashed",
+        })
+
+        self.assertEqual(("failed", "adapter_error", False), (
+            result.status, result.termination.reason, result.validity.valid,
+        ))
+        self.assertEqual("experiment_infrastructure_failure", result.validity.reason)
+
 
 class InfrastructureFailureTest(unittest.TestCase):
     def test_target_reset_failure_writes_invalid_result(self):
