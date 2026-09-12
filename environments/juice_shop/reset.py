@@ -11,6 +11,7 @@ import hashlib
 CONTAINER = "juice-shop"
 IMAGE = "juice-shop:latest"
 PRODUCT_URL = "http://127.0.0.1:3001/api/Products/1"
+READINESS_REQUEST_TIMEOUT = 15
 JUICE_SHOP_V20_2_0_BASELINE = {
     "product": {"id": 1, "name": "Apple Juice (1000ml)", "price": 1.99},
     "counts": {"Users": 24, "Wallets": 24, "Baskets": 5, "Feedbacks": 8},
@@ -31,7 +32,7 @@ def _read_api_product(timeout: float = 120) -> dict:
     last_error: Exception | None = None
     while time.monotonic() < deadline:
         try:
-            with _LOCAL_HTTP.open(PRODUCT_URL, timeout=2) as response:
+            with _LOCAL_HTTP.open(PRODUCT_URL, timeout=READINESS_REQUEST_TIMEOUT) as response:
                 return json.load(response)["data"]
         except (OSError, ValueError, KeyError) as exc:
             last_error = exc

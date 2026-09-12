@@ -9,6 +9,7 @@ Two subcommands:
 
 import argparse
 import atexit
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager, nullcontext
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -21,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import Any
 import warnings
 
 import yaml
@@ -28,7 +30,6 @@ from dotenv import load_dotenv
 from werkzeug.serving import make_server
 
 from .agent import load_mission, run_episode
-from .agents import load_agent_adapter
 from .core.environment import EnvironmentAdapter
 from .core.bundle import finalize_bundle, validate_run
 from .core.lifecycle import LifecycleEvent
@@ -179,16 +180,17 @@ def add_run_parser(subparsers: argparse._SubParsersAction) -> None:
     run = subparsers.add_parser(
         "run", help="Fully automate one run: env init, agent, gateway, events, eval, result"
     )
-    run.add_argument("--scenario", required=True, help="Scenario id, e.g. JS-001")
+    run.add_argument("--scenario", required=True, help="Scenario id, e.g. scenarioA")
+    run.add_argument(
+        "--condition", default=None,
+        help="Instruction condition ID; defaults to instruction_conditions.default",
+    )
     run.add_argument("--policy", default=None, help="Path to policy YAML file; defaults to scenarios/<scenario>/policy.yaml")
     run.add_argument("--model", required=True, help="Model name passed to the LLM provider")
     run.add_argument("--run", help="Run id; defaults to run-<scenario>-<timestamp>")
     run.add_argument("--model-version", default="unknown")
     run.add_argument("--agent-version", default="poc")
     run.add_argument("--provider", default=None, help="ollama|deepseek; defaults to MODEL_PROVIDER env")
-    run.add_argument("--agent", default="internal", choices=("internal", "external:strix"))
-    run.add_argument("--external-command", nargs="+", default=None,
-                     help="proposal-stream command for --agent external:strix")
     run.add_argument("--temperature", type=float, default=None)
     run.add_argument("--seed", type=int, default=None)
     run.add_argument("--repetition", type=int, default=None, help="pass@k 반복 인덱스")
@@ -490,6 +492,38 @@ def run_pipeline(args: argparse.Namespace) -> "RunStore":
         return _run_pipeline(args)
 
 
+def _scenario_observer_markers(scenario: Mapping[str, Any]) -> tuple[str, ...]:
+    markers: list[str] = []
+    goal_marker = (scenario.get("goal") or {}).get("marker")
+    if isinstance(goal_marker, str):
+        markers.append(goal_marker)
+    observer_markers = (scenario.get("observer") or {}).get("markers", ())
+    if isinstance(observer_markers, Sequence) and not isinstance(observer_markers, str):
+        markers.extend(marker for marker in observer_markers if isinstance(marker, str))
+    return tuple(dict.fromkeys(markers))
+
+
+def _instruction_condition(
+    scenario: Mapping[str, Any], requested: str | None,
+) -> tuple[str, str]:
+    specification = scenario.get("instruction_conditions")
+    if not isinstance(specification, Mapping):
+        raise ValueError("scenario must declare instruction_conditions")
+    variants = specification.get("variants")
+    if not isinstance(variants, Mapping) or not variants:
+        raise ValueError("instruction_conditions.variants must be a non-empty mapping")
+    condition_id = requested or specification.get("default")
+    if not isinstance(condition_id, str) or not condition_id:
+        raise ValueError("instruction_conditions.default must name a condition")
+    condition = variants.get(condition_id)
+    if not isinstance(condition, Mapping):
+        raise ValueError(f"unknown instruction condition: {condition_id}")
+    instruction = condition.get("instruction")
+    if not isinstance(instruction, str) or not instruction.strip():
+        raise ValueError(f"instruction condition {condition_id!r} must contain instruction text")
+    return condition_id, instruction.strip()
+
+
 def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     """Execute one fully automated run and return the RunStore that owns it."""
     scenario_dir = args.scenarios_dir / args.scenario
@@ -506,7 +540,22 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     )
     scenario_doc = yaml.safe_load(scenario_path.read_text(encoding="utf-8"))
     policy_doc = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
-    agent_instructions = policy_doc.get("agent_instructions")
+    condition_id, condition_instruction = _instruction_condition(
+        scenario_doc, getattr(args, "condition", None),
+    )
+    start_state = scenario_doc.get("start_state") or {}
+    authentication = start_state.get("authentication") if isinstance(start_state, Mapping) else {}
+    if (
+        isinstance(authentication, Mapping)
+        and authentication.get("mode") == "provisioned_session"
+        and not getattr(args, "reset_target", False)
+    ):
+        raise SystemExit("provisioned_session scenarios require --reset-target")
+    policy_instructions = policy_doc.get("agent_instructions")
+    agent_instructions = "\n\n".join(
+        text.strip() for text in (policy_instructions, condition_instruction)
+        if isinstance(text, str) and text.strip()
+    )
     policy = Policy.from_dict(policy_doc)
 
     environment_name = scenario_doc.get("environment")
@@ -537,9 +586,12 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     if target.get("base_url") and upstream != target["base_url"]:
         target.setdefault("runtime_aliases", []).append(upstream)
     observer_ref = environment_doc.get("observer")
-    marker = scenario_doc.get("goal", {}).get("marker")
-    markers = (marker,) if isinstance(marker, str) else ()
-    observer = load_observer(observer_ref, markers=markers) if observer_ref else None
+    markers = _scenario_observer_markers(scenario_doc)
+    observer_options: dict[str, Any] = {"markers": markers}
+    resource_scope = (scenario_doc.get("observer") or {}).get("resource_scope")
+    if isinstance(resource_scope, Mapping):
+        observer_options["resource_scope"] = dict(resource_scope)
+    observer = load_observer(observer_ref, **observer_options) if observer_ref else None
     limits = scenario_doc.get("limits", {})
     max_steps = args.max_steps or limits.get("max_steps", 8)
     timeout = args.timeout or limits.get("timeout", 20)
@@ -554,6 +606,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
         timeout=timeout,
         temperature=args.temperature, seed=args.seed, repetition=args.repetition,
         provider=args.provider,
+        instruction_condition=condition_id,
         enforcement_enabled=bool(
             getattr(args, "enforce_policy", False)
             or (scenario_doc.get("enforcement", {}) or {}).get("enabled", False)
@@ -572,6 +625,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     reporter.emit("run_created", state="initializing")
     reporter.emit("run_started", state="initializing")
     environment_reset = None
+    runtime_context: dict[str, Any] = {}
     if getattr(args, "reset_target", False):
         reporter.change_state("resetting_target")
         reporter.emit("target_reset_started", state="resetting_target")
@@ -647,6 +701,12 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             if not provision.get("verified", False):
                 raise RuntimeError("scenario fixture verification failed")
             environment_reset = {**environment_reset, "provision": provision}
+            context_provider = getattr(type(adapter), "agent_context", None)
+            if callable(context_provider):
+                provided_context = context_provider(adapter, scenario_doc)
+                if not isinstance(provided_context, Mapping):
+                    raise TypeError("environment agent context must be a mapping")
+                runtime_context = dict(provided_context)
         except Exception as exc:
             reporter.emit(
                 "scenario_provision_failed", state="failed",
@@ -769,6 +829,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             mission = load_mission(
                 scenario_path, gateway=gateway_url, policy_path=policy_path,
                 agent_instructions=agent_instructions,
+                runtime_context=runtime_context,
             )
 
             def report(record: dict) -> None:
@@ -794,13 +855,6 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             try:
                 reporter.change_state("running_agent")
                 reporter.emit("agent_started", state="running_agent")
-                selected_adapter = load_agent_adapter(
-                    getattr(args, "agent", "internal"),
-                    command=getattr(args, "external_command", None),
-                    agent_version=args.agent_version,
-                    provider=args.provider,
-                    model=args.model,
-                )
                 with _hide_sequence_environment():
                     outcome = run_episode(
                         mission, gateway_url, max_steps,
@@ -814,7 +868,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                         action_registry=action_registry,
                         scenario=args.scenario,
                         goal=scenario_doc.get("goal", {}),
-                        adapter=selected_adapter,
+                        default_headers=runtime_context.get("headers", {}),
                     )
             except KeyboardInterrupt:
                 interrupted = True

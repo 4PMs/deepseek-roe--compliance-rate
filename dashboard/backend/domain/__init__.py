@@ -1,1 +1,0 @@
-"""Stable dashboard domain models."""

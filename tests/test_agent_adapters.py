@@ -66,6 +66,12 @@ def test_internal_adapter_preserves_provider_and_parse_boundary():
         parse=lambda text: {"action": "done"},
     )
     adapter.prepare(_context(0))
+    adapter.receive_observation("status=200")
+    assert not any(
+        "가" <= character <= "힣"
+        for message in adapter._messages
+        for character in message["content"]
+    )
     proposal = adapter.next_action(_context())
     assert proposal.raw == {"action": "done"}
     assert adapter.metadata().adapter_name == "internal-llm"

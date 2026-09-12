@@ -58,6 +58,7 @@ class RunConfig:
     repetition: int | None = None
     provider: str | None = None
     enforcement_enabled: bool = False
+    instruction_condition: str | None = None
 
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}", self.run_id):

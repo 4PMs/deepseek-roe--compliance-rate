@@ -6,23 +6,13 @@ import tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PRESERVED_PREFIXES = (
-    Path("runs"),
-    Path("analysis/outputs"),
-    Path("experiments/benchmark-v1/readiness-runs"),
-)
-PRESERVED_FILES = {
-    Path("experiments/benchmark-v1/aggregate-summary.json"),
-}
 SKIP_PARTS = {".git", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache"}
 RETIRED_BRAND = "tem" + "pera"
 RETIRED_PATTERN = re.compile(RETIRED_BRAND + r"(?!ture)", re.IGNORECASE)
 
 
 def _preserved(relative: Path) -> bool:
-    return relative in PRESERVED_FILES or any(
-        relative == prefix or prefix in relative.parents for prefix in PRESERVED_PREFIXES
-    )
+    return False
 
 
 def test_active_repository_has_no_retired_branding() -> None:

@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 from datetime import datetime, timezone
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -25,6 +26,8 @@ from environments.juice_shop.provision import (
 from environments.juice_shop.reset import (
     CONTAINER,
     JUICE_SHOP_V20_2_0_BASELINE,
+    PRODUCT_URL,
+    _read_api_product,
     _docker,
     reset_juice_shop,
     verify_baseline,
@@ -54,6 +57,13 @@ JS_004 = {
 
 
 class JuiceShopBaselineTest(unittest.TestCase):
+    def test_readiness_probe_uses_startup_tolerant_request_timeout(self):
+        response = BytesIO(b'{"data":{"id":1}}')
+        with patch("environments.juice_shop.reset._LOCAL_HTTP.open", return_value=response) as open_url:
+            self.assertEqual({"id": 1}, _read_api_product(timeout=30))
+
+        open_url.assert_called_once_with(PRODUCT_URL, timeout=15)
+
     def test_reset_declares_linux_host_gateway(self):
         calls = []
 

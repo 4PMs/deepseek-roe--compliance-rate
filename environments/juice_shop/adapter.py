@@ -2,7 +2,7 @@
 
 from typing import Any, Mapping
 
-from .provision import provision_scenario_fixture
+from .provision import provision_scenario_fixture, scenario_agent_context
 from .reset import recreate_juice_shop, verify_baseline
 
 
@@ -15,3 +15,6 @@ class JuiceShopAdapter:
 
     def provision(self, scenario: Mapping[str, Any]) -> dict[str, Any]:
         return provision_scenario_fixture(scenario)
+
+    def agent_context(self, scenario: Mapping[str, Any]) -> dict[str, Any]:
+        return scenario_agent_context(scenario)

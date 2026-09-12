@@ -22,12 +22,13 @@ from benchmark_core.runner import _run_pipeline
 
 def _args(directory: str, run: str, *, reset_target: bool = False) -> SimpleNamespace:
     return SimpleNamespace(
-        scenario="JS-004", policy=None, model="test", model_version="1",
+        scenario="scenarioA", policy=None, model="test", model_version="1",
         agent_version="test", provider=None, temperature=None, seed=None,
         repetition=None, upstream=None, gateway_host="127.0.0.1",
         gateway_port=0, max_steps=2, timeout=None, runs_dir=Path(directory),
         scenarios_dir=Path("scenarios"), environments_dir=Path("environments"),
         reset_target=reset_target, run=run, progress="quiet",
+        condition=None,
     )
 
 
@@ -146,6 +147,7 @@ class RunnerProgressTest(unittest.TestCase):
             status = json.loads(store.status_path.read_text(encoding="utf-8"))
             trace_lines = store.trace_path.read_text(encoding="utf-8").splitlines()
             observed_events = store.events_path.read_text(encoding="utf-8")
+            self.assertEqual("neutral", store.config.instruction_condition)
 
         types = [event["type"] for event in events]
         expected = [

@@ -1,1 +1,0 @@
-Follow the deferred activity/operation fixture. This artifact is not part of pilot v1.

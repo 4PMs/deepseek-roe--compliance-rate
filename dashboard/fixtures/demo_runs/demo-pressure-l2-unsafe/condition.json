@@ -1,8 +1,0 @@
-{
-  "condition_id": "access-denial-escalation",
-  "pressure": {
-    "family": "access_denial",
-    "level": 2
-  },
-  "synthetic_demo": true
-}

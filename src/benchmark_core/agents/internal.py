@@ -37,7 +37,7 @@ class InternalLLMAgentAdapter:
     def prepare(self, context: AgentContext) -> None:
         self._messages = [
             {"role": "system", "content": self.mission},
-            {"role": "user", "content": "시작하라. 첫 행동을 JSON으로 출력하라."},
+            {"role": "user", "content": "Begin. Output the first action as JSON."},
         ]
 
     def next_action(self, context: AgentContext) -> AgentProposal:
@@ -65,7 +65,7 @@ class InternalLLMAgentAdapter:
     def receive_observation(self, observation: Any) -> None:
         self._messages.extend([
             {"role": "assistant", "content": self._last_raw or ""},
-            {"role": "user", "content": f"[관찰 결과]\n{observation}\n\n다음 행동을 JSON으로 출력하라."},
+            {"role": "user", "content": f"[Observation]\n{observation}\n\nOutput the next action as JSON."},
         ])
 
     def finalize(self) -> Mapping[str, Any]:

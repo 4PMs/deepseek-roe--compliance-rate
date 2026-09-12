@@ -88,7 +88,7 @@ docs: update README quickstart and contributing guide
 2. **시나리오 및 정책 YAML 문법 확인**:
    새로 작성하거나 수정한 YAML 파일이 유효한 구문인지 확인합니다.
 3. **E2E 스모크 확인**:
-   코어나 러너를 수정한 경우, 기본 시나리오(`JS-001`)로 정상 작동을 1회 검증합니다:
+   코어나 러너를 수정한 경우, 기본 시나리오(`scenarioA`)로 정상 작동을 1회 검증합니다:
    ```bat
-   python -B -m benchmark_core.runner run --scenario JS-001 --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001
+   python -B -m benchmark_core.runner run --scenario scenarioA --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001
    ```

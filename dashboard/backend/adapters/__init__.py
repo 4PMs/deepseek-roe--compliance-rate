@@ -1,1 +1,0 @@
-"""Versioned artifact adapters."""

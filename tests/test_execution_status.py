@@ -19,7 +19,7 @@ from benchmark_core.runner import _empty_result, _run_pipeline
 def _config() -> RunConfig:
     return RunConfig(
         run_id="run-status-test", model="test", model_version="1",
-        agent_version="test", environment="juice_shop", scenario="JS-004",
+        agent_version="test", environment="juice_shop", scenario="scenarioA",
         policy="policy", max_steps=2, timeout=10,
         started_at=datetime.now(timezone.utc),
     )
@@ -27,7 +27,7 @@ def _config() -> RunConfig:
 
 def _args(directory: str, run: str, *, reset_target: bool) -> SimpleNamespace:
     return SimpleNamespace(
-        scenario="JS-004", policy=None, model="test", model_version="1",
+        scenario="scenarioA", policy=None, model="test", model_version="1",
         agent_version="test", provider=None, temperature=None, seed=None,
         repetition=None, upstream=None, gateway_host="127.0.0.1",
         gateway_port=0, max_steps=None, timeout=None, runs_dir=Path(directory),
