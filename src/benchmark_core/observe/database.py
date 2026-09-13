@@ -62,6 +62,12 @@ class DatabaseObserver(Observer):
         affected_rows = observation.facts.get("affected_rows")
         if isinstance(affected_rows, int) and affected_rows >= 0:
             attributes["affected_rows"] = affected_rows
+        action_id = observation.facts.get("action_id")
+        if isinstance(action_id, str) and action_id:
+            attributes["action_id"] = action_id
+        correlation_status = observation.facts.get("correlation_status")
+        if correlation_status in {"observed", "missing", "ambiguous"}:
+            attributes["correlation_status"] = correlation_status
         return Event(
             schema_version="0.2",
             run_id=run_id,
@@ -94,7 +100,7 @@ class DatabaseEventCollector:
         self._thread = Thread(target=self._receive, daemon=True)
         self._started = False
         self._observer = DatabaseObserver()
-        self._windows: list[list[datetime | None]] = []
+        self._windows: list[list[Any]] = []
         self._windows_lock = Lock()
 
     def __enter__(self) -> "DatabaseEventCollector":
@@ -119,8 +125,8 @@ class DatabaseEventCollector:
         self._socket.close()
 
     @contextmanager
-    def request_scope(self):
-        window: list[datetime | None] = [datetime.now(timezone.utc), None]
+    def request_scope(self, action_id: str | None):
+        window: list[Any] = [datetime.now(timezone.utc), None, action_id]
         with self._windows_lock:
             self._windows.append(window)
         try:
@@ -128,14 +134,21 @@ class DatabaseEventCollector:
         finally:
             window[1] = datetime.now(timezone.utc)
 
-    def _within_request_window(self, timestamp: datetime, received_at: datetime) -> bool:
+    def _correlate(
+        self, timestamp: datetime, received_at: datetime,
+    ) -> tuple[str | None, str]:
         grace = timedelta(milliseconds=250)
         with self._windows_lock:
-            return any(
-                start is not None and start <= timestamp
+            matches = [
+                action_id for start, end, action_id in self._windows
+                if start is not None and start <= timestamp
                 and timestamp <= (end or received_at) + grace
-                for start, end in self._windows
-            )
+            ]
+        if len(matches) == 1 and isinstance(matches[0], str) and matches[0]:
+            return matches[0], "observed"
+        if len(matches) > 1:
+            return None, "ambiguous"
+        return None, "missing"
 
     def _receive(self) -> None:
         while not self._stopped.is_set():
@@ -151,8 +164,10 @@ class DatabaseEventCollector:
                     str(document["timestamp"]).replace("Z", "+00:00")
                 )
                 received_at = datetime.now(timezone.utc)
-                if (abs(received_at - timestamp) > timedelta(milliseconds=250)
-                        or not self._within_request_window(timestamp, received_at)):
+                if abs(received_at - timestamp) > timedelta(milliseconds=250):
+                    continue
+                action_id, correlation_status = self._correlate(timestamp, received_at)
+                if correlation_status == "missing":
                     continue
                 event = self._observer.normalize(
                     self.run_id,
@@ -163,7 +178,11 @@ class DatabaseEventCollector:
                         kind="database",
                         action="query",
                         target="sqlite",
-                        facts={"sql": document["sql"]},
+                        facts={
+                            "sql": document["sql"],
+                            "action_id": action_id,
+                            "correlation_status": correlation_status,
+                        },
                     ),
                     seq=int(document["seq"]),
                 )

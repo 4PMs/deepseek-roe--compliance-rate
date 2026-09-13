@@ -78,3 +78,14 @@ def test_synchronous_gateway_observation_before_runner_execution_is_valid():
     ]
 
     validate_lifecycle(records)
+
+
+def test_lifecycle_correlation_uses_action_id_while_streams_keep_their_sequences():
+    records = [
+        {"run_id": "run-1", "seq": 3, "action_id": "action-4", "stage": "proposed"},
+        {"run_id": "run-1", "seq": 3, "action_id": "action-4", "stage": "policy_decision"},
+        {"run_id": "run-1", "seq": 610, "action_id": "action-4", "stage": "observed"},
+        {"run_id": "run-1", "seq": 3, "action_id": "action-4", "stage": "executed"},
+    ]
+
+    validate_lifecycle(records, expected_run_id="run-1")

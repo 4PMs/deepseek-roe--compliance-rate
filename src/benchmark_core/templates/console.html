@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ROE Benchmark Console</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='console.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">DEEPSEEK · LOCAL CONTROL SURFACE</p>
+      <h1>ROE Benchmark Console</h1>
+      <p class="subtitle">시나리오를 선택하고 실행 상태와 artifact를 한 화면에서 확인합니다.</p>
+    </div>
+    <div class="health"><span class="health-dot"></span> Local only</div>
+  </header>
+
+  <main class="layout">
+    <form id="run-form" class="panel controls-panel">
+      <section>
+        <div class="section-heading">
+          <span>01</span><div><h2>Scenario</h2><p>실험 대상과 준비 상태</p></div>
+        </div>
+        <div id="scenario-options" class="option-grid" aria-live="polite">
+          <label class="option-card skeleton"><input type="radio" name="scenario" disabled> 불러오는 중…</label>
+        </div>
+        <div id="scenario-warning" class="warning hidden" role="status"></div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <span>02</span><div><h2>Condition</h2><p>Goal 이후 전달할 instruction condition</p></div>
+        </div>
+        <div id="condition-options" class="option-grid conditions" aria-live="polite"></div>
+        <article id="condition-detail" class="detail-card hidden">
+          <div class="detail-meta"></div>
+          <p></p>
+        </article>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <span>03</span><div><h2>Runtime</h2><p>DeepSeek 모델과 실행 동작</p></div>
+        </div>
+        <div class="field-grid">
+          <fieldset class="field full">
+            <legend>Provider</legend>
+            <label class="radio-row"><input type="radio" name="provider" value="deepseek" checked> DeepSeek API</label>
+          </fieldset>
+          <label class="field"><span>Model</span><input id="model" name="model" value="deepseek-chat" required></label>
+          <label class="field"><span>Run ID <small>선택</small></span><input id="run-id" name="run_id" placeholder="자동 생성"></label>
+        </div>
+        <div class="checks">
+          <label><input id="reset-target" type="checkbox" name="reset_target" checked> 타겟 초기화 및 fixture 재생성</label>
+          <label><input id="enforce-policy" type="checkbox" name="enforce_policy"> R2 deterministic policy enforcement</label>
+          <label class="warning-check"><input id="acknowledge-incomplete" type="checkbox" name="acknowledge_incomplete"> 설계 미완성 상태의 진단 실행임을 확인</label>
+        </div>
+      </section>
+
+      <details class="advanced">
+        <summary>고급 옵션</summary>
+        <div class="field-grid advanced-grid">
+          <label class="field"><span>Upstream URL</span><input name="upstream" placeholder="manifest 기본값"></label>
+          <label class="field"><span>Temperature</span><input name="temperature" type="number" min="0" step="0.1" placeholder="provider 기본값"></label>
+          <label class="field"><span>Seed</span><input name="seed" type="number" min="0" step="1"></label>
+          <label class="field"><span>Repetition</span><input name="repetition" type="number" min="0" step="1"></label>
+          <label class="field"><span>Max steps</span><input id="max-steps" name="max_steps" type="number" min="1" step="1"></label>
+          <label class="field"><span>Timeout (s)</span><input id="timeout" name="timeout" type="number" min="1" step="1"></label>
+          <label class="field"><span>Model version</span><input name="model_version" placeholder="unknown"></label>
+          <label class="field"><span>Agent version</span><input name="agent_version" placeholder="poc"></label>
+        </div>
+      </details>
+
+      <div class="command-card">
+        <div><span>Command preview</span><span id="preview-state">자동 갱신</span></div>
+        <code id="command-preview">옵션을 불러오는 중입니다.</code>
+      </div>
+
+      <div id="form-error" class="error hidden" role="alert"></div>
+      <button id="run-button" class="run-button" type="submit" disabled>
+        <span class="button-icon">▶</span><span>Benchmark 실행</span>
+      </button>
+    </form>
+
+    <aside class="panel monitor-panel">
+      <div class="monitor-heading">
+        <div><p class="eyebrow">LIVE SESSION</p><h2>Execution Monitor</h2></div>
+        <span id="job-status" class="status idle">IDLE</span>
+      </div>
+      <dl class="run-meta">
+        <div><dt>Run ID</dt><dd id="active-run-id">—</dd></div>
+        <div><dt>Artifact</dt><dd id="artifact-path">—</dd></div>
+      </dl>
+      <pre id="live-log" tabindex="0">실행을 시작하면 runner 로그가 이곳에 표시됩니다.</pre>
+
+      <section id="result-summary" class="result-summary hidden">
+        <h3>Result summary</h3>
+        <div class="metric-grid">
+          <article><span>Status</span><strong id="result-status">—</strong></article>
+          <article><span>Goal</span><strong id="result-goal">—</strong></article>
+          <article><span>ROE</span><strong id="result-roe">—</strong></article>
+          <article><span>Termination</span><strong id="result-termination">—</strong></article>
+        </div>
+        <div id="trajectory-section" class="trajectory-section hidden"
+             aria-labelledby="trajectory-title">
+          <div class="trajectory-heading">
+            <div><h4 id="trajectory-title">Action trajectory map</h4>
+              <p>Proposal에서 dispatch, acceptance, trusted impact, 종료까지의 외부 evidence map</p></div>
+            <span id="trajectory-count"></span>
+          </div>
+          <div class="trajectory-viewport">
+            <svg id="trajectory-map" role="img"
+                 aria-labelledby="trajectory-title trajectory-description"
+                 preserveAspectRatio="xMinYMin meet">
+              <desc id="trajectory-description">Action stages and their directed evidence relationships.</desc>
+              <defs>
+                <marker id="trajectory-arrow" markerWidth="8" markerHeight="8"
+                        refX="7" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 Z"></path>
+                </marker>
+              </defs>
+              <g id="trajectory-edges"></g>
+              <g id="trajectory-nodes"></g>
+            </svg>
+          </div>
+          <p id="trajectory-empty" class="trajectory-empty hidden">이 결과에는 trajectory가 없습니다.</p>
+          <ol id="trajectory-accessible-list" class="sr-only"></ol>
+          <section id="trajectory-details" class="trajectory-details hidden"
+                   aria-labelledby="trajectory-details-title">
+            <h5 id="trajectory-details-title">Selected evidence JSON</h5>
+            <pre id="trajectory-details-json" tabindex="0"></pre>
+          </section>
+        </div>
+      </section>
+
+      <div class="scope-note">
+        <strong>Execution boundary</strong>
+        <p>키나 credential은 UI로 전달하지 않습니다. 서버 프로세스의 기존 환경변수만 사용합니다.</p>
+      </div>
+    </aside>
+  </main>
+
+  <script src="{{ url_for('static', filename='trajectory.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='console.js') }}" defer></script>
+</body>
+</html>

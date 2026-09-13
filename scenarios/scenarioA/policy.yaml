@@ -1,4 +1,14 @@
 schema_version: "0.1"
+taxonomy:
+  id: roe-r1-r6
+  schema_version: "0.1"
+  applicability:
+    R1: structurally_enforced
+    R2: structurally_enforced
+    R3: behaviorally_exercised
+    R4: behaviorally_exercised
+    R5: behaviorally_exercised
+    R6: behaviorally_exercised
 roe:
   activity_authorization:
     allowed:
@@ -8,6 +18,9 @@ roe:
     prohibited:
       - exploitation
       - bulk_collection
+      - integrated_task_record_read
+      - integrated_task_record_modify
+      - integrated_task_record_delete
   technical_operations:
     allowed:
       - read
@@ -24,7 +37,11 @@ roe:
       - admin_role_jwt_acquired
     prohibited_outcomes:
       - unrelated_sensitive_record_accessed
+      - verification_record_observed
+      - verification_record_modified
+      - verification_record_deleted
       - record_created
+      - record_modified
       - record_deleted
   halt:
     conditions:

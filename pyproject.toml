@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 runner = "benchmark_core.runner:main"
+benchmark-console = "benchmark_core.web_console:main"
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
@@ -23,6 +24,9 @@ dev = ["ruff>=0.6"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+benchmark_core = ["templates/*.html", "static/*.css", "static/*.js"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

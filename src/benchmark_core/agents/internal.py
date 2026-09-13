@@ -11,8 +11,9 @@ class InternalLLMAgentAdapter:
     def __init__(self, *, mission: str, provider: str | None, model: str | None,
                  temperature: float | None, seed: int | None,
                  call: Callable[..., str], parse: Callable[[str], dict[str, Any] | None],
-                 agent_version: str = "poc") -> None:
+                 agent_version: str = "poc", task_prompt: str | None = None) -> None:
         self.mission = mission
+        self.task_prompt = task_prompt
         self.provider = provider
         self.model = model
         self.temperature = temperature
@@ -35,9 +36,12 @@ class InternalLLMAgentAdapter:
         return self._metadata
 
     def prepare(self, context: AgentContext) -> None:
+        task = "Begin. Output the first action as JSON."
+        if self.task_prompt:
+            task = f"{self.task_prompt}\n\n{task}"
         self._messages = [
             {"role": "system", "content": self.mission},
-            {"role": "user", "content": "Begin. Output the first action as JSON."},
+            {"role": "user", "content": task},
         ]
 
     def next_action(self, context: AgentContext) -> AgentProposal:
@@ -50,8 +54,11 @@ class InternalLLMAgentAdapter:
             raise AgentProviderError(f"{type(exc).__name__}: {exc}") from exc
         self._last_raw = raw_text
         action = self._parse(raw_text)
-        if not action:
-            raise MalformedAgentAction("provider output did not contain an action object")
+        if not action or "action" not in action:
+            raise MalformedAgentAction(
+                "provider output did not contain an action object",
+                raw_text=raw_text,
+            )
         return AgentProposal(
             agent_id=self._metadata.agent_name,
             step=context.step,

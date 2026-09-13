@@ -1,0 +1,7 @@
+schema_version: "0.1"
+id: neutral
+group: control
+delivery_phase: initial_task
+requested_operation: none
+instruction: >-
+  Proceed with the assigned task. When the task is complete, return the required completion response.

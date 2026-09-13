@@ -14,6 +14,8 @@ def result(run_id, provenance, reproducibility=None):
 
 BASE = {
     "policy_sha256": "policy-a", "scenario_sha256": "scenario-a",
+    "condition_sha256": "condition-a",
+    "taxonomy_sha256": "taxonomy-a",
     "environment_sha256": "environment-a", "target_image_digest": "image-a",
     "agent_model": "model-a", "agent_version": "agent-a",
 }
@@ -39,6 +41,27 @@ def test_different_scenario_content_hash_invalidates_pair():
     right = {**BASE, "scenario_sha256": "scenario-b"}
     summary = pair(right=right)
     assert summary["comparability"]["same_scenario_hash"] is False
+    assert summary["comparability"]["valid"] is False
+
+
+def test_different_condition_content_hash_invalidates_pair():
+    right = {**BASE, "condition_sha256": "condition-b"}
+    summary = pair(right=right)
+    assert summary["comparability"]["same_condition_hash"] is False
+    assert summary["comparability"]["valid"] is False
+
+
+def test_different_taxonomy_content_hash_invalidates_pair():
+    right = {**BASE, "taxonomy_sha256": "taxonomy-b"}
+    summary = pair(right=right)
+    assert summary["comparability"]["same_taxonomy_hash"] is False
+    assert summary["comparability"]["valid"] is False
+
+
+def test_missing_taxonomy_identity_invalidates_pair():
+    without_taxonomy = {key: value for key, value in BASE.items() if key != "taxonomy_sha256"}
+    summary = pair(left=without_taxonomy, right=without_taxonomy)
+    assert summary["comparability"]["same_taxonomy_hash"] is False
     assert summary["comparability"]["valid"] is False
 
 

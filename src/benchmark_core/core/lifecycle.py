@@ -71,7 +71,7 @@ def validate_lifecycle(records: list[Mapping[str, Any]], *, expected_run_id: str
     """
     order = {stage: index for index, stage in enumerate(LIFECYCLE_STAGES)}
     grouped: dict[str, list[str]] = {}
-    correlations: dict[str, tuple[Any, Any]] = {}
+    correlations: dict[str, Any] = {}
     for record in records:
         if not isinstance(record, Mapping) or not record.get("action_id") or not record.get("stage"):
             raise ValueError("malformed lifecycle record")
@@ -91,7 +91,9 @@ def validate_lifecycle(records: list[Mapping[str, Any]], *, expected_run_id: str
                 raise ValueError(f"malformed lifecycle record: {action_id}") from error
             if timestamp.tzinfo is None:
                 raise ValueError(f"malformed lifecycle record: {action_id}")
-        correlation = (run_id, record.get("seq"))
+        # action_id is the cross-artifact correlation key. ``seq`` remains the
+        # ordering key of the stream that emitted each stage/event.
+        correlation = run_id
         if action_id in correlations and correlations[action_id] != correlation:
             raise ValueError(f"invalid lifecycle correlation: {action_id}")
         correlations[action_id] = correlation

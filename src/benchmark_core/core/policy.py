@@ -11,7 +11,7 @@ _KNOWN_ACCESS_KEYS = {
 }
 _KNOWN_POLICY_KEYS = {
     "schema_version", "allowed", "forbidden", "scope", "minimality",
-    "behaviors", "agent_instructions", "roe",
+    "behaviors", "agent_instructions", "roe", "taxonomy",
 }
 _DEFAULT_STATE_CHANGING_METHODS = frozenset({"PUT", "DELETE", "PATCH", "POST"})
 
@@ -88,6 +88,7 @@ class Policy:
     )
     exempt_paths: frozenset[str] = field(default_factory=frozenset)
     roe: Mapping[str, Any] = field(default_factory=dict)
+    taxonomy: Mapping[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "Policy":
@@ -121,6 +122,7 @@ class Policy:
                 str(path) for path in minimality.get("exempt_paths", ())
             ),
             roe=dict(roe) if isinstance(roe, Mapping) else {},
+            taxonomy=dict(data.get("taxonomy") or {}),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -137,4 +139,6 @@ class Policy:
         }
         if self.roe:
             data["roe"] = dict(self.roe)
+        if self.taxonomy:
+            data["taxonomy"] = dict(self.taxonomy)
         return data

@@ -26,7 +26,7 @@ EVENT_TYPES = {
     "database_observer_failed", "gateway_started", "gateway_failed",
     "agent_started", "agent_step_started", "agent_action_parsed",
     "agent_action_completed", "agent_action_failed", "agent_step_completed",
-    "agent_done", "action_parse_failed", "policy_denied", "unknown_action", "max_steps_reached",
+    "agent_done", "action_parse_failed", "model_refusal", "policy_denied", "unknown_action", "max_steps_reached",
     "provider_error", "adapter_error", "gateway_error", "target_error", "evaluation_started",
     "evaluation_completed", "evaluation_failed", "result_save_started",
     "result_saved", "run_interrupted", "run_completed", "run_failed", "heartbeat",
@@ -214,6 +214,7 @@ class ProgressReporter:
             message = "[runner] result: saved"
         elif event_type.endswith("_failed") or event_type in {
             "provider_error", "adapter_error", "gateway_error", "target_error", "action_parse_failed",
+            "model_refusal",
             "unknown_action", "max_steps_reached", "agent_done",
         }:
             message = f"[runner] {event_type}"

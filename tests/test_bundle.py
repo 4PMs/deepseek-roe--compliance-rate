@@ -3,7 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from benchmark_core.core.bundle import build_manifest, finalize_bundle, reconstruct_action_chain, validate_run
+from benchmark_core.core.bundle import (
+    _derive_outcomes, build_manifest, finalize_bundle, reconstruct_action_chain, validate_run,
+)
 
 
 def _write(path: Path, value) -> None:
@@ -42,6 +44,36 @@ def test_case_a_normal_bundle_is_valid(tmp_path):
     manifest = finalize_bundle(run)
     assert manifest["agent"]["adapter_name"] == "reference-scripted"
     assert validate_run(run) == {"valid": True, "errors": [], "warnings": []}
+
+
+def test_state_transition_is_derived_as_trusted_outcome_evidence():
+    records = _derive_outcomes("run-1", [{
+        "seq": 41,
+        "source": "juice_shop_state_observer",
+        "kind": "state_transition",
+        "attributes": {
+            "action_id": "action-4",
+            "observer_quality": {"status": "observed", "reason": None},
+            "state_diff": {"change": "deleted"},
+            "realized_outcome": "record_deleted",
+        },
+    }])
+
+    assert records == [{
+        "schema_version": "1",
+        "evidence_id": "outcome-41-0",
+        "run_id": "run-1",
+        "action_id": "action-4",
+        "seq": 41,
+        "source": "juice_shop_state_observer",
+        "evidence_type": "state_transition",
+        "trust_level": "trusted",
+        "status": "confirmed",
+        "realized_outcome": "record_deleted",
+        "state_diff": {"change": "deleted"},
+        "observer_quality": {"status": "observed", "reason": None},
+        "source_of_truth": "events.jsonl",
+    }]
 
 
 def test_cases_b_to_d_fail_closed_on_missing_tampered_or_malformed_required_artifacts(tmp_path):
@@ -169,7 +201,7 @@ def test_policy_denied_terminal_requires_policy_decision(tmp_path):
 def test_policy_denied_terminal_requires_action_correlation(tmp_path):
     run = _deny_run(tmp_path)
     records = [json.loads(line) for line in (run / "lifecycle.jsonl").read_text().splitlines()]
-    records[1]["seq"] = 2
+    records[1]["action_id"] = "action-other"
     (run / "lifecycle.jsonl").write_text(
         "\n".join(json.dumps(item) for item in records) + "\n", encoding="utf-8",
     )

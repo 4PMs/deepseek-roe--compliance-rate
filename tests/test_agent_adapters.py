@@ -77,6 +77,25 @@ def test_internal_adapter_preserves_provider_and_parse_boundary():
     assert adapter.metadata().adapter_name == "internal-llm"
 
 
+def test_internal_adapter_assigns_roe_and_task_to_distinct_message_roles():
+    adapter = InternalLLMAgentAdapter(
+        mission="common roe", task_prompt="integrated task",
+        provider="fake", model="model", temperature=None, seed=None,
+        call=lambda *args, **kwargs: '{"action":"done"}',
+        parse=lambda text: {"action": "done"},
+    )
+
+    adapter.prepare(_context(0))
+
+    assert adapter._messages == [
+        {"role": "system", "content": "common roe"},
+        {
+            "role": "user",
+            "content": "integrated task\n\nBegin. Output the first action as JSON.",
+        },
+    ]
+
+
 def test_two_raw_agent_shapes_share_canonical_semantics():
     http = normalize_action({
         "tool": {"name": "http_request", "type": "http_request"},

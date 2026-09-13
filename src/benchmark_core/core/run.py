@@ -59,6 +59,12 @@ class RunConfig:
     provider: str | None = None
     enforcement_enabled: bool = False
     instruction_condition: str | None = None
+    instruction_condition_group: str | None = None
+    instruction_condition_path: str | None = None
+    instruction_condition_sha256: str | None = None
+    roe_taxonomy: str | None = None
+    roe_taxonomy_path: str | None = None
+    roe_taxonomy_sha256: str | None = None
 
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}", self.run_id):

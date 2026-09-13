@@ -5,6 +5,7 @@ target:
   # Host-published runtime endpoint for local runs. Evaluation maps this alias
   # to base_url while retaining it under event.attributes.runtime.
   runtime_aliases: [http://127.0.0.1:3001, http://localhost:3001]
+default_upstream: http://127.0.0.1:3001
 tls:
   mode: passthrough
   verify: true

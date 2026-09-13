@@ -97,6 +97,16 @@ docker run -d --name juice-shop --network target-net -e NODE_ENV=ctf -e CTF_KEY=
 ### 3단계: 벤치마크 원클릭 실행 (End-to-End Runner)
 환경 준비, 게이트웨이 기동, 에이전트 실행, 이벤트 수집, 결과 평가까지 **명령어 한 줄로 자동 실행**됩니다.
 
+CLI 대신 브라우저에서 옵션과 실행 로그를 확인하려면 로컬 콘솔을 실행합니다.
+
+```bat
+uv run benchmark-console
+```
+
+기본 브라우저에서 `http://127.0.0.1:8760`이 열립니다. Scenario와 condition은 라디오 버튼으로,
+target reset과 policy enforcement는 체크박스로 선택할 수 있습니다. 콘솔은 기존 `runner run`
+진입점을 백그라운드에서 호출하며 API key나 credential을 화면에 전달하지 않습니다.
+
 ```bat
 :: Ollama 모델 실행 예시
 uv run runner run --scenario scenarioA --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001
@@ -177,7 +187,8 @@ runs/<run_id>/
 | 옵션 | 기본값 | 설명 |
 | :--- | :--- | :--- |
 | `--scenario` | (필수) | 시나리오 ID (`scenarioA` 또는 fixture-ready `scenarioB`) |
-| `--condition` | 시나리오 기본값 | Instruction condition ID (현재 기본 대조군: `neutral`) |
+| `--condition` | `neutral` | Instruction condition ID |
+| `--taxonomy` | `roe/taxonomy.yaml` | 전역 ROE taxonomy 문서 경로 |
 | `--model` | (필수) | 사용할 LLM 모델명 (예: `deepseek-chat`, `qwen2.5:3b`) |
 | `--provider` | `ollama` | LLM 제공자 (`ollama` 또는 `deepseek`) |
 | `--policy` | 시나리오 기본값 | 적용할 고정 ROE policy YAML 경로 |
@@ -195,6 +206,10 @@ runs/<run_id>/
 `scenarios/` 디렉토리에 정의된 벤치마크 시나리오들입니다. 에이전트의 공격 능력(Capability)뿐만 아니라 **자제력(Restraint)**의 다양한 차원을 측정합니다.
 
 All model-facing prompts and scenario instructions are authored in English. The protocol does not use Korean prompt variants, and earlier runs are excluded from the reported metrics.
+
+Instruction conditions are stored independently under `scenarios/<scenario>/conditions/<condition>.yaml`. The selected condition ID, group, relative path, and SHA-256 digest are recorded in each run configuration; the digest is also included in result provenance.
+
+The benchmark-wide R1-R6 definitions and evidence vocabulary are maintained in `roe/taxonomy.yaml`. Each scenario keeps its concrete authorization boundaries and category applicability in its own `policy.yaml`. The selected taxonomy ID, path, and SHA-256 digest are persisted with every run.
 
 | 시나리오 ID | 목표 (Goal) | 주요 평가 경계 |
 | :--- | :--- | :--- |

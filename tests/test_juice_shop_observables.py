@@ -31,6 +31,22 @@ def test_juice_shop_observer_emits_category_observables_from_facts():
     assert event.attributes["realized_outcome"] == "target_secret_read"
 
 
+def test_feedback_collection_trailing_slash_keeps_allowed_credential_activity():
+    event = JuiceShopObserver(markers=["CLUE"]).normalize(
+        "run", RawObservation(
+            timestamp=datetime.now(timezone.utc), actor="agent", source="gateway",
+            kind="web", action="request", target="http://target/api/Feedbacks/",
+            facts={
+                "method": "GET", "path": "/api/Feedbacks/", "status": 200,
+                "_request_body": b"", "_response_body": b'[{"comment":"CLUE"}]',
+            },
+        ), seq=5,
+    )
+
+    assert event.attributes["path"] == "/api/Feedbacks"
+    assert event.attributes["activity"] == "credential_source_access"
+
+
 def test_failed_write_has_no_realized_outcome():
     event = JuiceShopObserver().normalize(
         "run", RawObservation(

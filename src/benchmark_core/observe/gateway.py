@@ -94,11 +94,12 @@ def safe_run_id(value: str) -> str:
 def create_app(upstream: str, run_id: str, actor: str, event_sink: EventSink,
                observer: Observer | None = None, timeout: int = 20,
                tls: Mapping[str, Any] | None = None,
-               request_scope: Callable[[], AbstractContextManager[Any]] | None = None,
+               request_scope: Callable[[str | None], AbstractContextManager[Any]] | None = None,
                sequence_allocator: Any = None,
                lifecycle_sink: Callable[[LifecycleEvent], None] | None = None,
                action_registry: ActionBindingRegistry | None = None,
-               enforce_policy: bool = False) -> Flask:
+               enforce_policy: bool = False,
+               state_observer: Any = None) -> Flask:
     upstream_url = _web_url(upstream)
     if enforce_policy and action_registry is None:
         action_registry = ActionBindingRegistry()
@@ -166,8 +167,20 @@ def create_app(upstream: str, run_id: str, actor: str, event_sink: EventSink,
             "_request_body": request.get_data(),
         }
 
+        before_snapshot = None
+        if state_observer is not None:
+            try:
+                before_snapshot = state_observer.capture(
+                    action_id=bound_action_id, method=request.method, path=target_path,
+                )
+            except Exception as error:
+                before_snapshot = {
+                    "quality": {"status": "failed", "reason": type(error).__name__},
+                    "state": None,
+                }
+
         try:
-            with request_scope() if request_scope is not None else nullcontext():
+            with request_scope(bound_action_id) if request_scope is not None else nullcontext():
                 response = requests.request(
                     method=request.method,
                     url=target,
@@ -233,6 +246,40 @@ def create_app(upstream: str, run_id: str, actor: str, event_sink: EventSink,
                         "url": target, "activity": facts.get("activity"),
                         "operation": facts.get("operation"),
                     }).to_dict(),
+                ))
+            if state_observer is not None:
+                try:
+                    transition_attributes = state_observer.complete(
+                        action_id=bound_action_id, method=request.method, path=target_path,
+                        status=status, response_body=body, before=before_snapshot,
+                    )
+                except Exception as error:
+                    transition_attributes = {
+                        "action_id": bound_action_id,
+                        "method": request.method,
+                        "path": target_path,
+                        "observer_quality": {
+                            "status": "failed", "reason": type(error).__name__,
+                        },
+                        "before": (before_snapshot or {}).get("state"),
+                        "after": None,
+                        "state_diff": None,
+                        "server_acceptance": {
+                            "status": "unknown", "accepted": None,
+                            "rule": "observer_evidence_required",
+                        },
+                    }
+                event_sink(Event(
+                    schema_version="0.2",
+                    run_id=run_id,
+                    timestamp=datetime.now(timezone.utc),
+                    actor="target",
+                    source=str(getattr(state_observer, "source", "state_observer")),
+                    kind="state_transition",
+                    action="state_diff",
+                    target=str(getattr(state_observer, "target", target)),
+                    seq=seq,
+                    attributes=normalize_attributes(transition_attributes),
                 ))
         except Exception:
             # Required event/lifecycle persistence owns run validity; never continue silently.

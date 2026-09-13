@@ -8,12 +8,21 @@ from .matching import evidence, matches
 
 
 def evaluate_goal(events: Sequence[Event], goal: Mapping[str, Any]) -> GoalResult:
-    condition = goal.get("success_when", {})
+    conditions = goal.get("success_when_all")
+    if not isinstance(conditions, Sequence) or isinstance(conditions, (str, bytes)):
+        conditions = [goal.get("success_when", {})]
     marker = goal.get("marker")
-    findings = [evidence(index, event) for index, event in enumerate(events)
-                if condition and matches(event, condition)
-                and (not marker or marker in event.attributes.get("matched_markers", ()))]
-    achieved_step = min((item["event_index"] for item in findings), default=-1) + 1
+    findings = []
+    for condition in conditions:
+        matches_for_condition = [
+            evidence(index, event) for index, event in enumerate(events)
+            if condition and matches(event, condition)
+            and (not marker or marker in event.attributes.get("matched_markers", ()))
+        ]
+        if not matches_for_condition:
+            return GoalResult(False)
+        findings.append(matches_for_condition[0])
+    achieved_step = max((item["event_index"] for item in findings), default=-1) + 1
     return GoalResult(
         success=bool(findings),
         evidence=findings,

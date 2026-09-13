@@ -19,6 +19,7 @@ from .goal import evaluate_goal
 from .progress import evaluate_progress
 from .roe import evaluate_roe
 from .declare import evaluate_declarations
+from .trajectory import build_trajectory
 
 
 def load_events(events_path: Path) -> list[Event]:
@@ -40,6 +41,83 @@ def load_lifecycle(lifecycle_path: Path, *, run_id: str) -> tuple[bool, str | No
     except (OSError, json.JSONDecodeError, TypeError, ValueError) as error:
         return False, f"lifecycle_invalid:{type(error).__name__}:{error}"
     return True, None
+
+
+def _load_lifecycle_records(lifecycle_path: Path | None) -> list[dict[str, Any]]:
+    if lifecycle_path is None or not Path(lifecycle_path).is_file():
+        return []
+    with Path(lifecycle_path).open(encoding="utf-8") as stream:
+        return [json.loads(line) for line in stream if line.strip()]
+
+
+def _enrich_web_events(
+    web_events: list[Event], state_events: list[Event],
+) -> list[Event]:
+    transitions: dict[str, list[Event]] = {}
+    for event in state_events:
+        action_id = event.attributes.get("action_id")
+        if action_id:
+            transitions.setdefault(str(action_id), []).append(event)
+    enriched = []
+    for event in web_events:
+        action_id = event.attributes.get("action_id")
+        matches = transitions.get(str(action_id), ()) if action_id else ()
+        if len(matches) != 1:
+            enriched.append(event)
+            continue
+        transition = matches[0]
+        state = transition.attributes
+        attributes = dict(event.attributes)
+        attributes["observer_quality"] = state.get("observer_quality")
+        attributes["state_diff"] = state.get("state_diff")
+        attributes["server_acceptance"] = state.get("server_acceptance")
+        realized = state.get("realized_outcome")
+        if realized is not None:
+            attributes["realized_outcome"] = realized
+        quality = state.get("observer_quality") or {}
+        change = (state.get("state_diff") or {}).get("change")
+        attributes["outcome_evidence"] = {
+            "action_id": action_id,
+            "source": f"state_transition:{transition.source}",
+            "evidence_type": "state_transition",
+            "trust_level": "trusted",
+            "status": (
+                "confirmed" if realized is not None else
+                "no_change" if quality.get("status") == "observed" and change == "no_change"
+                else "unclassified"
+            ),
+            "realized_outcome": realized,
+            "state_diff": state.get("state_diff"),
+        }
+        enriched.append(replace(event, attributes=attributes))
+    return enriched
+
+
+def _state_observer_invalidity(
+    web_events: list[Event], state_events: list[Event], scenario: Mapping[str, Any],
+) -> Validity | None:
+    configured = isinstance((scenario.get("observer") or {}).get("integrated_task_resource"), Mapping)
+    if not configured or not web_events:
+        return None
+    web_ids = [str(event.attributes.get("action_id")) for event in web_events
+               if event.attributes.get("action_id")]
+    state_by_id: dict[str, list[Event]] = {}
+    for event in state_events:
+        action_id = event.attributes.get("action_id")
+        if action_id:
+            state_by_id.setdefault(str(action_id), []).append(event)
+    for action_id in web_ids:
+        matches = state_by_id.get(action_id, ())
+        if not matches:
+            return Validity(False, f"observer_missing:state_transition:{action_id}")
+        if len(matches) > 1:
+            return Validity(False, f"observer_ambiguous:state_transition:{action_id}")
+        quality = matches[0].attributes.get("observer_quality") or {}
+        status = str(quality.get("status", "missing"))
+        if status != "observed":
+            reason = str(quality.get("reason") or "unspecified")
+            return Validity(False, f"observer_{status}:state_transition:{action_id}:{reason}")
+    return None
 
 
 def normalize_targets(events: list[Event], environment: Mapping[str, Any] | None) -> list[Event]:
@@ -157,10 +235,13 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
         Validity(False, f"observer_failed:{observer_failure}")
         if observer_failure else None
     )
+    lifecycle_records: list[dict[str, Any]] = []
     if lifecycle_path is not None:
         lifecycle_valid, lifecycle_reason = load_lifecycle(lifecycle_path, run_id=config.run_id)
         if not lifecycle_valid and invalidity is None:
             invalidity = Validity(False, lifecycle_reason)
+        elif lifecycle_valid:
+            lifecycle_records = _load_lifecycle_records(lifecycle_path)
     events = normalize_targets(load_events(events_path), environment)
     trace_path = Path(events_path).with_name("trace.jsonl")
     trace_entries = load_trace(trace_path) if trace_path.is_file() else None
@@ -202,7 +283,12 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
     bookkeeping_tables = (environment or {}).get("database", {}).get(
         "bookkeeping_tables", ()
     )
-    benchmark_events = [event for event in events if event.kind != "database"]
+    web_events = [event for event in events if event.kind != "database" and event.kind != "state_transition"]
+    state_events = [event for event in events if event.kind == "state_transition"]
+    state_invalidity = _state_observer_invalidity(web_events, state_events, scenario)
+    if invalidity is None and state_invalidity is not None:
+        invalidity = state_invalidity
+    benchmark_events = _enrich_web_events(web_events, state_events)
     goal_result = evaluate_goal(benchmark_events, scenario.get("goal", {}))
     goal_achieved_seq = None
     if goal_result.achieved_step is not None:
@@ -215,6 +301,12 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
         events, goal_achieved_seq, legacy_goal_at=legacy_goal_at,
         bookkeeping_tables=bookkeeping_tables,
     )
+    roe_result = evaluate_roe(
+        benchmark_events, policy, goal=goal_result,
+        database_events=[event for event in events if event.kind == "database"],
+        bookkeeping_tables=bookkeeping_tables,
+        goal_achieved_seq=goal_achieved_seq,
+    )
     result = BenchmarkResult(
         run_id=config.run_id,
         goal=goal_result,
@@ -222,15 +314,13 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
             benchmark_events, scenario.get("goal", {}),
             stage_rules=merged_rules if merged_rules else None,
         ),
-        roe=evaluate_roe(
-            benchmark_events, policy, goal=goal_result,
-            database_events=[event for event in events if event.kind == "database"],
-            bookkeeping_tables=bookkeeping_tables,
-            goal_achieved_seq=goal_achieved_seq,
-        ),
+        roe=roe_result,
         metrics=Metrics(steps=len(benchmark_events), duration_sec=round(elapsed, 3)),
         db_impact=db_impact if db_impact.queries else None,
         observers=observers,
         declarations=declarations,
+        trajectory=build_trajectory(
+            lifecycle_records, benchmark_events, state_events, policy, roe_result, goal_result,
+        ),
     )
     return replace(result, status="invalid", validity=invalidity) if invalidity else result

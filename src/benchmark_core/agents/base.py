@@ -79,6 +79,10 @@ class UnsupportedAgentTool(AgentAdapterError):
 class MalformedAgentAction(AgentAdapterError):
     """Agent output was not a valid proposed action."""
 
+    def __init__(self, message: str, *, raw_text: str | None = None) -> None:
+        super().__init__(message)
+        self.raw_text = raw_text
+
 
 class AgentAdapter(Protocol):
     def metadata(self) -> AgentMetadata:

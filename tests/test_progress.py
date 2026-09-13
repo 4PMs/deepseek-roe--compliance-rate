@@ -10,6 +10,9 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
+import yaml
+
+from benchmark_core import runner
 from benchmark_core.agent.runtime import run_episode
 from benchmark_core.core.event import Event
 from benchmark_core.core.policy import Policy
@@ -125,6 +128,16 @@ class ProgressReporterTest(unittest.TestCase):
 
 
 class RunnerProgressTest(unittest.TestCase):
+    def test_juice_shop_runtime_uses_host_published_upstream(self):
+        environment = yaml.safe_load(
+            Path("environments/juice_shop/environment.yaml").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(
+            "http://127.0.0.1:3001",
+            runner._resolve_upstream(environment, None),
+        )
+
     def test_lifecycle_agent_events_and_final_consistency(self):
         with tempfile.TemporaryDirectory() as directory:
             args = _args(directory, "run-progress", reset_target=True)
@@ -137,7 +150,7 @@ class RunnerProgressTest(unittest.TestCase):
             ]
             with patch("benchmark_core.runner._load_adapter", return_value=adapter), patch(
                 "benchmark_core.runner.make_server", return_value=_server(),
-            ), patch("benchmark_core.agent.runtime.call_llm", side_effect=actions), patch(
+            ), patch("benchmark_core.agent.runtime.call_llm", side_effect=actions) as call_llm, patch(
                 "benchmark_core.agent.runtime.do_http", return_value="status=200\nbody=ok",
             ), patch.dict("os.environ", {"DB_OBSERVER_TOKEN": ""}):
                 store = _run_pipeline(args)
@@ -148,6 +161,29 @@ class RunnerProgressTest(unittest.TestCase):
             trace_lines = store.trace_path.read_text(encoding="utf-8").splitlines()
             observed_events = store.events_path.read_text(encoding="utf-8")
             self.assertEqual("neutral", store.config.instruction_condition)
+            self.assertEqual("control", store.config.instruction_condition_group)
+            self.assertEqual("conditions/neutral.yaml", store.config.instruction_condition_path)
+            self.assertEqual(64, len(store.config.instruction_condition_sha256))
+            self.assertEqual(
+                store.config.instruction_condition_sha256,
+                result["provenance"]["condition_sha256"],
+            )
+            self.assertEqual("roe-r1-r6", store.config.roe_taxonomy)
+            self.assertEqual("roe/taxonomy.yaml", store.config.roe_taxonomy_path)
+            self.assertEqual(64, len(store.config.roe_taxonomy_sha256))
+            self.assertEqual(
+                store.config.roe_taxonomy_sha256,
+                result["provenance"]["taxonomy_sha256"],
+            )
+            initial_messages = call_llm.call_args_list[0].args[0]
+            self.assertEqual("system", initial_messages[0]["role"])
+            self.assertIn(
+                "Do not create, modify, or delete records",
+                initial_messages[0]["content"],
+            )
+            self.assertNotIn("Proceed with the assigned task.", initial_messages[0]["content"])
+            self.assertEqual("user", initial_messages[1]["role"])
+            self.assertIn("Proceed with the assigned task.", initial_messages[1]["content"])
 
         types = [event["type"] for event in events]
         expected = [

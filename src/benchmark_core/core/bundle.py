@@ -97,6 +97,24 @@ def _derive_outcomes(run_id: str, events: list[dict[str, Any]]) -> list[dict[str
     for event in events:
         attributes = event.get("attributes", {})
         evidence = attributes.get("outcome_evidence") if isinstance(attributes, Mapping) else None
+        if (evidence is None and event.get("kind") == "state_transition"
+                and isinstance(attributes, Mapping)):
+            quality = attributes.get("observer_quality") or {}
+            realized = attributes.get("realized_outcome")
+            change = (attributes.get("state_diff") or {}).get("change")
+            evidence = {
+                "source": event.get("source", "state_observer"),
+                "evidence_type": "state_transition",
+                "trust_level": "trusted",
+                "status": (
+                    "confirmed" if realized is not None else
+                    "no_change" if quality.get("status") == "observed" and change == "no_change"
+                    else "unclassified"
+                ),
+                "realized_outcome": realized,
+                "state_diff": attributes.get("state_diff"),
+                "observer_quality": attributes.get("observer_quality"),
+            }
         if isinstance(evidence, Mapping):
             evidence = [evidence]
         if not isinstance(evidence, list):
@@ -302,15 +320,15 @@ def validate_run(run_dir: Path) -> dict[str, Any]:
             validate_lifecycle(lifecycle, expected_run_id=run_id)
         except ValueError as exc:
             errors.append(f"lifecycle invalid: {exc}")
-    actions = {(str(item.get("action_id")), item.get("seq")) for item in lifecycle}
+    actions = {str(item.get("action_id")) for item in lifecycle if item.get("action_id")}
     for event in events:
         attrs = event.get("attributes", {})
         action_id = attrs.get("action_id") if isinstance(attrs, Mapping) else None
-        if action_id is not None and (str(action_id), event.get("seq")) not in actions:
+        if action_id is not None and str(action_id) not in actions:
             errors.append(f"orphan event action: {action_id}/{event.get('seq')}")
     for violation in result.get("roe", {}).get("violations", []):
         key = violation.get("event_key")
-        if isinstance(key, list) and len(key) >= 3 and (str(key[2]), key[1]) not in actions:
+        if isinstance(key, list) and len(key) >= 3 and str(key[2]) not in actions:
             errors.append(f"orphan violation evidence: {key[2]}/{key[1]}")
     _validate_terminal_semantics(lifecycle, events, result, errors)
     enforcement = records.get("enforcement", [])
@@ -332,14 +350,13 @@ def _validate_terminal_semantics(lifecycle: list[dict[str, Any]],
     for record in lifecycle:
         grouped.setdefault(str(record.get("action_id")), []).append(record)
     denied = 0
-    observed_keys = {(str(event.get("attributes", {}).get("action_id")), event.get("seq"))
-                     for event in events if isinstance(event.get("attributes"), Mapping)}
+    observed_actions = {str(event.get("attributes", {}).get("action_id"))
+                        for event in events if isinstance(event.get("attributes"), Mapping)}
     for action_id, records in grouped.items():
         decision = next((item for item in records if item.get("stage") == "policy_decision"), None)
         proposed = next((item for item in records if item.get("stage") == "proposed"), None)
         stages = {item.get("stage") for item in records}
-        seq = next((item.get("seq") for item in records if item.get("seq") is not None), None)
-        has_observed = "observed" in stages or (action_id, seq) in observed_keys
+        has_observed = "observed" in stages or action_id in observed_actions
         if decision is None:
             if result.get("termination", {}).get("reason") == "policy_denied":
                 errors.append(f"policy_denied action {action_id}: policy decision missing")
@@ -368,7 +385,7 @@ def reconstruct_action_chain(run_dir: Path, action_id: str, seq: int) -> dict[st
     result = _read_json(run_dir / "result.json")
     stages = {
         item.get("stage"): item for item in lifecycle
-        if item.get("action_id") == action_id and item.get("seq") == seq
+        if item.get("action_id") == action_id
     }
     observed = [item for item in events if item.get("seq") == seq and
                 item.get("attributes", {}).get("action_id") == action_id]

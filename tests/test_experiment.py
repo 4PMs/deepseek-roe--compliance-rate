@@ -11,6 +11,7 @@ CONFIG = {
     "timeout": 10,
     "seed": 7,
     "policy": "policy",
+    "taxonomy_sha256": "a" * 64,
 }
 
 

@@ -49,6 +49,7 @@ class EpisodeTerminationTest(unittest.TestCase):
         self.assertEqual(("completed", "agent_done", True), (
             result.status, result.termination.reason, result.validity.valid,
         ))
+        self.assertFalse(result.goal.success)
 
     def test_max_steps_is_completed_and_valid(self):
         result = self._result('{"action":"http_request","path":"/"}', max_steps=1)
@@ -57,7 +58,11 @@ class EpisodeTerminationTest(unittest.TestCase):
         ))
 
     def test_model_output_failures_are_valid(self):
-        for raw, reason in (("[1]", "action_parse_failed"), ('{"action":"wat"}', "unknown_action")):
+        for raw, reason in (
+            ("[1]", "action_parse_failed"),
+            ('{"action":"wat"}', "unknown_action"),
+            ('{"refusal":"I cannot comply with this request."}', "model_refusal"),
+        ):
             with self.subTest(reason=reason):
                 result = self._result(raw)
                 self.assertEqual(("completed", reason, True), (

@@ -9,9 +9,10 @@ Two subcommands:
 
 import argparse
 import atexit
+from copy import deepcopy
 from collections.abc import Mapping, Sequence
 from contextlib import contextmanager, nullcontext
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -19,7 +20,6 @@ import os
 from pathlib import Path
 import secrets
 import subprocess
-import sys
 import tempfile
 import time
 from typing import Any
@@ -29,7 +29,7 @@ import yaml
 from dotenv import load_dotenv
 from werkzeug.serving import make_server
 
-from .agent import load_mission, run_episode
+from .agent import load_agent_prompts, run_episode
 from .core.environment import EnvironmentAdapter
 from .core.bundle import finalize_bundle, validate_run
 from .core.lifecycle import LifecycleEvent
@@ -40,7 +40,9 @@ from .core.result import (
 )
 from .core.run import RunConfig, RunStore
 from .core.sequence import SequenceService
+from .core.taxonomy import load_roe_taxonomy, validate_policy_taxonomy
 from .evaluate.pipeline import evaluate_run
+from .evaluate.trajectory import with_termination
 from .experiment import load_experiment_aggregate, run_ab_experiment
 from .observe.database import DatabaseEventCollector
 from .observe.gateway import ActionBindingRegistry, create_app, load_observer
@@ -49,7 +51,9 @@ from .progress import ProgressReporter
 SCENARIOS_DIR = Path("scenarios")
 ENVIRONMENTS_DIR = Path("environments")
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-_VALID_TERMINATIONS = {"agent_done", "max_steps", "action_parse_failed", "unknown_action"}
+_VALID_TERMINATIONS = {
+    "agent_done", "max_steps", "action_parse_failed", "model_refusal", "unknown_action",
+}
 _INVALID_REASONS = {
     "provider_error": "experiment_infrastructure_failure",
     "adapter_error": "experiment_infrastructure_failure",
@@ -116,7 +120,9 @@ def collect_provenance(policy_path: Path, scenario_path: Path, agent_model: str,
                        agent_version: str | None, seed: int | None,
                        started_at: datetime, *, environment_sha256: str = "unknown",
                        environment_version: str | None = None,
-                       target_image_digest: str | None = None) -> Provenance:
+                       target_image_digest: str | None = None,
+                       condition_path: Path | None = None,
+                       taxonomy_path: Path | None = None) -> Provenance:
     try:
         policy_sha256 = sha256_file(policy_path)
     except OSError:
@@ -125,6 +131,14 @@ def collect_provenance(policy_path: Path, scenario_path: Path, agent_model: str,
         scenario_sha256 = sha256_file(scenario_path)
     except OSError:
         scenario_sha256 = "unknown"
+    try:
+        condition_sha256 = sha256_file(condition_path) if condition_path else "unknown"
+    except OSError:
+        condition_sha256 = "unknown"
+    try:
+        taxonomy_sha256 = sha256_file(taxonomy_path) if taxonomy_path else "unknown"
+    except OSError:
+        taxonomy_sha256 = "unknown"
     code_commit, code_dirty = _git_state()
     image_digests = _image_digests()
     return Provenance(
@@ -142,6 +156,8 @@ def collect_provenance(policy_path: Path, scenario_path: Path, agent_model: str,
         environment_sha256=environment_sha256,
         environment_version=environment_version,
         target_image_digest=target_image_digest,
+        condition_sha256=condition_sha256,
+        taxonomy_sha256=taxonomy_sha256,
     )
 
 
@@ -183,7 +199,11 @@ def add_run_parser(subparsers: argparse._SubParsersAction) -> None:
     run.add_argument("--scenario", required=True, help="Scenario id, e.g. scenarioA")
     run.add_argument(
         "--condition", default=None,
-        help="Instruction condition ID; defaults to instruction_conditions.default",
+        help="Instruction condition ID; defaults to neutral",
+    )
+    run.add_argument(
+        "--taxonomy", type=Path, default=Path("roe/taxonomy.yaml"),
+        help="Global ROE taxonomy document",
     )
     run.add_argument("--policy", default=None, help="Path to policy YAML file; defaults to scenarios/<scenario>/policy.yaml")
     run.add_argument("--model", required=True, help="Model name passed to the LLM provider")
@@ -352,6 +372,12 @@ def _with_execution(result: BenchmarkResult, outcome: dict) -> BenchmarkResult:
         result = replace(result, reproducibility=outcome["reproducibility"])
     if "agent_metadata" in outcome:
         result = replace(result, agent_metadata=outcome["agent_metadata"])
+    if result.trajectory:
+        result = replace(result, trajectory=with_termination(result.trajectory, {
+            "reason": result.termination.reason,
+            "step": result.termination.step,
+            "detail": result.termination.detail,
+        }))
     return result
 
 
@@ -413,11 +439,6 @@ def _save_result(store: RunStore, result: BenchmarkResult,
         result = replace(result, provenance=replace(
             result.provenance, finished_at=datetime.now(timezone.utc),
         ))
-        if result.provenance.code_dirty or result.provenance.code_commit == "unknown":
-            print(
-                "WARNING: 재현 불가능한 상태로 실행됨 (uncommitted changes)",
-                file=sys.stderr,
-            )
     try:
         store.write_result(result)
     except Exception as exc:
@@ -503,25 +524,93 @@ def _scenario_observer_markers(scenario: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(markers))
 
 
-def _instruction_condition(
-    scenario: Mapping[str, Any], requested: str | None,
-) -> tuple[str, str]:
-    specification = scenario.get("instruction_conditions")
-    if not isinstance(specification, Mapping):
-        raise ValueError("scenario must declare instruction_conditions")
-    variants = specification.get("variants")
-    if not isinstance(variants, Mapping) or not variants:
-        raise ValueError("instruction_conditions.variants must be a non-empty mapping")
-    condition_id = requested or specification.get("default")
-    if not isinstance(condition_id, str) or not condition_id:
-        raise ValueError("instruction_conditions.default must name a condition")
-    condition = variants.get(condition_id)
-    if not isinstance(condition, Mapping):
-        raise ValueError(f"unknown instruction condition: {condition_id}")
-    instruction = condition.get("instruction")
+def _scenario_observer_options(scenario: Mapping[str, Any]) -> dict[str, Any]:
+    options: dict[str, Any] = {"markers": _scenario_observer_markers(scenario)}
+    observer = scenario.get("observer") or {}
+    if not isinstance(observer, Mapping):
+        return options
+    for key in ("resource_scope", "integrated_task_resource"):
+        value = observer.get(key)
+        if isinstance(value, Mapping):
+            options[key] = dict(value)
+    return options
+
+
+def _environment_action_observer(adapter: Any, scenario: Mapping[str, Any]) -> Any:
+    """Build a trusted action observer only from an explicitly declared hook."""
+    provider = getattr(type(adapter), "action_observer", None)
+    return provider(adapter, scenario) if callable(provider) else None
+
+
+def _resolve_upstream(environment: Mapping[str, Any], explicit: str | None) -> str | None:
+    target = environment.get("target") or {}
+    return explicit or environment.get("default_upstream") or target.get("base_url")
+
+
+@dataclass(frozen=True)
+class InstructionCondition:
+    condition_id: str
+    group: str
+    instruction: str
+    path: Path
+    sha256: str
+    success_when_all: tuple[Mapping[str, Any], ...] = ()
+
+
+def _integrate_condition_goal(
+    scenario: Mapping[str, Any], condition: InstructionCondition,
+) -> dict[str, Any]:
+    integrated = deepcopy(dict(scenario))
+    if not condition.success_when_all:
+        return integrated
+    goal = dict(integrated.get("goal") or {})
+    base = goal.get("success_when")
+    if not isinstance(base, Mapping):
+        raise ValueError("integrated scenario goal must declare success_when")
+    goal["success_when_all"] = [deepcopy(dict(base)), *(
+        deepcopy(dict(rule)) for rule in condition.success_when_all
+    )]
+    integrated["goal"] = goal
+    return integrated
+
+
+def _load_instruction_condition(
+    scenario_dir: Path, requested: str | None,
+) -> InstructionCondition:
+    condition_id = requested or "neutral"
+    if not condition_id or any(
+        character not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
+        for character in condition_id
+    ):
+        raise ValueError("instruction condition ID must be a safe identifier")
+    condition_path = scenario_dir / "conditions" / f"{condition_id}.yaml"
+    if not condition_path.is_file():
+        raise FileNotFoundError(f"Instruction condition file not found: {condition_path}")
+    document = yaml.safe_load(condition_path.read_text(encoding="utf-8"))
+    if not isinstance(document, Mapping):
+        raise ValueError(f"instruction condition must be a mapping: {condition_path}")
+    if document.get("schema_version") != "0.1":
+        raise ValueError(f"unsupported instruction condition schema: {condition_path}")
+    if document.get("id") != condition_id:
+        raise ValueError(f"instruction condition ID does not match filename: {condition_path}")
+    group = document.get("group")
+    instruction = document.get("instruction")
+    success_when_all = document.get("success_when_all") or ()
+    if not isinstance(group, str) or not group.strip():
+        raise ValueError(f"instruction condition must declare group: {condition_path}")
     if not isinstance(instruction, str) or not instruction.strip():
-        raise ValueError(f"instruction condition {condition_id!r} must contain instruction text")
-    return condition_id, instruction.strip()
+        raise ValueError(f"instruction condition must contain instruction text: {condition_path}")
+    if not isinstance(success_when_all, Sequence) or isinstance(success_when_all, (str, bytes)) \
+            or any(not isinstance(rule, Mapping) for rule in success_when_all):
+        raise ValueError(f"instruction condition success_when_all must contain mappings: {condition_path}")
+    return InstructionCondition(
+        condition_id=condition_id,
+        group=group.strip(),
+        instruction=instruction.strip(),
+        path=condition_path,
+        sha256=sha256_file(condition_path),
+        success_when_all=tuple(dict(rule) for rule in success_when_all),
+    )
 
 
 def _run_pipeline(args: argparse.Namespace) -> "RunStore":
@@ -534,14 +623,20 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     if not policy_path.exists():
         raise FileNotFoundError(f"Policy file not found: {policy_path}")
 
+    taxonomy_path = Path(getattr(args, "taxonomy", None) or "roe/taxonomy.yaml")
+    taxonomy = load_roe_taxonomy(taxonomy_path)
+    policy_doc = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
+    validate_policy_taxonomy(policy_doc, taxonomy)
+    condition = _load_instruction_condition(
+        scenario_dir, getattr(args, "condition", None),
+    )
     started_at = datetime.now(timezone.utc)
     provenance = collect_provenance(
         policy_path, scenario_path, args.model, args.agent_version, args.seed, started_at,
+        condition_path=condition.path, taxonomy_path=taxonomy.path,
     )
-    scenario_doc = yaml.safe_load(scenario_path.read_text(encoding="utf-8"))
-    policy_doc = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
-    condition_id, condition_instruction = _instruction_condition(
-        scenario_doc, getattr(args, "condition", None),
+    scenario_doc = _integrate_condition_goal(
+        yaml.safe_load(scenario_path.read_text(encoding="utf-8")), condition,
     )
     start_state = scenario_doc.get("start_state") or {}
     authentication = start_state.get("authentication") if isinstance(start_state, Mapping) else {}
@@ -551,11 +646,6 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
         and not getattr(args, "reset_target", False)
     ):
         raise SystemExit("provisioned_session scenarios require --reset-target")
-    policy_instructions = policy_doc.get("agent_instructions")
-    agent_instructions = "\n\n".join(
-        text.strip() for text in (policy_instructions, condition_instruction)
-        if isinstance(text, str) and text.strip()
-    )
     policy = Policy.from_dict(policy_doc)
 
     environment_name = scenario_doc.get("environment")
@@ -576,21 +666,16 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
         environment_version=environment_doc.get("version"),
         target_image_digest=environment_doc.get("target", {}).get("image_digest"),
     )
-    upstream = args.upstream or environment_doc.get("target", {}).get("base_url") \
-        or environment_doc.get("default_upstream")
+    target = environment_doc.get("target", {})
+    upstream = _resolve_upstream(environment_doc, args.upstream)
     if not upstream:
         raise SystemExit(
             f"no upstream configured: pass --upstream or set target.base_url in {environment_path}"
         )
-    target = environment_doc.get("target", {})
     if target.get("base_url") and upstream != target["base_url"]:
         target.setdefault("runtime_aliases", []).append(upstream)
     observer_ref = environment_doc.get("observer")
-    markers = _scenario_observer_markers(scenario_doc)
-    observer_options: dict[str, Any] = {"markers": markers}
-    resource_scope = (scenario_doc.get("observer") or {}).get("resource_scope")
-    if isinstance(resource_scope, Mapping):
-        observer_options["resource_scope"] = dict(resource_scope)
+    observer_options = _scenario_observer_options(scenario_doc)
     observer = load_observer(observer_ref, **observer_options) if observer_ref else None
     limits = scenario_doc.get("limits", {})
     max_steps = args.max_steps or limits.get("max_steps", 8)
@@ -606,7 +691,13 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
         timeout=timeout,
         temperature=args.temperature, seed=args.seed, repetition=args.repetition,
         provider=args.provider,
-        instruction_condition=condition_id,
+        instruction_condition=condition.condition_id,
+        instruction_condition_group=condition.group,
+        instruction_condition_path=condition.path.relative_to(scenario_dir).as_posix(),
+        instruction_condition_sha256=condition.sha256,
+        roe_taxonomy=taxonomy.taxonomy_id,
+        roe_taxonomy_path=taxonomy.path.as_posix(),
+        roe_taxonomy_sha256=taxonomy.sha256,
         enforcement_enabled=bool(
             getattr(args, "enforce_policy", False)
             or (scenario_doc.get("enforcement", {}) or {}).get("enabled", False)
@@ -625,6 +716,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     reporter.emit("run_created", state="initializing")
     reporter.emit("run_started", state="initializing")
     environment_reset = None
+    adapter = None
     runtime_context: dict[str, Any] = {}
     if getattr(args, "reset_target", False):
         reporter.change_state("resetting_target")
@@ -729,6 +821,10 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             raise
         reporter.emit("scenario_provision_completed", state="provisioning")
 
+    state_observer = (
+        _environment_action_observer(adapter, scenario_doc) if adapter is not None else None
+    )
+
     config = RunConfig(
         **config_values, started_at=started_at,
         environment_reset=environment_reset,
@@ -798,6 +894,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             lifecycle_sink=store.append_lifecycle,
             action_registry=action_registry,
             enforce_policy=config.enforcement_enabled,
+            state_observer=state_observer,
         )
         server = make_server(args.gateway_host, requested_port, app)
     except Exception as exc:
@@ -826,9 +923,9 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     with database_collector if database_collector is not None else nullcontext():
         server_thread.start()
         try:
-            mission = load_mission(
+            prompts = load_agent_prompts(
                 scenario_path, gateway=gateway_url, policy_path=policy_path,
-                agent_instructions=agent_instructions,
+                condition_instruction=condition.instruction,
                 runtime_context=runtime_context,
             )
 
@@ -857,7 +954,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                 reporter.emit("agent_started", state="running_agent")
                 with _hide_sequence_environment():
                     outcome = run_episode(
-                        mission, gateway_url, max_steps,
+                        prompts.system, gateway_url, max_steps,
                         provider=args.provider, model=args.model,
                         temperature=args.temperature, on_step=report,
                         on_progress=progress, on_lifecycle=lifecycle,
@@ -869,6 +966,7 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                         scenario=args.scenario,
                         goal=scenario_doc.get("goal", {}),
                         default_headers=runtime_context.get("headers", {}),
+                        task_prompt=prompts.task,
                     )
             except KeyboardInterrupt:
                 interrupted = True

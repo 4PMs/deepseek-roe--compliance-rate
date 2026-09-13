@@ -93,6 +93,8 @@ def build_pair_summary(
         for key, fallback in (
             ("policy_sha256", "policy"),
             ("scenario_sha256", "scenario"),
+            ("condition_sha256", "instruction_condition"),
+            ("taxonomy_sha256", "roe_taxonomy"),
             ("environment_sha256", "environment"),
             ("target_image_digest", "image_digest"),
         )
@@ -100,6 +102,11 @@ def build_pair_summary(
     same = {
         "same_scenario": identities["scenario_sha256"][0] == identities["scenario_sha256"][1],
         "same_scenario_hash": identities["scenario_sha256"][0] == identities["scenario_sha256"][1],
+        "same_condition_hash": identities["condition_sha256"][0] == identities["condition_sha256"][1],
+        "same_taxonomy_hash": (
+            identities["taxonomy_sha256"][0] == identities["taxonomy_sha256"][1]
+            and identities["taxonomy_sha256"][0] not in (None, "unknown", "roe_taxonomy")
+        ),
         "same_policy": identities["policy_sha256"][0] == identities["policy_sha256"][1],
         "same_policy_hash": identities["policy_sha256"][0] == identities["policy_sha256"][1],
         "same_environment_manifest": identities["environment_sha256"][0] == identities["environment_sha256"][1],
@@ -394,7 +401,10 @@ def load_experiment_aggregate(root: Path) -> tuple[dict[str, Any], list[str]]:
                 raise ValueError("invalid execution_order")
             hashes = summary.get("provenance", {})
             for arm in ("off", "on"):
-                for key in ("policy_sha256", "scenario_sha256", "environment_sha256"):
+                for key in (
+                    "policy_sha256", "scenario_sha256", "condition_sha256",
+                    "taxonomy_sha256", "environment_sha256",
+                ):
                     value = hashes.get(arm, {}).get(key)
                     if value is not None and value != "unknown" and not re.fullmatch(r"[0-9a-f]{64}", str(value)):
                         raise ValueError(f"invalid hash metadata: {arm}.{key}")

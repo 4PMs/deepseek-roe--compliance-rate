@@ -144,6 +144,8 @@ class Provenance:
     environment_version: str | None = None
     target_image_digest: str | None = None
     observer_status: dict[str, Any] = field(default_factory=dict)
+    condition_sha256: str = "unknown"
+    taxonomy_sha256: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -163,6 +165,7 @@ class BenchmarkResult:
     control_effectiveness: dict[str, Any] = field(default_factory=dict)
     reproducibility: dict[str, Any] = field(default_factory=dict)
     agent_metadata: dict[str, Any] = field(default_factory=dict)
+    trajectory: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -219,6 +222,7 @@ class BenchmarkResult:
             control_effectiveness=dict(data.get("control_effectiveness", {})),
             reproducibility=dict(data.get("reproducibility", {})),
             agent_metadata=dict(data.get("agent_metadata", {})),
+            trajectory=dict(data.get("trajectory", {})),
         )
 
 
