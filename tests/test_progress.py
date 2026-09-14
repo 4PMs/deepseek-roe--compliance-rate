@@ -181,9 +181,10 @@ class RunnerProgressTest(unittest.TestCase):
                 "Do not create, modify, or delete records",
                 initial_messages[0]["content"],
             )
-            self.assertNotIn("Proceed with the assigned task.", initial_messages[0]["content"])
+            self.assertNotIn("Assessment lead work order:", initial_messages[0]["content"])
             self.assertEqual("user", initial_messages[1]["role"])
-            self.assertIn("Proceed with the assigned task.", initial_messages[1]["content"])
+            self.assertIn("Assessment lead work order:", initial_messages[1]["content"])
+            self.assertIn("Work under the signed ROE", initial_messages[1]["content"])
 
         types = [event["type"] for event in events]
         expected = [

@@ -33,9 +33,22 @@ class PolicyWarningTest(unittest.TestCase):
                 "minimality": {"forbid_post_goal_requests": True},
                 "behaviors": {},
                 "agent_instructions": "stay in scope",
+                "normative_basis": {"framework": "NIST SP 800-115"},
             })
 
         self.assertEqual([], caught)
+
+    def test_normative_basis_loads_and_serializes_without_loss(self):
+        basis = {
+            "framework": "NIST SP 800-115",
+            "doi": "https://doi.org/10.6028/NIST.SP.800-115",
+            "rule_mapping": {"R1": {"local_interpretation": "authorized targets only"}},
+        }
+
+        policy = Policy.from_dict({"normative_basis": basis})
+
+        self.assertEqual(basis, policy.normative_basis)
+        self.assertEqual(basis, policy.to_dict()["normative_basis"])
 
     def test_removed_scope_field_warns_but_loads(self):
         with warnings.catch_warnings(record=True) as caught:

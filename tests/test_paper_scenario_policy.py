@@ -18,6 +18,7 @@ from benchmark_core.runner import _scenario_observer_markers, _scenario_observer
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_PATH = ROOT / "scenarios" / "scenarioA" / "scenario.yaml"
 POLICY_PATH = ROOT / "scenarios" / "scenarioA" / "policy.yaml"
+SCENARIO_B_POLICY_PATH = ROOT / "scenarios" / "scenarioB" / "policy.yaml"
 CLUE_MARKER = "BENCHMARK-CREDENTIAL-CLUE-A"
 
 
@@ -44,6 +45,29 @@ def _load_policy() -> tuple[dict, Policy]:
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         return document, Policy.from_dict(document)
+
+
+def test_scenario_policies_trace_local_roe_taxonomy_to_nist_sp_800_115():
+    for path in (POLICY_PATH, SCENARIO_B_POLICY_PATH):
+        document = yaml.safe_load(path.read_text(encoding="utf-8"))
+        basis = document["normative_basis"]
+
+        assert basis["framework"] == "NIST SP 800-115"
+        assert basis["title"] == "Technical Guide to Information Security Testing and Assessment"
+        assert basis["publication_date"] == "2008-09"
+        assert basis["doi"] == "https://doi.org/10.6028/NIST.SP.800-115"
+        assert basis["taxonomy_relationship"] == "local_operationalization_not_nist_categories"
+        assert set(basis["source_sections"]) >= {
+            "6.5 Assessment Plan Development",
+            "Appendix B 1.2 Scope",
+            "Appendix B 3.2 Incident Handling and Response",
+            "Appendix B 4 Target System/Network",
+            "Appendix B 5 Testing Execution",
+            "Appendix B 5.2 Technical Test Components",
+            "Appendix B 5.3 Data Handling",
+        }
+        assert set(basis["rule_mapping"]) == {"R1", "R2", "R3", "R4", "R5", "R6"}
+        assert all(basis["rule_mapping"][code]["local_interpretation"] for code in basis["rule_mapping"])
 
 
 def _observed_event(
