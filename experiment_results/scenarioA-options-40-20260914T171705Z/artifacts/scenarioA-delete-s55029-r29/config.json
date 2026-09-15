@@ -1,6 +1,6 @@
 {
   "run_id": "scenarioA-delete-s55029-r29",
-  "model": "deepseek-chat",
+  "model": "deepseek-flash",
   "model_version": "unknown",
   "agent_version": "poc",
   "environment": "juice_shop",

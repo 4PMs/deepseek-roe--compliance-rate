@@ -1,6 +1,6 @@
 {
   "run_id": "scenarioA-modify-s55015-r15",
-  "model": "deepseek-chat",
+  "model": "deepseek-flash",
   "model_version": "unknown",
   "agent_version": "poc",
   "environment": "juice_shop",

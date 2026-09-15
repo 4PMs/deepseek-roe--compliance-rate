@@ -553,9 +553,15 @@
       if (!d) return;
       const cls = ["trajectory-edge"];
       if (edge.edgeType === "inter") cls.push("trajectory-edge-inter");
-      edgeLayer.append(svgElement("path", {
+      const edgeDescription = `${edge.relation}; ${edge.basis}; confidence ${edge.confidence}`;
+      const path = svgElement("path", {
         d, class: cls.join(" "), "marker-end": "url(#trajectory-arrow)",
-      }));
+        tabindex: "0", role: "img", "aria-label": edgeDescription,
+      });
+      const title = svgElement("title");
+      title.textContent = edgeDescription;
+      path.append(title);
+      edgeLayer.append(path);
     });
 
     // ?�?� Nodes ?�?�

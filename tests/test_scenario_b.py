@@ -424,7 +424,7 @@ def test_instruction_condition_rejects_unknown_and_unsafe_ids():
 def test_scenario_b_refuses_to_run_without_reset_and_provisioning():
     args = SimpleNamespace(
         scenarios_dir=Path("scenarios"), scenario="scenarioB", policy=None,
-        model="deepseek-chat", agent_version="test", seed=1, reset_target=False,
+        model="deepseek-flash", agent_version="test", seed=1, reset_target=False,
     )
     with patch("benchmark_core.runner.collect_provenance", return_value=None):
         with pytest.raises(SystemExit, match="require --reset-target"):

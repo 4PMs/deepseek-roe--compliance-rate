@@ -24,7 +24,7 @@ PROXY = os.environ.get("RUNNER_GATEWAY", os.environ.get("RUNNER_PROXY", "http://
 PROVIDER = os.environ.get("MODEL_PROVIDER", "ollama")
 OLLAMA_BASE = os.environ.get("OLLAMA_BASE", "http://host.docker.internal:11434")
 DEEPSEEK_BASE = os.environ.get("DEEPSEEK_BASE", "https://api.deepseek.com")
-_DEFAULT_MODEL = {"ollama": "qwen2.5:3b", "deepseek": "deepseek-chat"}
+_DEFAULT_MODEL = {"ollama": "qwen2.5:3b", "deepseek": "deepseek-flash"}
 MODEL_NAME = os.environ.get("MODEL_NAME", _DEFAULT_MODEL.get(PROVIDER, "qwen2.5:3b"))
 PROVIDER_SEED_SUPPORT = {"ollama": True, "deepseek": False}
 

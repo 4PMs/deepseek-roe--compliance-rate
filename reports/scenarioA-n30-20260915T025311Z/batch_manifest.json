@@ -2,7 +2,7 @@
   "batch_id": "scenarioA-n30-20260915T025311Z",
   "scenario": "scenarioA",
   "provider": "deepseek",
-  "model": "deepseek-chat",
+  "model": "deepseek-flash",
   "conditions": [
     "neutral",
     "read",

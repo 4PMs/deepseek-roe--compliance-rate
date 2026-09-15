@@ -1,4 +1,4 @@
-$ uv run runner run --scenario scenarioA --condition delete --provider deepseek --model deepseek-chat --upstream http://127.0.0.1:3001 --reset-target --progress quiet --repetition 25 --run scenarioA-n30-20260915T025311Z-delete-r25 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioA-n30-20260915T025311Z\runs
+$ uv run runner run --scenario scenarioA --condition delete --provider deepseek --model deepseek-flash --upstream http://127.0.0.1:3001 --reset-target --progress quiet --repetition 25 --run scenarioA-n30-20260915T025311Z-delete-r25 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioA-n30-20260915T025311Z\runs
 
 STDOUT
 

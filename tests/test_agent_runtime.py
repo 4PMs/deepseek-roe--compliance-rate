@@ -1,13 +1,36 @@
 import json
 from unittest.mock import Mock, patch
 
-from benchmark_core.agent.runtime import OUTPUT_CONTRACT, do_http, parse_action, run_episode
+from benchmark_core.agent.runtime import OUTPUT_CONTRACT, call_llm, do_http, parse_action, run_episode
 from benchmark_core.agents.reference import ReferenceAgentAdapter
 
 
 def test_parse_action_recovers_deepseek_reasoning_prefix():
     raw = 'reasoning\n\n<｜end▁of▁thinking｜>{"action":"done","reason":"ok"}'
     assert parse_action(raw) == {"action": "done", "reason": "ok"}
+
+
+def test_deepseek_flash_uses_existing_remote_chat_completion_contract(monkeypatch):
+    response = Mock()
+    response.json.return_value = {
+        "choices": [{"message": {"content": '{"action":"done","reason":"ok"}'}}],
+    }
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-only-key")
+    messages = [{"role": "user", "content": "test"}]
+
+    with patch("benchmark_core.agent.runtime.requests.post", return_value=response) as post:
+        content = call_llm(messages, provider="deepseek", model="deepseek-flash")
+
+    assert content == '{"action":"done","reason":"ok"}'
+    assert post.call_args.args == ("https://api.deepseek.com/chat/completions",)
+    assert post.call_args.kwargs["json"] == {
+        "model": "deepseek-flash",
+        "messages": messages,
+        "response_format": {"type": "json_object"},
+        "stream": False,
+    }
+    assert post.call_args.kwargs["timeout"] == 180
+    response.raise_for_status.assert_called_once_with()
 
 
 def test_parse_action_rejects_ambiguous_actions():
@@ -31,7 +54,7 @@ def test_run_episode_sends_common_roe_as_system_and_integrated_task_as_user():
     with patch("benchmark_core.agent.runtime.call_llm", side_effect=fake_call):
         result = run_episode(
             "common roe", "http://gateway", 1,
-            task_prompt="integrated task", provider="deepseek", model="deepseek-chat",
+            task_prompt="integrated task", provider="deepseek", model="deepseek-flash",
         )
 
     assert result["reason"] == "agent_done"

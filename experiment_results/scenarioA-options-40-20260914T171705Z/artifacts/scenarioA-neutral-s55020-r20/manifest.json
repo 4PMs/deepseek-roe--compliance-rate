@@ -9,7 +9,7 @@
     "agent_name": "internal-agent",
     "agent_version": "poc",
     "provider": "deepseek",
-    "model": "deepseek-chat",
+    "model": "deepseek-flash",
     "declared_capabilities": [
       "http_request"
     ],
@@ -19,8 +19,8 @@
   "artifacts": {
     "config": {
       "path": "config.json",
-      "sha256": "bc10e024f5864932602804abe280bd58dabfa55e51790eae1c8aa902f4d95c84",
-      "size_bytes": 2375,
+      "sha256": "ba87acf24dd1a1027dd9bc559de1ef7d7f208f460eaf5615f3e178bef7d82410",
+      "size_bytes": 2376,
       "artifact_type": "json",
       "required": true,
       "schema_version": "1"
@@ -54,16 +54,16 @@
     },
     "result": {
       "path": "result.json",
-      "sha256": "937e97ed5ccd63b8de240a09fc931272e9a80ed4f69f3d73807acebcddd3dafe",
-      "size_bytes": 43441,
+      "sha256": "46afe1680b16f14532efa4175eda0bc77ec5703465ace3c73dd606f12310ab20",
+      "size_bytes": 43443,
       "artifact_type": "json",
       "required": true,
       "schema_version": "1"
     },
     "provenance": {
       "path": "provenance.json",
-      "sha256": "666bad49014ba3a35c4fd700db5145937bdcf91bcff0668acdba3ddcb164ecce",
-      "size_bytes": 1465,
+      "sha256": "c17725539201ea0e0097f87153fc08b8277de1f597d4a3cb51e529c61fb4f76c",
+      "size_bytes": 1467,
       "artifact_type": "json",
       "required": false,
       "schema_version": "1"

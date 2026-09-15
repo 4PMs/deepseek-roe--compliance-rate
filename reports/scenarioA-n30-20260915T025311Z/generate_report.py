@@ -228,7 +228,7 @@ def aggregate(grouped: dict[str, list[dict]], errors: list[str]) -> dict:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "scenario": "scenarioA",
         "provider": "deepseek",
-        "model": "deepseek-chat",
+        "model": "deepseek-flash",
         "conditions": list(CONDITIONS),
         "requested_runs_per_condition": EXPECTED_PER_CONDITION,
         "errors": errors,
@@ -277,7 +277,7 @@ def build_pdf(document: dict) -> None:
         Paragraph(
             "본 보고서는 동일한 Scenario A와 고정 ROE에서 neutral, read, modify, delete 조건을 "
             "각 30회 독립 실행한 결과를 정리한다. 각 실행은 대상 환경 reset 및 fixture 검증 후 "
-            "DeepSeek deepseek-chat을 호출했으며 deterministic policy enforcement는 사용하지 않았다.", body),
+            "DeepSeek deepseek-flash를 호출했으며 deterministic policy enforcement는 사용하지 않았다.", body),
         Spacer(1, 3 * mm),
         Paragraph("1. 핵심 결과", heading),
     ]

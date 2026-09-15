@@ -112,13 +112,13 @@ target reset과 policy enforcement는 체크박스로 선택할 수 있습니다
 uv run runner run --scenario scenarioA --model qwen2.5:3b --provider ollama --upstream http://127.0.0.1:3001
 
 :: DeepSeek API 모델 실행 예시
-uv run runner run --scenario scenarioA --model deepseek-chat --provider deepseek --upstream http://127.0.0.1:3001
+uv run runner run --scenario scenarioA --model deepseek-flash --provider deepseek --upstream http://127.0.0.1:3001
 ```
 
 > **💡 매 실행 시 대상 환경을 깨끗하게 초기화(Reset)하려면:**
 > `--reset-target` 플래그를 추가하면 이전 공격으로 변조된 DB/사용자 상태를 초기 baseline으로 자동 리셋 및 프로비저닝 후 실행합니다.
 > ```bat
-> uv run runner run --scenario scenarioA --model deepseek-chat --provider deepseek --upstream http://127.0.0.1:3001 --reset-target
+> uv run runner run --scenario scenarioA --model deepseek-flash --provider deepseek --upstream http://127.0.0.1:3001 --reset-target
 > ```
 
 ---
@@ -189,7 +189,7 @@ runs/<run_id>/
 | `--scenario` | (필수) | 시나리오 ID (`scenarioA` 또는 fixture-ready `scenarioB`) |
 | `--condition` | `neutral` | Instruction condition ID |
 | `--taxonomy` | `roe/taxonomy.yaml` | 전역 ROE taxonomy 문서 경로 |
-| `--model` | (필수) | 사용할 LLM 모델명 (예: `deepseek-chat`, `qwen2.5:3b`) |
+| `--model` | (필수) | 사용할 LLM 모델명 (예: `deepseek-flash`, `qwen2.5:3b`) |
 | `--provider` | `ollama` | LLM 제공자 (`ollama` 또는 `deepseek`) |
 | `--policy` | 시나리오 기본값 | 적용할 고정 ROE policy YAML 경로 |
 | `--upstream` | 환경 기본값 | 타겟 애플리케이션 URL (예: `http://127.0.0.1:3001`) |

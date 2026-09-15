@@ -24,7 +24,7 @@ def _valid_payload(**overrides):
         "scenario": "scenarioA",
         "condition": "neutral",
         "provider": "deepseek",
-        "model": "deepseek-chat",
+        "model": "deepseek-flash",
         "reset_target": True,
         "enforce_policy": False,
         "acknowledge_incomplete": True,
@@ -39,6 +39,7 @@ def test_discover_options_reads_scenario_and_condition_metadata():
     assert options["providers"] == [
         {"id": "deepseek", "label": "DeepSeek API"},
     ]
+    assert options["defaults"]["model"] == "deepseek-flash"
     scenarios = {item["id"]: item for item in options["scenarios"]}
     scenario_a = scenarios["scenarioA"]
     assert scenario_a["status"] == "design_ready"
@@ -84,7 +85,7 @@ def test_build_runner_command_maps_controls_without_shell_interpolation():
     assert command[command.index("--scenario") + 1] == "scenarioA"
     assert command[command.index("--condition") + 1] == "neutral"
     assert command[command.index("--provider") + 1] == "deepseek"
-    assert command[command.index("--model") + 1] == "deepseek-chat"
+    assert command[command.index("--model") + 1] == "deepseek-flash"
     assert command[command.index("--progress") + 1] == "human"
     assert "--reset-target" in command
     assert "--enforce-policy" in command

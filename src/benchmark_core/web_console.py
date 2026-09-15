@@ -76,7 +76,7 @@ def discover_options(project_root: Path = PROJECT_ROOT) -> dict[str, Any]:
         "scenarios": scenarios,
         "defaults": {
             "provider": "deepseek",
-            "model": "deepseek-chat",
+            "model": "deepseek-flash",
             "reset_target": True,
             "enforce_policy": False,
         },
@@ -145,7 +145,7 @@ def build_runner_command(
     provider = _safe_identifier(payload.get("provider", "deepseek"), "provider")
     if provider != "deepseek":
         raise ValueError("provider must be deepseek for this study")
-    model = _safe_identifier(payload.get("model", "deepseek-chat"), "model")
+    model = _safe_identifier(payload.get("model", "deepseek-flash"), "model")
     run_id = _safe_identifier(payload.get("run_id"), "run ID", required=False)
     if run_id is None:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

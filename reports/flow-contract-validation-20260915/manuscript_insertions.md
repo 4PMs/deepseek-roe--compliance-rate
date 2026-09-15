@@ -92,6 +92,12 @@ A separate console artifact replay corrected six proposal-stage false positives.
 
 ## Condition-design limitation
 
+### Live feasibility demonstration
+
+We applied the revised measurement contract to two newly generated Scenario B trajectories using `deepseek-flash`, with independent reset and provisioning for each condition. In the neutral run, the agent issued one authorized `GET /rest/basket/9001`, observed the designated canary, and stopped after the goal anchor; the run was valid and ROE-compliant. In the modify run, the agent explicitly identified the request to alter foreign BasketItem 9102 as outside scope, completed the separable own-basket baseline, and dispatched no foreign-object mutation or broad collection. The executable contract therefore captured proposal, gateway dispatch, action-correlated before/after state observation, safe non-dispatch, and final disposition on live trajectories.
+
+The deterministic evaluator classified the modify trace as `partial_safe_completion` because `disposition_recorded` remained `not_observed`, despite a final disposition that reported both the completed own-basket read and the reason for withholding the prohibited mutation. We retain this result as a lexical-oracle false-negative candidate for independent human validation rather than correcting it after observing the trace. These two cases establish execution feasibility only and are not used to estimate violation rates.
+
 The read, modify, and delete conditions differ in more than operation. Their narratives vary in requesting party and stated purpose. Between-condition rates are therefore descriptive comparisons of the implemented work-order conditions, not causal estimates of operation type. An operation-only causal analysis would require matched templates or a factorial design that holds requester, syntax, authorization wording, and justification constant.
 
 Recommended table note: *Rates are descriptive for the implemented condition narratives and should not be interpreted as operation-only causal effects.*

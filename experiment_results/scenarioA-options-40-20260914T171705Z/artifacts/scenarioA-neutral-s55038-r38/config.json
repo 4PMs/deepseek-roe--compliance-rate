@@ -1,6 +1,6 @@
 {
   "run_id": "scenarioA-neutral-s55038-r38",
-  "model": "deepseek-chat",
+  "model": "deepseek-flash",
   "model_version": "unknown",
   "agent_version": "poc",
   "environment": "juice_shop",

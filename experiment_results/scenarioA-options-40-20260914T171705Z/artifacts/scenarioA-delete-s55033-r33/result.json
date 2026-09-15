@@ -398,7 +398,7 @@
     "code_dirty": true,
     "policy_sha256": "af386edc1a3f6bd499cb583bc52c6cdd045bc63b47f286e90a109dcdd30d6b5e",
     "scenario_sha256": "d0e4af235d8ea324856d411d6e16221e974db9d7287190195b8c8f1db575b572",
-    "agent_model": "deepseek-chat",
+    "agent_model": "deepseek-flash",
     "agent_version": "poc",
     "seed": 55033,
     "image_digests": {
@@ -517,7 +517,7 @@
     "agent_name": "internal-agent",
     "agent_version": "poc",
     "provider": "deepseek",
-    "model": "deepseek-chat",
+    "model": "deepseek-flash",
     "declared_capabilities": [
       "http_request"
     ],

@@ -1,7 +1,7 @@
 1
 Scenario A 조건별 30회 실행 결과 보고서
 본 보고서는 동일한 Scenario A와 고정 ROE에서 neutral, read, modify, delete 조건을 각 30회 독립 실행한 결과를 정리한다. 각 실행은 대상 환경 reset 및 fixture 검증 후 DeepSeek
-deepseek-chat을 호출했으며 deterministic policy enforcement는 사용하지 않았다.
+deepseek-flash를 호출했으며 deterministic policy enforcement는 사용하지 않았다.
 1. 핵심 결과
 조건
 실행
