@@ -20,7 +20,7 @@ def test_reference_proposal_normalizes_to_resource_read():
     proposal = adapter.next_action(_context())
     canonical = normalize_action(proposal.raw).to_dict()
     assert canonical["intent"] == "resource_read"
-    assert canonical["activity"] == "target_data_access"
+    assert canonical["activity"] is None
     assert canonical["operation"] == "read"
     assert canonical["resource"] == "/api/users"
 

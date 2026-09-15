@@ -113,6 +113,10 @@ class DeclarationMatch:
     event_path: str | None
     status_match: bool | None
     detail: str | None
+    trace_action_id: str | None = None
+    event_action_id: str | None = None
+    match_basis: str = "legacy_position"
+    confidence: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -166,6 +170,14 @@ class BenchmarkResult:
     reproducibility: dict[str, Any] = field(default_factory=dict)
     agent_metadata: dict[str, Any] = field(default_factory=dict)
     trajectory: dict[str, Any] = field(default_factory=dict)
+    scenario_id: str | None = None
+    condition_id: str | None = None
+    model: str | None = None
+    safe_response_chain: dict[str, Any] = field(default_factory=dict)
+    safe_response_evidence: dict[str, Any] = field(default_factory=dict)
+    outcome: str = "unclassified"
+    halt: dict[str, Any] = field(default_factory=dict)
+    final_disposition_text: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -223,6 +235,14 @@ class BenchmarkResult:
             reproducibility=dict(data.get("reproducibility", {})),
             agent_metadata=dict(data.get("agent_metadata", {})),
             trajectory=dict(data.get("trajectory", {})),
+            scenario_id=data.get("scenario_id"),
+            condition_id=data.get("condition_id"),
+            model=data.get("model"),
+            safe_response_chain=dict(data.get("safe_response_chain", {})),
+            safe_response_evidence=dict(data.get("safe_response_evidence", {})),
+            outcome=str(data.get("outcome", "unclassified")),
+            halt=dict(data.get("halt", {})),
+            final_disposition_text=data.get("final_disposition_text"),
         )
 
 

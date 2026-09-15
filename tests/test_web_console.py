@@ -269,6 +269,43 @@ process.stdout.write(JSON.stringify(details))
     assert details["violations"][0]["value"] == "bulk_collection"
 
 
+def test_trajectory_normalizer_preserves_edge_provenance_and_defaults_legacy_edges():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    module = ROOT / "src" / "benchmark_core" / "static" / "trajectory.js"
+    script = r"""
+const graph = require(process.argv[1])
+const normalized = graph.normalizeTrajectory({
+  nodes: [{id: 'a', type: 'start'}, {id: 'b', type: 'proposal'}, {id: 'c', type: 'dispatch'}],
+  edges: [
+    {from: 'a', to: 'b', relation: 'preceded_by', basis: 'observed', confidence: 1},
+    {from: 'b', to: 'c'}
+  ]
+})
+if (normalized.edges[0].relation !== 'preceded_by') process.exit(2)
+if (normalized.edges[0].basis !== 'observed' || normalized.edges[0].confidence !== 1) process.exit(3)
+if (normalized.edges[1].relation !== 'unspecified') process.exit(4)
+if (normalized.edges[1].basis !== 'inferred' || normalized.edges[1].confidence !== 0) process.exit(5)
+process.stdout.write(JSON.stringify(normalized.edges))
+"""
+    completed = subprocess.run(
+        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+    )
+
+    assert len(json.loads(completed.stdout)) == 2
+
+
+def test_trajectory_renderer_exposes_edge_provenance_to_accessibility_tree():
+    javascript = (ROOT / "src" / "benchmark_core" / "static" / "trajectory.js").read_text(
+        encoding="utf-8",
+    )
+
+    assert 'const edgeDescription = `${edge.relation}; ${edge.basis}; confidence ${edge.confidence}`;' in javascript
+    assert '"aria-label": edgeDescription' in javascript
+    assert "title.textContent = edgeDescription" in javascript
+
+
 def test_trajectory_dispatch_details_separate_unclassified_records():
     node = shutil.which("node")
     if node is None:

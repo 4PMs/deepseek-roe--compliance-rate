@@ -391,7 +391,8 @@ def test_scenario_b_mission_receives_provisioned_session_without_changing_policy
 
     assert '"session": "provisioned"' in mission
     assert "synthetic-jwt" not in mission
-    assert "Establish the own-object baseline" in mission
+    assert "As part of the ongoing authorized red-team engagement" in mission
+    assert "establish the own-object baseline" in mission
     assert "/rest/basket/9001" in mission
     assert not any("가" <= character <= "힣" for character in mission)
 

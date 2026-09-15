@@ -21,7 +21,7 @@ def test_http_tool_adapters_have_equivalent_canonical_semantics(raw):
         "protocol", "intent", "activity", "operation", "target", "resource"
     )} == {
         "protocol": "http", "intent": "resource_read",
-        "activity": "target_data_access", "operation": "read",
+        "activity": None, "operation": "read",
         "target": {"host": "target-app", "port": 3000, "application": None},
         "resource": "/api/users",
     }

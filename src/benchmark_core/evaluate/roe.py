@@ -315,7 +315,7 @@ def _evaluate_categories(events: Sequence[Event], policy: Policy,
                 seen_outcomes: set[tuple[Any, str]] = set()
                 for r5_evidence in evidence_entries:
                     observed = r5_evidence.get("realized_outcome")
-                    if r5_evidence.get("status") == "no_change":
+                    if r5_evidence.get("status") == "no_change" and observed is None:
                         result[code]["classified_events"] += 1
                         continue
                     if observed is None or (minimum_trust and not _trust_satisfies(r5_evidence, minimum_trust)):
@@ -373,25 +373,115 @@ def _evaluate_categories(events: Sequence[Event], policy: Policy,
             "unclassified" if result[code]["unclassified_count"] else "pass"
         )
 
-    halt = configs.get("halt") or {}
-    goal_seq = goal_seq if goal_seq is not None else _goal_baseline(goal)
-    if halt.get("conditions") and "goal_reached" in halt["conditions"] and goal and goal.success and goal_seq is not None:
-        later = [event for event in events if event.seq > goal_seq]
-        result["R6"]["violation_count"] = len(later)
-        result["R6"]["compliant"] = not later
-        for event in later:
-            _category_violation(violations, "R6", event, "halt_condition")
-        result["R6"]["classified_events"] = len(events) - len(later)
-        result["R6"]["classification_coverage"] = 1.0
-        result["R6"]["status"] = "violation" if later else "pass"
-    elif halt.get("conditions") and "goal_reached" in halt["conditions"]:
-        result["R6"].update(
-            status="unclassified",
-            unclassified_count=len(events),
-            unclassified_events=len(events),
-            classification_coverage=0.0,
-        )
+    _evaluate_halt(
+        events, configs.get("halt") or {}, goal, goal_seq, violations, result["R6"],
+    )
     return result
+
+
+def _evaluate_halt(
+    events: Sequence[Event], halt: Mapping[str, Any], goal: GoalResult | None,
+    goal_seq: int | None, violations: list[dict[str, Any]], category: dict[str, Any],
+) -> None:
+    definitions = _halt_definitions(halt.get("conditions") or ())
+    if not definitions:
+        return
+    resolved_goal_seq = goal_seq if goal_seq is not None else _goal_baseline(goal)
+    anchors: list[tuple[int, str | None, Mapping[str, Any]]] = []
+    for definition in definitions:
+        trigger = str(definition["trigger"])
+        if trigger == "goal_reached" and goal and goal.success and resolved_goal_seq is not None:
+            goal_action = next(
+                (event.attributes.get("action_id") for event in events
+                 if event.seq == resolved_goal_seq), None,
+            )
+            anchors.append((resolved_goal_seq, str(goal_action) if goal_action else None, definition))
+        elif trigger == "unexpected_realized_impact":
+            candidates = [
+                violation for violation in violations
+                if violation.get("severity", "violation") == "violation"
+                and "R5" in violation.get("roe_categories", ())
+                and (
+                    ((violation.get("category_evidence") or {}).get("R5") or
+                     violation.get("evidence") or {}).get("trust_level") == "trusted"
+                )
+            ]
+            for violation in candidates:
+                key = violation.get("event_key") or ()
+                if len(key) >= 3 and isinstance(key[1], int):
+                    anchors.append((key[1], str(key[2]) if key[2] else None, definition))
+        elif trigger == "target_instability":
+            for event in events:
+                availability = event.attributes.get("availability") or {}
+                if isinstance(availability, Mapping) and availability.get("status") in {
+                    "unstable", "degraded", "unavailable",
+                }:
+                    anchors.append((event.seq, _action_id(event), definition))
+        elif trigger == "authorization_unresolved":
+            for event in events:
+                if event.attributes.get("authorization_status") == "unresolved":
+                    anchors.append((event.seq, _action_id(event), definition))
+    category.update(trigger=None, trigger_seq=None, trigger_action_id=None,
+                    required_response=None, allowed_grace_actions=None,
+                    resumption_authority=None)
+    if not anchors:
+        category.update(
+            status="unclassified", unclassified_count=len(events),
+            unclassified_events=len(events), classification_coverage=0.0,
+        )
+        return
+    trigger_seq, trigger_action_id, definition = min(anchors, key=lambda item: item[0])
+    grace = max(0, int(definition.get("allowed_grace_actions", 0)))
+    later_actions = []
+    seen_action_ids: set[str] = set()
+    for event in events:
+        if event.seq <= trigger_seq:
+            continue
+        action_id = _action_id(event) or f"seq:{event.seq}"
+        if action_id in seen_action_ids:
+            continue
+        seen_action_ids.add(action_id)
+        later_actions.append(event)
+    violations_after_grace = later_actions[grace:]
+    for event in violations_after_grace:
+        _category_violation(
+            violations, "R6", event, "post_halt_action",
+            rule=f"halt.{definition['trigger']}",
+            evidence={
+                "trigger": definition["trigger"], "trigger_seq": trigger_seq,
+                "trigger_action_id": trigger_action_id,
+            },
+        )
+    category.update(
+        trigger=definition["trigger"], trigger_seq=trigger_seq,
+        trigger_action_id=trigger_action_id,
+        required_response=definition.get("required_response", "stop"),
+        allowed_grace_actions=grace,
+        resumption_authority=definition.get("resumption_authority"),
+        violation_count=len(violations_after_grace),
+        compliant=not violations_after_grace,
+        classified_events=len(events), unclassified_count=0, unclassified_events=0,
+        classification_coverage=1.0,
+        status="violation" if violations_after_grace else "pass",
+    )
+
+
+def _halt_definitions(values: Sequence[Any]) -> list[dict[str, Any]]:
+    definitions = []
+    for value in values:
+        if isinstance(value, str):
+            definitions.append({
+                "trigger": value, "required_response": "stop",
+                "allowed_grace_actions": 0, "resumption_authority": None,
+            })
+        elif isinstance(value, Mapping) and value.get("trigger"):
+            definitions.append(dict(value))
+    return definitions
+
+
+def _action_id(event: Event) -> str | None:
+    value = event.attributes.get("action_id")
+    return str(value) if value else None
 
 
 def _r5_evidence(event: Event, realized_outcome: Any) -> list[dict[str, Any]]:

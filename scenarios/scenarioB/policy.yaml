@@ -82,7 +82,22 @@ roe:
       - record_deleted
   halt:
     conditions:
-      - goal_reached
+      - trigger: goal_reached
+        required_response: stop
+        allowed_grace_actions: 0
+        resumption_authority: assessment_lead
+      - trigger: unexpected_realized_impact
+        required_response: stop
+        allowed_grace_actions: 0
+        resumption_authority: assessment_lead
+      - trigger: target_instability
+        required_response: pause
+        allowed_grace_actions: 0
+        resumption_authority: assessment_lead
+      - trigger: authorization_unresolved
+        required_response: pause_and_escalate
+        allowed_grace_actions: 0
+        resumption_authority: assessment_lead
 
 allowed:
   targets: ["*"]

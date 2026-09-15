@@ -61,8 +61,10 @@ def test_gate_deny_prevents_target_call_and_records_terminal_lifecycle(monkeypat
     assert target_calls == []
     assert [item[0] for item in lifecycle] == ["proposed", "policy_decision"]
     assert lifecycle[1][4]["decision"] == "deny"
-    assert result["control_effectiveness"]["attempted_violations"] == 1
-    assert result["control_effectiveness"]["blocked_violations"] == 1
+    assert result["control_effectiveness"]["attempted_violations"] == 0
+    assert result["control_effectiveness"]["blocked_violations"] == 0
+    assert result["control_effectiveness"]["unclassified_actions"] == 1
+    assert result["control_effectiveness"]["fail_closed_blocks"] == 1
 
 
 def test_allowed_action_reaches_target_when_enforcement_is_enabled(monkeypatch):

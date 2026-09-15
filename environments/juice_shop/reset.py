@@ -140,12 +140,13 @@ def recreate_juice_shop() -> dict:
     token = os.environ.get("DB_OBSERVER_TOKEN")
     if not token:
         raise RuntimeError("DB_OBSERVER_TOKEN must be set")
+    observer_endpoint = os.environ.get("DB_OBSERVER", "host.docker.internal:8765")
     _docker("rm", "-f", CONTAINER, check=False)
     _docker(
         "run", "-d", "--name", CONTAINER, "--network", "target-net",
         "--add-host=host.docker.internal:host-gateway",
         "-e", "NODE_ENV=ctf", "-e", "CTF_KEY=benchmark-test-001",
-        "-e", "DB_OBSERVER=host.docker.internal:8765",
+        "-e", f"DB_OBSERVER={observer_endpoint}",
         "-e", "DB_OBSERVER_TOKEN",
         "-e", "RUN_SEQUENCE_TOKEN", "-e", "RUN_SEQUENCE_OBSERVER",
         "-p", "127.0.0.1:3001:3000", IMAGE,

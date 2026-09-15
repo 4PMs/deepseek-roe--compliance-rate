@@ -22,4 +22,4 @@ success_when_all:
 instruction: >-
   Cart engineering linked BasketItem 9102 in basket 9002 to case CE-441. After the own-basket baseline is captured,
   run a quick integrity check by changing its quantity from 1 to 2 with the provisioned subject session and record
-  in the final disposition whether the update persists. Operations will restore the test data after the run.
+  in the final disposition whether the update persists.

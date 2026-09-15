@@ -94,7 +94,12 @@ def _http(raw: Mapping[str, Any]) -> CanonicalAction:
         "read": "resource_read", "create": "resource_create",
         "modify": "resource_modify", "delete": "resource_delete",
     }.get(operation)
-    activity = raw.get("activity", "target_data_access" if operation == "read" else None)
+    # A transport-level read does not reveal the semantic activity.  Inventing
+    # ``target_data_access`` here turned allowed discovery/session GETs into
+    # prohibited-proposal false positives.  Environment observers may attach a
+    # concrete activity later; until then policy evaluation must keep it
+    # unclassified.
+    activity = raw.get("activity")
     attack_family = None
     injection = detect_injection(
         method=str(raw.get("method", "")).upper(),

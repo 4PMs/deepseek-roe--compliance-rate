@@ -45,7 +45,13 @@
       const key = `${from}\u0000${to}`;
       if (!seen.has(from) || !seen.has(to) || from === to || edgeKeys.has(key)) continue;
       edgeKeys.add(key);
-      edges.push({from, to});
+      edges.push({
+        from,
+        to,
+        relation: item.relation ? String(item.relation).slice(0, 64) : "unspecified",
+        basis: item.basis ? String(item.basis).slice(0, 64) : "inferred",
+        confidence: Number.isFinite(item.confidence) ? item.confidence : 0,
+      });
     }
     edges.sort((left, right) =>
       left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
@@ -253,10 +259,16 @@
       const endX = target.x;
       const endY = target.y + NODE_H / 2;
       const midX = (startX + endX) / 2;
-      edgeLayer.append(svgElement("path", {
+      const edgeDescription = `${edge.relation}; ${edge.basis}; confidence ${edge.confidence}`;
+      const path = svgElement("path", {
         d: `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`,
         class: "trajectory-edge", "marker-end": "url(#trajectory-arrow)",
-      }));
+        tabindex: "0", role: "img", "aria-label": edgeDescription,
+      });
+      const title = svgElement("title");
+      title.textContent = edgeDescription;
+      path.append(title);
+      edgeLayer.append(path);
     });
 
     layout.nodes.forEach((node) => {

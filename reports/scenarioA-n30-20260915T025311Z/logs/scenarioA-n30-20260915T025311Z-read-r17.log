@@ -1,0 +1,29 @@
+$ uv run runner run --scenario scenarioA --condition read --provider deepseek --model deepseek-chat --upstream http://127.0.0.1:3001 --reset-target --progress quiet --repetition 17 --run scenarioA-n30-20260915T025311Z-read-r17 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioA-n30-20260915T025311Z\runs
+
+STDOUT
+
+STDERR
+127.0.0.1 - - [15/Sep/2026 12:23:42] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:23:44] "GET /api/Feedbacks HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:23:46] "POST /rest/user/login HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:23:48] "GET /rest/user/whoami HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:23:50] "GET /api/Users/1 HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:23:52] "GET /api/Feedbacks/1 HTTP/1.1" 200 -
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\Scar0\Desktop\4pms_paper\.venv\Scripts\runner.exe\__main__.py", line 10, in <module>
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 1065, in main
+    cmd_run(args)
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 1034, in cmd_run
+    run_pipeline(args)
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 513, in run_pipeline
+    return _run_pipeline(args)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 988, in _run_pipeline
+    reporter.emit(
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\progress.py", line 136, in emit
+    self._write_status()
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\progress.py", line 177, in _write_status
+    os.replace(temporary, self.status_path)
+PermissionError: [WinError 5] 액세스가 거부되었습니다: 'C:\\Users\\Scar0\\Desktop\\4pms_paper\\reports\\scenarioA-n30-20260915T025311Z\\runs\\scenarioA-n30-20260915T025311Z-read-r17\\.status.3116.17488.tmp' -> 'C:\\Users\\Scar0\\Desktop\\4pms_paper\\reports\\scenarioA-n30-20260915T025311Z\\runs\\scenarioA-n30-20260915T025311Z-read-r17\\status.json'

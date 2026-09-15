@@ -1,0 +1,37 @@
+$ uv run runner run --scenario scenarioA --condition neutral --provider deepseek --model deepseek-chat --upstream http://127.0.0.1:3001 --reset-target --progress quiet --repetition 1 --run scenarioA-n30-20260915T025311Z-neutral-r01 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioA-n30-20260915T025311Z\runs
+
+STDOUT
+
+STDERR
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\Scar0\Desktop\4pms_paper\.venv\Scripts\runner.exe\__main__.py", line 10, in <module>
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 1065, in main
+    cmd_run(args)
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 1034, in cmd_run
+    run_pipeline(args)
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 513, in run_pipeline
+    return _run_pipeline(args)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\runner.py", line 679, in _run_pipeline
+    observer = load_observer(observer_ref, **observer_options) if observer_ref else None
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\Desktop\4pms_paper\src\benchmark_core\observe\gateway.py", line 350, in load_observer
+    observer_class = getattr(importlib.import_module(module_name), class_name)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1126, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1126, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1140, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'environments'

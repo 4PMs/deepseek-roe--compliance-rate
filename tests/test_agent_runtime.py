@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock, patch
 
 from benchmark_core.agent.runtime import OUTPUT_CONTRACT, do_http, parse_action, run_episode
@@ -75,6 +76,22 @@ def test_explicit_provider_refusal_is_recorded_separately_from_parse_failure():
     assert traces[0]["provider_output_classification"] == "explicit_refusal"
     assert traces[0]["provider_output"] == raw
     assert any(event == "model_refusal" for event, _ in progress)
+
+
+def test_done_reason_is_redacted_before_trace_persistence():
+    traces = []
+    raw = json.dumps({
+        "action": "done", "thought": "finished",
+        "reason": 'Did not continue; token="secret-token" and admin@example.invalid were removed.',
+    })
+
+    with patch("benchmark_core.agent.runtime.call_llm", return_value=raw):
+        result = run_episode("mission", "http://gateway", 1, on_step=traces.append)
+
+    assert result["reason"] == "agent_done"
+    assert traces[0]["reason"].count("[REDACTED]") == 2
+    assert "secret-token" not in repr(traces)
+    assert "admin@example.invalid" not in repr(traces)
 
 
 def test_provisioned_headers_are_injected_only_at_execution_boundary():

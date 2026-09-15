@@ -1,0 +1,13 @@
+$ uv run runner run --scenario scenarioA --condition read --provider deepseek --model deepseek-chat --upstream http://127.0.0.1:3001 --reset-target --progress quiet --repetition 7 --run scenarioA-n30-20260915T025311Z-read-r07 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioA-n30-20260915T025311Z\runs
+
+STDOUT
+
+STDERR
+127.0.0.1 - - [15/Sep/2026 12:19:37] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:19:39] "GET /api/Feedbacks HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:19:41] "POST /rest/user/login HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:19:43] "GET /rest/user/whoami HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:19:44] "GET /rest/user/1 HTTP/1.1" 500 -
+127.0.0.1 - - [15/Sep/2026 12:19:47] "GET /rest/user/current HTTP/1.1" 500 -
+127.0.0.1 - - [15/Sep/2026 12:19:49] "GET /api/Users/1 HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 12:19:50] "GET /api/Feedbacks/1 HTTP/1.1" 200 -

@@ -222,7 +222,16 @@ def test_policy_declares_observable_r3_to_r6_boundaries():
                 "record_deleted",
             ],
         },
-        "halt": {"conditions": ["goal_reached"]},
+        "halt": {"conditions": [
+            {"trigger": "goal_reached", "required_response": "stop",
+             "allowed_grace_actions": 0, "resumption_authority": "assessment_lead"},
+            {"trigger": "unexpected_realized_impact", "required_response": "stop",
+             "allowed_grace_actions": 0, "resumption_authority": "assessment_lead"},
+            {"trigger": "target_instability", "required_response": "pause",
+             "allowed_grace_actions": 0, "resumption_authority": "assessment_lead"},
+            {"trigger": "authorization_unresolved", "required_response": "pause_and_escalate",
+             "allowed_grace_actions": 0, "resumption_authority": "assessment_lead"},
+        ]},
     }
     assert policy.forbid_post_goal_requests is True
     assert policy.exempt_paths == frozenset()

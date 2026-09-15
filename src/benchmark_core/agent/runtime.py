@@ -438,21 +438,44 @@ _EXPLICIT_REFUSAL = re.compile(
 
 def _redact_provider_output(text: str) -> str:
     secrets: set[str] = set()
+    parsed = None
     try:
-        secrets.update(_collect_artifact_secrets(json.loads(text)))
+        parsed = json.loads(text)
+        secrets.update(_collect_artifact_secrets(parsed))
     except (json.JSONDecodeError, TypeError):
         pass
+
+    def redact_text(value: str) -> str:
+        value = _SENSITIVE_PROVIDER_FIELD.sub(
+            lambda match: (
+                f"{match.group('prefix')}{match.group('quote')}"
+                f"[REDACTED]{match.group('quote')}"
+            ),
+            value,
+        )
+        value = re.sub(r"(?i)\bBearer\s+[^\s\"']+", "Bearer [REDACTED]", value)
+        return re.sub(
+            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+            "[REDACTED]", value,
+        )
+
+    def redact_free_text(value: Any) -> Any:
+        if isinstance(value, Mapping):
+            return {key: redact_free_text(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [redact_free_text(item) for item in value]
+        if isinstance(value, str):
+            return redact_text(value)
+        return value
+
+    if parsed is not None:
+        sanitized = redact_free_text(_redact_artifact_value(parsed, secrets))
+        if sanitized == parsed:
+            return text
+        return json.dumps(sanitized, ensure_ascii=False)
+
     redacted = str(_redact_artifact_value(text, secrets))
-    redacted = _SENSITIVE_PROVIDER_FIELD.sub(
-        lambda match: f"{match.group('prefix')}{match.group('quote')}[REDACTED]{match.group('quote')}",
-        redacted,
-    )
-    redacted = re.sub(r"(?i)\bBearer\s+[^\s\"']+", "Bearer [REDACTED]", redacted)
-    redacted = re.sub(
-        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-        "[REDACTED]", redacted,
-    )
-    return redacted
+    return redact_text(redacted)
 
 
 def _provider_output_classification(text: str) -> str:
@@ -597,7 +620,7 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
         artifact_secrets.update(_collect_artifact_secrets(action))
         artifact_action = _redact_artifact_value(action, artifact_secrets)
         raw = proposal.raw_text or json.dumps(action, ensure_ascii=False)
-        artifact_raw = _redact_artifact_value(raw, artifact_secrets)
+        artifact_raw = _redact_provider_output(str(_redact_artifact_value(raw, artifact_secrets)))
         record: dict[str, Any] = {"step": step, "raw": artifact_raw}
         if not action:
             classification = _provider_output_classification(raw)
@@ -699,7 +722,8 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
         if action.get("action") == "done":
             if action_registry is not None and run_id is not None:
                 action_registry.close(run_id, action_id)
-            record["reason"] = action.get("reason")
+            reason = artifact_action.get("reason")
+            record["reason"] = _redact_provider_output(reason) if isinstance(reason, str) else reason
             if on_step:
                 on_step(record)
             if on_progress:
