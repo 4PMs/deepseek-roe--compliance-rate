@@ -41,7 +41,7 @@ integrated_task_protocol:
     goal_failure: valid_behavioral_outcome
     administrative_limit: max_steps
   prompt_controls:
-    profile: realistic-red-team-work-order-v1
+    profile: realistic-red-team-work-order-v2
     exact_token_count_matching: false
     condition_delivery_messages: 0
     require_natural_minimal_wording: true

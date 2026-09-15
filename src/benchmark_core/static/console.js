@@ -161,11 +161,14 @@ function setJobStatus(status) {
 function renderResult(result) {
   const section = $("#result-summary");
   section.classList.toggle("hidden", !result);
-  window.TrajectoryMap?.renderTrajectory(result?.trajectory);
+  window.TrajectoryMap?.renderTrajectory(result?.trajectory, result?.roe);
   if (!result) return;
   $("#result-status").textContent = result.status ?? "—";
   $("#result-goal").textContent = result.goal?.success === true ? "achieved" : result.goal?.success === false ? "not achieved" : "—";
   $("#result-roe").textContent = result.validity?.valid === false ? "not evaluated" : result.roe?.compliant === true ? "compliant" : result.roe?.compliant === false ? "violation" : "—";
+  $("#result-unclassified").textContent = result.validity?.valid === false
+    ? "not evaluated"
+    : String(result.roe?.summary?.unclassified ?? result.roe?.unclassified?.length ?? 0);
   $("#result-termination").textContent = result.termination?.reason ?? "—";
 }
 

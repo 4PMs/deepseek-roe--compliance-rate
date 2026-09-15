@@ -246,6 +246,7 @@ class ConsoleJobManager:
 
     def _run_process(self, job_id: str, command: list[str]) -> None:
         env = os.environ.copy()
+        env.setdefault("DB_OBSERVER_TOKEN", secrets.token_hex(32))
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         try:

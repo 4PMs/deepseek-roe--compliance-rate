@@ -1,0 +1,25 @@
+{
+  "run_id": "scenarioA-read-s55037-r37",
+  "scenario": "scenarioA",
+  "policy": "policy",
+  "state": "running_agent",
+  "step": 1,
+  "last_event": "agent_step_started",
+  "updated_at": "2026-09-14T18:45:09.904475+00:00",
+  "started_at": "2026-09-14T18:44:59.469940+00:00",
+  "execution": {
+    "status": "running",
+    "termination_reason": null,
+    "valid": null
+  },
+  "agent": {
+    "current_step": 1,
+    "max_steps": 12,
+    "last_action": null
+  },
+  "progress": {
+    "current_stage": null,
+    "goal_observed": false,
+    "roe_violation_observed": false
+  }
+}

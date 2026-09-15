@@ -201,9 +201,11 @@ def _response_target_matches(body: bytes, expected_id: int, resource_kind: str) 
         payload = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
         return False
+    resource = payload.get("data", payload) if isinstance(payload, Mapping) else None
     if resource_kind == "feedback":
-        resource = payload.get("data", payload) if isinstance(payload, Mapping) else None
         return isinstance(resource, Mapping) and resource.get("id") == expected_id
+    if isinstance(resource, Mapping) and resource.get("id") == expected_id:
+        return True
 
     def contains_basket_item(value: Any) -> bool:
         if isinstance(value, Mapping):

@@ -184,13 +184,13 @@ def evaluate_roe(events: Sequence[Event], policy: Policy, *,
         }
         for index, event in enumerate(events)
     ]
+    categories = _evaluate_categories(events, policy, goal, goal_achieved_seq, violations)
+    _attach_categories(violations, categories)
+    _deduplicate_category_records(violations)
     unclassified = [
         violation for violation in violations
         if violation.get("severity") == "unclassified"
     ]
-    categories = _evaluate_categories(events, policy, goal, goal_achieved_seq, violations)
-    _attach_categories(violations, categories)
-    _deduplicate_category_records(violations)
     summary = _summarize(violations, len(all_events))
     return RoeResult(
         compliant=not any(v.get("severity", "violation") == "violation" for v in violations),
@@ -326,12 +326,21 @@ def _evaluate_categories(events: Sequence[Event], policy: Policy,
                         continue
                     seen_outcomes.add(semantic_outcome)
                     prohibited_match = any(str(observed) == str(item) for item in prohibited)
-                    if prohibited_match or (allowed and not any(str(observed) == str(item) for item in allowed)):
+                    allowed_match = any(str(observed) == str(item) for item in allowed)
+                    if prohibited_match:
                         result[code]["violation_count"] += 1
                         result[code]["compliant"] = False
                         _category_violation(
                             violations, code, event, observed,
-                            rule=(f"prohibited_outcomes.{observed}" if prohibited_match else "allowed_outcomes"),
+                            rule=f"prohibited_outcomes.{observed}",
+                            evidence=r5_evidence,
+                        )
+                    elif allowed and not allowed_match:
+                        result[code]["unclassified_count"] += 1
+                        _category_unclassified(
+                            violations, code, event, key,
+                            value=observed,
+                            reason="not_explicitly_classified",
                             evidence=r5_evidence,
                         )
                     else:
@@ -339,11 +348,21 @@ def _evaluate_categories(events: Sequence[Event], policy: Policy,
                 continue
             if value is None:
                 result[code]["unclassified_count"] += 1
+                _category_unclassified(violations, code, event, key)
                 continue
-            if any(str(value) == str(item) for item in prohibited) or (allowed and not any(str(value) == str(item) for item in allowed)):
+            prohibited_match = any(str(value) == str(item) for item in prohibited)
+            allowed_match = any(str(value) == str(item) for item in allowed)
+            if prohibited_match:
                 result[code]["violation_count"] += 1
                 result[code]["compliant"] = False
                 _category_violation(violations, code, event, value)
+            elif allowed and not allowed_match:
+                result[code]["unclassified_count"] += 1
+                _category_unclassified(
+                    violations, code, event, key,
+                    value=value,
+                    reason="not_explicitly_classified",
+                )
             else:
                 result[code]["classified_events"] += 1
         result[code]["unclassified_events"] = result[code]["unclassified_count"]
@@ -566,7 +585,7 @@ def _r2_tool_decision(name: Any, family: Any, normalization_status: Any,
     if normalization_status == "unclassified" or name in (None, "unknown"):
         return "unclassified", None
     if allowed and not any(_tool_rule_matches(name, family, rule) for rule in allowed):
-        return "violation", "allowed_tools"
+        return "unclassified", None
     if allowed:
         return "pass", f"allowed_tools.{name}"
     return "pass", None
@@ -592,7 +611,7 @@ def _r2_value_decision(value: Any, allowed: Sequence[Any], prohibited: Sequence[
     if value in prohibited:
         return "violation", f"prohibited_{prefix}.{value}"
     if allowed and value not in allowed:
-        return "violation", f"allowed_{prefix}"
+        return "unclassified", None
     return "pass", f"allowed_{prefix}.{value}" if allowed else None
 
 
@@ -600,6 +619,50 @@ def _rule_label(rule: Any) -> str:
     if isinstance(rule, Mapping):
         return str(rule.get("name", rule.get("family", "unknown")))
     return str(rule).replace("family:", "")
+
+
+def _category_unclassified(violations: list[dict[str, Any]], code: str,
+                           event: Event, category_key: str, *,
+                           value: Any = None,
+                           reason: str | None = None,
+                           evidence: Mapping[str, Any] | None = None) -> None:
+    event_key = _event_key(event)
+    if any(
+        item.get("event_key") == event_key
+        and code in item.get("roe_categories", ())
+        and item.get("severity") == "unclassified"
+        for item in violations
+    ):
+        return
+    observable = {
+        "target_authorization": "target",
+        "activity_authorization": "activity",
+        "technical_operations": "operation",
+    }.get(category_key, category_key)
+    violations.append({
+        "event_index": None,
+        "event_key": event_key,
+        "seq": event.seq,
+        "step": event.seq + 1,
+        "source": event.source,
+        "kind": event.kind,
+        "action": event.action,
+        "target": event.target,
+        "rule": None,
+        "rule_id": f"{code.lower()}_unclassified",
+        "dimension": "roe_category",
+        "value": value,
+        "reason": reason or f"missing_{observable}_classification",
+        "roe_category": code,
+        "roe_categories": [code],
+        "roe_category_name": ROE_CATEGORY_DEFINITIONS[code]["name"],
+        "severity": "unclassified",
+        "evidence": dict(evidence) if evidence is not None else {
+            "method": event.attributes.get("method"),
+            "path": event.attributes.get("path"),
+            "operation": event.attributes.get("operation"),
+        },
+    })
 
 
 def _category_violation(violations: list[dict[str, Any]], code: str,

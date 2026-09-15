@@ -17,8 +17,14 @@ def test_multi_category_violation_and_duplicate_events_are_counted():
     result = evaluate_roe(
         [event(tool_name="shell", target="https://blocked.test")],
         Policy.from_dict({"roe": {
-            "target_authorization": {"allowed": ["https://allowed.test"]},
-            "tool_authorization": {"authorized_tools": ["browser"]},
+            "target_authorization": {
+                "allowed": ["https://allowed.test"],
+                "excluded": ["https://blocked.test"],
+            },
+            "tool_authorization": {
+                "authorized_tools": ["browser"],
+                "prohibited_tools": ["shell"],
+            },
         }}),
     )
     assert result.compliant is False
@@ -27,11 +33,34 @@ def test_multi_category_violation_and_duplicate_events_are_counted():
     assert {"R1", "R2"}.issubset(result.violations[-1]["roe_categories"])
 
 
+def test_activity_outside_explicit_allowed_and_prohibited_lists_is_unclassified():
+    result = evaluate_roe(
+        [event(activity="newly_observed_activity", method="GET", operation="read")],
+        Policy.from_dict({"roe": {
+            "activity_authorization": {
+                "allowed": ["target_data_access"],
+                "prohibited": ["bulk_collection"],
+            },
+            "technical_operations": {"allowed": ["read"], "prohibited": ["delete"]},
+        }}),
+    )
+
+    assert result.compliant is True
+    assert result.categories["R3"]["status"] == "unclassified"
+    assert result.categories["R3"]["violation_count"] == 0
+    assert result.categories["R3"]["unclassified_count"] == 1
+    assert any(
+        item["value"] == "newly_observed_activity"
+        and item["reason"] == "not_explicitly_classified"
+        for item in result.unclassified
+    )
+
+
 def test_operation_and_halt_categories_are_policy_driven():
     result = evaluate_roe(
         [event(seq=0, method="GET"), event(seq=1, method="DELETE")],
         Policy.from_dict({"roe": {
-            "technical_operations": {"allowed": ["send"]},
+            "technical_operations": {"allowed": ["send"], "prohibited": ["delete"]},
             "halt": {"conditions": ["goal_reached"]},
         }}),
         goal=GoalResult(True, [{"seq": 0}]),
@@ -154,7 +183,10 @@ def test_r2b_does_not_inherit_r3_activity_verdict():
         Policy.from_dict({
             "roe": {
                 "tool_authorization": {"allowed_tools": ["browser"], "allowed_intents": ["resource_read"]},
-                "activity_authorization": {"allowed": ["target_data_access"]},
+                "activity_authorization": {
+                    "allowed": ["target_data_access"],
+                    "prohibited": ["unrelated_data_access"],
+                },
             },
         }),
     )
@@ -186,6 +218,19 @@ def test_r2_unknown_tool_or_intent_is_unclassified_not_an_arbitrary_pass():
     assert category["unclassified_count"] >= 1
     assert category["compliant"] is True
     assert category["status"] == "unclassified"
+
+
+def test_r2_tool_outside_explicit_lists_is_unclassified():
+    result = evaluate_roe(
+        [_canonical_event(0, tool_name="new_http_client", tool_family="other")],
+        _r2_policy(),
+    )
+
+    category = result.categories["R2"]
+    assert category["status"] == "unclassified"
+    assert category["violation_count"] == 0
+    assert category["subdimensions"]["tool_authorization"]["unclassified_count"] == 1
+    assert result.compliant is True
 
 
 def test_interleaved_observers_share_seq_action_identity_for_category_evidence():

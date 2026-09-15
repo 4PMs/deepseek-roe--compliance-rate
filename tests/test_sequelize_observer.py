@@ -4,6 +4,7 @@ import shutil
 import subprocess
 
 import pytest
+import yaml
 
 
 NODE = shutil.which("node")
@@ -69,3 +70,70 @@ def test_missing_database_variables_also_disables_observer_without_delay_path():
     })
     assert result.stdout == '{"loaded":false}'
     assert result.stderr.count("BENCHMARK DB observer disabled") == 1
+
+
+def test_query_logging_never_spawns_a_synchronous_child_process():
+    if NODE is None:
+        pytest.skip("node is not installed")
+    script = """
+const Module = require('node:module')
+const load = Module._load
+let childProcessLoaded = false
+let connectionCreated = false
+let heartbeatSent = false
+class Sequelize {
+  log () { return 'logged' }
+}
+Module._load = function (request, parent, isMain) {
+  if (request === 'sequelize') return { Sequelize }
+  if (request === 'node:dgram') {
+    return {
+      createSocket: () => ({
+        on () {},
+        unref () {},
+        send (payload) { heartbeatSent ||= JSON.parse(payload).type === 'heartbeat' }
+      })
+    }
+  }
+  if (request === 'node:net') {
+    return {
+      createConnection: () => {
+        connectionCreated = true
+        return { on () { return this }, end () {}, destroy () {} }
+      }
+    }
+  }
+  if (request === 'node:child_process') {
+    childProcessLoaded = true
+    return { execFileSync: () => { throw new Error('sync child process used') } }
+  }
+  return load.call(this, request, parent, isMain)
+}
+require(process.argv[1])
+const result = Sequelize.prototype.log('SELECT * FROM Users')
+process.stdout.write(JSON.stringify({ childProcessLoaded, connectionCreated, heartbeatSent, result }))
+"""
+    process_env = os.environ.copy()
+    process_env.update({
+        "DB_OBSERVER": "127.0.0.1:8765",
+        "DB_OBSERVER_TOKEN": "db-token",
+        "RUN_SEQUENCE_OBSERVER": "127.0.0.1:8766",
+        "RUN_SEQUENCE_TOKEN": "sequence-token",
+    })
+    result = subprocess.run(
+        [NODE, "-e", script, str(OBSERVER)],
+        capture_output=True, text=True, env=process_env, check=True,
+    )
+
+    assert result.stdout == (
+        '{"childProcessLoaded":false,"connectionCreated":true,'
+        '"heartbeatSent":true,"result":"logged"}'
+    )
+
+
+def test_database_collector_binds_an_interface_reachable_from_docker():
+    environment = yaml.safe_load(
+        (OBSERVER.parent / "environment.yaml").read_text(encoding="utf-8")
+    )
+
+    assert environment["database"]["observation"]["bind_host"] == "0.0.0.0"

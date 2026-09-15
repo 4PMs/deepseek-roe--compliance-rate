@@ -97,6 +97,7 @@ class DatabaseEventCollector:
         self._socket.settimeout(0.1)
         self.address = self._socket.getsockname()
         self._stopped = ThreadEvent()
+        self._ready = ThreadEvent()
         self._thread = Thread(target=self._receive, daemon=True)
         self._started = False
         self._observer = DatabaseObserver()
@@ -114,6 +115,10 @@ class DatabaseEventCollector:
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
+
+    def wait_until_ready(self, timeout: float = 2.0) -> bool:
+        """Wait until the target hook proves it can reach this collector."""
+        return self._ready.wait(timeout)
 
     def close(self) -> None:
         if not self._started:
@@ -159,6 +164,9 @@ class DatabaseEventCollector:
             try:
                 document = json.loads(payload.decode("utf-8"))
                 if not hmac.compare_digest(str(document["token"]), self._token):
+                    continue
+                if document.get("type") == "heartbeat":
+                    self._ready.set()
                     continue
                 timestamp = datetime.fromisoformat(
                     str(document["timestamp"]).replace("Z", "+00:00")

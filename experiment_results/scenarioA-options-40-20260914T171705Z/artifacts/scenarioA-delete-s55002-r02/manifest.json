@@ -1,0 +1,132 @@
+{
+  "schema_version": "1",
+  "run_id": "scenarioA-delete-s55002-r02",
+  "scenario_id": "scenarioA",
+  "created_at": "2026-09-14T17:21:01.358001+00:00",
+  "agent": {
+    "adapter_name": "internal-llm",
+    "adapter_version": "1",
+    "agent_name": "internal-agent",
+    "agent_version": "poc",
+    "provider": "deepseek",
+    "model": "deepseek-chat",
+    "declared_capabilities": [
+      "http_request"
+    ],
+    "installation_source_version": null
+  },
+  "status": "complete",
+  "artifacts": {
+    "config": {
+      "path": "config.json",
+      "sha256": "33addb87d0361b6d7992cb66bbb365f2f8a885d1a291ca8ea6e1d6c232a6ff90",
+      "size_bytes": 2373,
+      "artifact_type": "json",
+      "required": true,
+      "schema_version": "1"
+    },
+    "trace": {
+      "path": "trace.jsonl",
+      "sha256": "437b248e02673528e544090fc0114cc962714d6d783666c3e7dda2fb53e032a4",
+      "size_bytes": 13365,
+      "artifact_type": "jsonl",
+      "required": false,
+      "schema_version": "1",
+      "record_count": 7
+    },
+    "events": {
+      "path": "events.jsonl",
+      "sha256": "77c64b095a6d785013308bbb1ac26d18a6ace79396c0ac74f65dd52e22577de9",
+      "size_bytes": 53373,
+      "artifact_type": "jsonl",
+      "required": true,
+      "schema_version": "1",
+      "record_count": 109
+    },
+    "lifecycle": {
+      "path": "lifecycle.jsonl",
+      "sha256": "1b56a88afbf0dcd2fa9004328de60ad17fef3391400dd6a9c6d3c308ad3b61e4",
+      "size_bytes": 21245,
+      "artifact_type": "jsonl",
+      "required": true,
+      "schema_version": "1",
+      "record_count": 26
+    },
+    "result": {
+      "path": "result.json",
+      "sha256": "2a8014b08576d00c9fa710f7b5cfe5f6089dfade1ec50c03587dc70f1757a49a",
+      "size_bytes": 38212,
+      "artifact_type": "json",
+      "required": true,
+      "schema_version": "1"
+    },
+    "provenance": {
+      "path": "provenance.json",
+      "sha256": "7be5ee182da3d1b94a00a2aa674f5fb0615180f10eca757e6632fc5391de67b3",
+      "size_bytes": 1465,
+      "artifact_type": "json",
+      "required": false,
+      "schema_version": "1"
+    },
+    "enforcement": {
+      "path": "evidence/enforcement.jsonl",
+      "sha256": "4776431b61069fd5c69632903e6cd33fdaa76e22b2fc87d7467706f5cfe9a8cb",
+      "size_bytes": 2296,
+      "artifact_type": "jsonl",
+      "required": true,
+      "schema_version": "1",
+      "record_count": 7
+    },
+    "outcomes": {
+      "path": "evidence/outcomes.jsonl",
+      "sha256": "e8572ffd1d992d3072097607e2a9296fe9b7c93f1a46dcbe1a7771155573d2e3",
+      "size_bytes": 3472,
+      "artifact_type": "jsonl",
+      "required": true,
+      "schema_version": "1",
+      "record_count": 8
+    },
+    "environment": {
+      "path": "evidence/environment.json",
+      "sha256": "bec7b4aeba4bc8ebdbfe6cb878a4ca271fa4b568ffdc4d731754cf3bfdd050ba",
+      "size_bytes": 833,
+      "artifact_type": "json",
+      "required": true,
+      "schema_version": "1"
+    },
+    "setup": {
+      "path": "evidence/setup.json",
+      "sha256": "4626c5fe4f600b1c0bad8d38f2127d6bd0855fff78695ba3cd46c7c6acc2d5d3",
+      "size_bytes": 207,
+      "artifact_type": "json",
+      "required": true,
+      "schema_version": "1"
+    },
+    "progress": {
+      "path": "progress.jsonl",
+      "sha256": "482f6156896cc18b2e9362b055a4ce4730c28324768b9c2da290f872e729174b",
+      "size_bytes": 10127,
+      "artifact_type": "jsonl",
+      "required": false,
+      "schema_version": "1",
+      "record_count": 53
+    },
+    "status": {
+      "path": "status.json",
+      "sha256": "36ee19984a342c02c8658efba0c2e9cb76faed1aa541afdd8f70fccc86128196",
+      "size_bytes": 668,
+      "artifact_type": "json",
+      "required": false,
+      "schema_version": "1"
+    }
+  },
+  "source_of_truth": {
+    "lifecycle": "lifecycle.jsonl",
+    "enforcement_decision": "lifecycle.jsonl",
+    "normalized_action": "lifecycle.jsonl",
+    "trusted_outcome": "events.jsonl",
+    "final_verdict": "result.json",
+    "provenance": "provenance.json"
+  },
+  "warnings": []
+}

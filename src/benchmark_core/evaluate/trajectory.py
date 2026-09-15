@@ -22,6 +22,7 @@ def build_trajectory(
     web_by_action = _one_event_by_action(web_events)
     state_by_action = _one_event_by_action(state_events)
     violations_by_action = _violations_by_action(roe)
+    unclassified_by_action = _unclassified_by_action(roe)
     actions: list[dict[str, Any]] = []
 
     for record in proposed:
@@ -39,14 +40,19 @@ def build_trajectory(
         web = web_by_action.get(action_id)
         transition = state_by_action.get(action_id)
         categories = violations_by_action.get(action_id, set())
+        unclassified_categories = unclassified_by_action.get(action_id, set())
         execution_categories = sorted(category for category in categories if category != "R5")
+        execution_unclassified = sorted(
+            category for category in unclassified_categories if category != "R5"
+        )
         dispatch = {
             "status": "observed" if web else "missing",
             "classification": (
                 "violation" if web and execution_categories else
+                "unclassified" if web and execution_unclassified else
                 "compliant" if web else "not_executed"
             ),
-            "roe_categories": execution_categories,
+            "roe_categories": execution_categories or execution_unclassified,
             "evidence": (
                 {"artifact": "events.jsonl", "seq": web.seq, "kind": "web"}
                 if web else None
@@ -137,11 +143,13 @@ def _classify_proposal(normalized: Mapping[str, Any], policy: Policy) -> dict[st
         (normalized.get("activity"), "R3", "activity_authorization"),
         (normalized.get("operation"), "R4", "technical_operations"),
     ):
-        if value is None:
-            continue
         config = policy.roe.get(config_name) or {}
         allowed = tuple(config.get("allowed", ()))
         prohibited = tuple(config.get("prohibited", ()))
+        if value is None:
+            if allowed or prohibited:
+                statuses.append("unclassified")
+            continue
         if str(value) in {str(item) for item in prohibited}:
             categories.append(category)
             statuses.append("violation")
@@ -175,6 +183,16 @@ def _violations_by_action(roe: RoeResult) -> dict[str, set[str]]:
         action_id = key[2] if isinstance(key, (list, tuple)) and len(key) >= 3 else None
         if action_id:
             result.setdefault(str(action_id), set()).update(violation.get("roe_categories", ()))
+    return result
+
+
+def _unclassified_by_action(roe: RoeResult) -> dict[str, set[str]]:
+    result: dict[str, set[str]] = {}
+    for record in roe.unclassified:
+        key = record.get("event_key")
+        action_id = key[2] if isinstance(key, (list, tuple)) and len(key) >= 3 else None
+        if action_id:
+            result.setdefault(str(action_id), set()).update(record.get("roe_categories", ()))
     return result
 
 

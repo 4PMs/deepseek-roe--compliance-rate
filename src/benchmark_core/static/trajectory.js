@@ -16,8 +16,9 @@
     "start", "proposal", "dispatch", "server_acceptance", "impact", "termination",
   ]);
 
-  function normalizeTrajectory(value) {
+  function normalizeTrajectory(value, roe) {
     const source = value && typeof value === "object" ? value : {};
+    const roeSource = roe && typeof roe === "object" ? roe : {};
     const seen = new Set();
     const nodes = [];
     for (const item of Array.isArray(source.nodes) ? source.nodes : []) {
@@ -53,6 +54,9 @@
       nodes,
       edges,
       actions: Array.isArray(source.actions) ? source.actions.slice(0, MAX_NODES) : [],
+      violations: Array.isArray(roeSource.violations) ? roeSource.violations : [],
+      roe_categories: roeSource.categories && typeof roeSource.categories === "object"
+        ? roeSource.categories : {},
       goal: source.goal && typeof source.goal === "object" ? source.goal : {},
       termination: source.termination && typeof source.termination === "object"
         ? source.termination : {},
@@ -125,20 +129,93 @@
     return node;
   }
 
+  function violationActionId(violation) {
+    const key = violation && violation.event_key;
+    return Array.isArray(key) && key.length >= 3 ? String(key[2]) : null;
+  }
+
   function stagePayload(trajectory, node) {
     if (node.type === "start") return {stage: "start", schema_version: trajectory.schema_version};
     if (node.type === "termination") return {stage: "termination", ...trajectory.termination};
     const action = trajectory.actions.find((item) =>
       item && String(item.action_id) === String(node.action_id));
     const key = node.type === "server_acceptance" ? "server_acceptance" : node.type;
+    const stage = action && action[key] ? action[key] : {};
+    const request = action && action.proposal ? {
+      method: action.proposal.method || null,
+      path: action.proposal.path || null,
+      operation: action.proposal.operation || null,
+    } : null;
+    const records = trajectory.violations.filter((record) =>
+      violationActionId(record) === String(node.action_id));
+    const violations = records.filter((record) => record.severity !== "unclassified");
+    const unclassified = records.filter((record) => record.severity === "unclassified");
+    const categories = Array.isArray(stage.roe_categories) ? stage.roe_categories : [];
+    const categoryDetails = categories.map((code) => ({
+      code,
+      name: trajectory.roe_categories[code]?.name
+        || records.find((item) =>
+          item.roe_category === code || item.roe_categories?.includes(code))?.roe_category_name
+        || null,
+    }));
     return {
-      node: {id: node.id, type: node.type, action_id: node.action_id, status: node.status},
-      evidence: action && action[key] ? action[key] : node.evidence,
+      stage: node.type,
+      action_id: node.action_id,
+      request,
+      classification: stage.classification || node.status,
+      roe_categories: categories,
+      roe_category_details: categoryDetails,
+      violations,
+      unclassified,
+      gateway_event: node.type === "dispatch" ? (stage.evidence || node.evidence) : undefined,
+      evidence: node.type === "dispatch" ? undefined : (Object.keys(stage).length ? stage : node.evidence),
     };
   }
 
-  function renderTrajectory(value) {
+  async function enterGraphFullscreen(element, documentLike) {
+    if (!element || !documentLike || documentLike.fullscreenElement === element) return false;
+    if (typeof element.requestFullscreen === "function") {
+      try {
+        await element.requestFullscreen();
+        return true;
+      } catch (_error) {
+        // Fall through to the CSS overlay when the browser rejects native fullscreen.
+      }
+    }
+    element.classList.add("trajectory-fullscreen-fallback");
+    return true;
+  }
+
+  async function exitGraphFullscreen(element, documentLike) {
+    if (!element || !documentLike) return false;
+    if (documentLike.fullscreenElement === element && typeof documentLike.exitFullscreen === "function") {
+      await documentLike.exitFullscreen();
+    }
+    element.classList.remove("trajectory-fullscreen-fallback");
+    return true;
+  }
+
+  function bindGraphFullscreen(section, viewport, exitButton) {
+    if (!section || !viewport || section.dataset.fullscreenBound === "true") return;
+    section.dataset.fullscreenBound = "true";
+    const open = () => enterGraphFullscreen(section, document);
+    viewport.addEventListener("click", open);
+    viewport.addEventListener("keydown", (event) => {
+      if (event.target === viewport && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        open();
+      }
+    });
+    exitButton?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      exitGraphFullscreen(section, document);
+    });
+  }
+
+  function renderTrajectory(value, roe) {
     const section = document.querySelector("#trajectory-section");
+    const viewport = document.querySelector(".trajectory-viewport");
+    const exitButton = document.querySelector("#trajectory-fullscreen-exit");
     const svg = document.querySelector("#trajectory-map");
     const edgeLayer = document.querySelector("#trajectory-edges");
     const nodeLayer = document.querySelector("#trajectory-nodes");
@@ -148,8 +225,9 @@
     const details = document.querySelector("#trajectory-details");
     const detailsJson = document.querySelector("#trajectory-details-json");
     if (!section || !svg || !edgeLayer || !nodeLayer) return;
+    bindGraphFullscreen(section, viewport, exitButton);
 
-    const trajectory = normalizeTrajectory(value);
+    const trajectory = normalizeTrajectory(value, roe);
     edgeLayer.replaceChildren();
     nodeLayer.replaceChildren();
     if (list) list.replaceChildren();
@@ -227,5 +305,12 @@
     return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
   }
 
-  return {normalizeTrajectory, layoutDirectedGraph, renderTrajectory};
+  return {
+    normalizeTrajectory,
+    layoutDirectedGraph,
+    renderTrajectory,
+    stagePayload,
+    enterGraphFullscreen,
+    exitGraphFullscreen,
+  };
 });

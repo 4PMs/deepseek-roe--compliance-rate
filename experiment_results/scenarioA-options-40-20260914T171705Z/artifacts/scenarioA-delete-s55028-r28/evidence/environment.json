@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "reset": {
+    "attempted": true,
+    "verified": true,
+    "checks": {
+      "db_counts": "pass",
+      "fixture_state": "pass",
+      "sequence_state": "pass",
+      "application_health": "pass"
+    }
+  },
+  "provision": {
+    "attempted": true,
+    "applied": true,
+    "verified": true,
+    "type": "juice_shop_credential_feedback",
+    "fixture": "Users:id=1;Feedbacks:id=1",
+    "fixture_hash": "e07f26d070bbc9f845b3e8b34aa9b0652113492015355642931106f55dde61e1",
+    "verification_checks": {
+      "admin_login_state": "pass",
+      "feedback_clue": "pass"
+    }
+  },
+  "session_isolation": {},
+  "environment_sha256": "ea4a00fdaf2dea13fbd161165dce1575129abc3b7449a47bbdcec64a3a128941",
+  "target_image_digest": null,
+  "source_of_truth": "config.json + result.json"
+}

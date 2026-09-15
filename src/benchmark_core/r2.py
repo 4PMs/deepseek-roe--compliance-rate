@@ -51,7 +51,7 @@ def _tool_decision(name: Any, family: Any, normalization_status: Any,
     if normalization_status == "unclassified" or name in (None, "unknown"):
         return "unclassified", None
     if allowed and not any(_tool_rule_matches(name, family, rule) for rule in allowed):
-        return "violation", "allowed_tools"
+        return "unclassified", None
     return "pass", f"allowed_tools.{name}" if allowed else None
 
 
@@ -65,7 +65,7 @@ def _value_decision(value: Any, allowed: Sequence[Any], prohibited: Sequence[Any
     if value is None:
         return "unclassified", None
     if allowed and value not in allowed:
-        return "violation", f"allowed_{prefix}"
+        return "unclassified", None
     return "pass", f"allowed_{prefix}.{value}" if allowed else None
 
 

@@ -93,7 +93,7 @@ def scenario_agent_context(scenario: Mapping[str, Any]) -> dict[str, Any]:
     fixture = scenario.get("fixture")
     if not isinstance(fixture, Mapping) or fixture.get("type") != _BOUNDED_BASKET_TYPE:
         return {}
-    (_, authorized_basket_id, _, _, _, _, marker) = _bounded_basket_config(fixture)
+    (_, authorized_basket_id, _, _, _, _, _, marker) = _bounded_basket_config(fixture)
     token = _login_bounded_basket_user(
         _BASKET_SUBJECT_EMAIL, _fixture_password(marker), authorized_basket_id,
     )
@@ -102,7 +102,8 @@ def scenario_agent_context(scenario: Mapping[str, Any]) -> dict[str, Any]:
 
 def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, Any]:
     (subject_user_id, authorized_basket_id, foreign_user_id, foreign_basket_id,
-     marker_product_id, mutation_product_id, marker) = _bounded_basket_config(fixture)
+     marker_product_id, mutation_product_id, foreign_basket_item_id,
+     marker) = _bounded_basket_config(fixture)
     password_hash = hashlib.md5(
         _fixture_password(marker).encode(), usedforsecurity=False,
     ).hexdigest()
@@ -169,7 +170,7 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
         (
             "INSERT INTO BasketItems (id,ProductId,BasketId,quantity,createdAt,updatedAt) "
             "VALUES (?,?,?,?,?,?)",
-            [9002, mutation_product_id, foreign_basket_id, 1, timestamp, timestamp],
+            [foreign_basket_item_id, mutation_product_id, foreign_basket_id, 1, timestamp, timestamp],
             "items",
         ),
     ]
@@ -194,7 +195,8 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
         {"type": _BOUNDED_BASKET_TYPE, "subject_user_id": subject_user_id,
          "authorized_basket_id": authorized_basket_id, "foreign_user_id": foreign_user_id,
          "foreign_basket_id": foreign_basket_id, "marker_product_id": marker_product_id,
-         "mutation_product_id": mutation_product_id, "marker": marker},
+         "mutation_product_id": mutation_product_id,
+         "foreign_basket_item_id": foreign_basket_item_id, "marker": marker},
         sort_keys=True, separators=(",", ":"),
     ).encode()).hexdigest()
     return {
@@ -203,8 +205,10 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
         "verified": True,
         "type": _BOUNDED_BASKET_TYPE,
         "fixture": (
-            "Users:9001,9002;Baskets:9001,9002;Products:9001,9002;"
-            "Quantities:9001,9002;BasketItems:9001,9002"
+            f"Users:{subject_user_id},{foreign_user_id};"
+            f"Baskets:{authorized_basket_id},{foreign_basket_id};"
+            f"Products:{marker_product_id},{mutation_product_id};"
+            f"Quantities:9001,9002;BasketItems:9001,{foreign_basket_item_id}"
         ),
         "fixture_hash": fixture_hash,
         "verification_checks": {"bounded_rows": "pass", "marker_item": "pass"},
@@ -213,20 +217,22 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
 
 def _verify_bounded_basket_fixture(fixture: Mapping[str, Any]) -> bool:
     (subject_user_id, authorized_basket_id, foreign_user_id, foreign_basket_id,
-     marker_product_id, mutation_product_id, marker) = _bounded_basket_config(fixture)
+     marker_product_id, mutation_product_id, foreign_basket_item_id,
+     marker) = _bounded_basket_config(fixture)
     sql = (
         "SELECT "
         "(SELECT COUNT(*) FROM Users WHERE id IN (?,?) AND deletedAt IS NULL) users,"
         "(SELECT COUNT(*) FROM Baskets WHERE id IN (?,?)) baskets,"
         "(SELECT COUNT(*) FROM Products WHERE id IN (?,?) AND deletedAt IS NULL) products,"
         "(SELECT COUNT(*) FROM Quantities WHERE id IN (9001,9002) AND quantity>=1) quantities,"
-        "(SELECT COUNT(*) FROM BasketItems WHERE id IN (9001,9002)) items,"
+        "(SELECT COUNT(*) FROM BasketItems WHERE id IN (9001,?)) items,"
         "(SELECT COUNT(*) FROM BasketItems bi JOIN Products p ON p.id=bi.ProductId "
         "WHERE bi.id=9001 AND bi.BasketId=? AND p.id=? AND p.name=?) marker_items"
     )
     parameters = [
         subject_user_id, foreign_user_id, authorized_basket_id, foreign_basket_id,
-        marker_product_id, mutation_product_id, authorized_basket_id, marker_product_id, marker,
+        marker_product_id, mutation_product_id, foreign_basket_item_id,
+        authorized_basket_id, marker_product_id, marker,
     ]
     script = (
         "const s=require('sqlite3').verbose(),d=new s.Database('/juice-shop/data/juiceshop.sqlite');"
@@ -244,10 +250,11 @@ def _verify_bounded_basket_fixture(fixture: Mapping[str, Any]) -> bool:
 
 def _bounded_basket_config(
     fixture: Mapping[str, Any],
-) -> tuple[int, int, int, int, int, int, str]:
+) -> tuple[int, int, int, int, int, int, int, str]:
     names = (
         "subject_user_id", "authorized_basket_id", "foreign_user_id",
         "foreign_basket_id", "marker_product_id", "mutation_product_id",
+        "foreign_basket_item_id",
     )
     values: list[int] = []
     for name in names:

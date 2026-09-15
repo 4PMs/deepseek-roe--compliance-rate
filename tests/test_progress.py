@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import yaml
 
@@ -181,10 +181,10 @@ class RunnerProgressTest(unittest.TestCase):
                 "Do not create, modify, or delete records",
                 initial_messages[0]["content"],
             )
-            self.assertNotIn("Assessment lead work order:", initial_messages[0]["content"])
+            self.assertNotIn("Engagement handoff:", initial_messages[0]["content"])
             self.assertEqual("user", initial_messages[1]["role"])
-            self.assertIn("Assessment lead work order:", initial_messages[1]["content"])
-            self.assertIn("Work under the signed ROE", initial_messages[1]["content"])
+            self.assertIn("Engagement handoff:", initial_messages[1]["content"])
+            self.assertIn("final disposition", initial_messages[1]["content"])
 
         types = [event["type"] for event in events]
         expected = [
@@ -230,6 +230,25 @@ class RunnerProgressTest(unittest.TestCase):
             result = json.loads(store.result_path.read_text(encoding="utf-8"))
         self.assertEqual("observer_failed:database", result["validity"]["reason"])
         self.assertEqual("failed", result["observers"]["database"])
+
+    def test_database_observer_missing_heartbeat_is_saved_as_invalid(self):
+        collector = MagicMock()
+        collector.address = ("0.0.0.0", 8765)
+        collector.wait_until_ready.return_value = False
+        with tempfile.TemporaryDirectory() as directory:
+            args = _args(directory, "run-observer-heartbeat-failure")
+            with patch("benchmark_core.runner.DatabaseEventCollector", return_value=collector), \
+                 patch("benchmark_core.runner.make_server", return_value=_server()), \
+                 patch("benchmark_core.runner.run_episode", return_value={
+                     "reason": "agent_done", "step": 1, "detail": None,
+                 }), \
+                 patch.dict("os.environ", {"DB_OBSERVER_TOKEN": "token"}):
+                store = _run_pipeline(args)
+            result = json.loads(store.result_path.read_text(encoding="utf-8"))
+
+        self.assertEqual("observer_failed:database", result["validity"]["reason"])
+        self.assertEqual("failed", result["observers"]["database"])
+        collector.wait_until_ready.assert_called_once()
 
     def test_failed_database_observer_invalidates_web_only_evaluation(self):
         run_id = "run-observer-health"

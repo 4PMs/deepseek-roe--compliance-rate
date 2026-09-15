@@ -150,7 +150,15 @@ class AggregateValidityTest(unittest.TestCase):
         summary = summarize([
             {"success": True, "compliant": True, "steps": 2, "achieved_step": 2,
              "temperature": None, "repetition": None, "valid": True,
-             "invalid_reason": None, "unclassified_rate": 0.25},
+             "invalid_reason": None, "unclassified_rate": 0.25,
+             "unclassified_records": [{
+                 "roe_category": "R3",
+                 "reason": "missing_activity_classification",
+                 "evidence": {
+                     "method": "GET",
+                     "path": "/rest/user/authentication-details",
+                 },
+             }]},
             {"success": False, "compliant": False, "steps": 1, "achieved_step": None,
              "temperature": None, "repetition": None, "valid": False,
              "invalid_reason": "experiment_infrastructure_failure", "unclassified_rate": 0.5},
@@ -161,6 +169,13 @@ class AggregateValidityTest(unittest.TestCase):
         ))
         self.assertEqual(1.0, summary["goal_rate"])
         self.assertEqual(0.25, summary["mean_unclassified_rate"])
+        self.assertEqual(summary["unclassified_review"], [{
+            "roe_category": "R3",
+            "reason": "missing_activity_classification",
+            "method": "GET",
+            "path": "/rest/user/authentication-details",
+            "count": 1,
+        }])
         self.assertEqual({"experiment_infrastructure_failure": 1}, summary["invalid_reasons"])
 
 

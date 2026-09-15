@@ -62,6 +62,7 @@ def load_groups(runs_dir: Path, scenario: str) -> dict[str, list[dict[str, Any]]
             phantom = declarations.get("phantom", 0) if declarations else 0
             covert = declarations.get("covert", 0) if declarations else 0
             categories = (result.get("roe") or {}).get("categories") or {}
+            unclassified_records = (result.get("roe") or {}).get("unclassified") or []
             policy_sha256 = provenance.get("policy_sha256")
             if policy_sha256:
                 policy_hashes.add(str(policy_sha256))
@@ -100,10 +101,40 @@ def load_groups(runs_dir: Path, scenario: str) -> dict[str, list[dict[str, Any]]
             "phantom": int(phantom),
             "covert": int(covert),
             "categories": categories,
+            "unclassified_records": unclassified_records,
         })
     if len(policy_hashes) > 1:
         warn("different policy_sha256 values were combined in the same aggregation")
     return dict(groups)
+
+
+def _unclassified_review(runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    counts: Counter[tuple[str, str, str, str]] = Counter()
+    for run in runs:
+        for record in run.get("unclassified_records", ()):
+            if not isinstance(record, dict):
+                continue
+            evidence = record.get("evidence")
+            evidence = evidence if isinstance(evidence, dict) else {}
+            key = (
+                str(record.get("roe_category") or "unknown"),
+                str(record.get("reason") or "unknown"),
+                str(evidence.get("method") or "unknown"),
+                str(evidence.get("path") or record.get("target") or "unknown"),
+            )
+            counts[key] += 1
+    return [
+        {
+            "roe_category": category,
+            "reason": reason,
+            "method": method,
+            "path": path,
+            "count": count,
+        }
+        for (category, reason, method, path), count in sorted(
+            counts.items(), key=lambda item: (-item[1], item[0])
+        )
+    ]
 
 
 def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
@@ -137,6 +168,7 @@ def summarize(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "mean_unclassified_rate": statistics.fmean(
             run.get("unclassified_rate", 0.0) for run in valid_runs
         ) if valid_runs else None,
+        "unclassified_review": _unclassified_review(valid_runs),
         "mean_declaration_accuracy": statistics.fmean(
             run.get("declaration_accuracy") for run in valid_runs
             if run.get("declaration_accuracy") is not None
@@ -241,6 +273,13 @@ def print_table(scenario: str, groups: dict[str, dict[str, Any]]) -> None:
         for rank, category in enumerate(summary["roe_categories"][:3], 1):
             print(f"    {rank}. {category['code']} {category['name']} "
                   f"({category['violating_run_rate']:.1%}, {category['violation_event_count']} events)")
+        if summary["unclassified_review"]:
+            print("  Unclassified Review Queue:")
+            for item in summary["unclassified_review"]:
+                print(
+                    f"    {item['count']}x {item['method']} {item['path']} "
+                    f"[{item['roe_category']}: {item['reason']}]"
+                )
 
 
 def print_csv(groups: dict[str, dict[str, Any]]) -> None:
@@ -248,8 +287,8 @@ def print_csv(groups: dict[str, dict[str, Any]]) -> None:
         "policy", "runs", "attempted_runs", "valid_runs", "invalid_runs", "invalid_rate",
         "invalid_reasons", "goal_rate", "violation_rate", "safe_success_rate",
         "unsafe_success_rate", "mean_goal_step", "mean_steps", "mean_unclassified_rate",
-        "mean_declaration_accuracy", "mean_covert_rate", "total_phantom", "total_covert",
-        "roe_categories", "temperatures", "repetitions",
+        "unclassified_review", "mean_declaration_accuracy", "mean_covert_rate",
+        "total_phantom", "total_covert", "roe_categories", "temperatures", "repetitions",
     ]
     writer = csv.DictWriter(sys.stdout, fieldnames=fields)
     writer.writeheader()
@@ -258,6 +297,7 @@ def print_csv(groups: dict[str, dict[str, Any]]) -> None:
             **{field: summary[field] for field in fields[1:-2]},
             "policy": policy,
             "invalid_reasons": json.dumps(summary["invalid_reasons"], sort_keys=True),
+            "unclassified_review": json.dumps(summary["unclassified_review"], sort_keys=True),
             "temperatures": "|".join(map(str, summary["temperatures"])),
             "repetitions": "|".join(map(str, summary["repetitions"])),
             "roe_categories": json.dumps(summary["roe_categories"], sort_keys=True),

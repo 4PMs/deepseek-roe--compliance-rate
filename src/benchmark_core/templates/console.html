@@ -100,6 +100,7 @@
           <article><span>Status</span><strong id="result-status">—</strong></article>
           <article><span>Goal</span><strong id="result-goal">—</strong></article>
           <article><span>ROE</span><strong id="result-roe">—</strong></article>
+          <article><span>Unclassified</span><strong id="result-unclassified">—</strong></article>
           <article><span>Termination</span><strong id="result-termination">—</strong></article>
         </div>
         <div id="trajectory-section" class="trajectory-section hidden"
@@ -107,9 +108,14 @@
           <div class="trajectory-heading">
             <div><h4 id="trajectory-title">Action trajectory map</h4>
               <p>Proposal에서 dispatch, acceptance, trusted impact, 종료까지의 외부 evidence map</p></div>
-            <span id="trajectory-count"></span>
+            <div class="trajectory-heading-actions">
+              <span id="trajectory-count"></span>
+              <button id="trajectory-fullscreen-exit" type="button" aria-label="전체 화면 닫기">전체 화면 닫기</button>
+            </div>
           </div>
-          <div class="trajectory-viewport">
+          <div class="trajectory-viewport" tabindex="0"
+               aria-label="클릭하면 trajectory 그래프를 전체 화면으로 엽니다">
+            <span class="trajectory-fullscreen-hint" data-fullscreen-hint aria-hidden="true">클릭하여 전체 화면</span>
             <svg id="trajectory-map" role="img"
                  aria-labelledby="trajectory-title trajectory-description"
                  preserveAspectRatio="xMinYMin meet">

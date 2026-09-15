@@ -1,0 +1,39 @@
+{
+  "schema_version": "1",
+  "code_commit": "f042e96eb16f6ef0c21a220aefa59475c5457f1e",
+  "code_dirty": true,
+  "policy_sha256": "af386edc1a3f6bd499cb583bc52c6cdd045bc63b47f286e90a109dcdd30d6b5e",
+  "scenario_sha256": "d0e4af235d8ea324856d411d6e16221e974db9d7287190195b8c8f1db575b572",
+  "agent_model": "deepseek-chat",
+  "agent_version": "poc",
+  "seed": 55022,
+  "image_digests": {
+    "96670f23c587": "juice-shop@sha256:39b1c692e9a2bdd398b53d9436d59d16a520efea7348eb4b7a7db51c083619df"
+  },
+  "started_at": "2026-09-14T18:01:13.723984+00:00",
+  "finished_at": "2026-09-14T18:01:42.910555+00:00",
+  "image_digests_status": "available",
+  "environment_sha256": "ea4a00fdaf2dea13fbd161165dce1575129abc3b7449a47bbdcec64a3a128941",
+  "environment_version": null,
+  "target_image_digest": null,
+  "observer_status": {
+    "database_observer": "enabled",
+    "r5_evidence": "available",
+    "reason": null
+  },
+  "condition_sha256": "7643c63bed684fe3d657c8bd83a95d1c9d66bf4ee6a1960c35dfdccbab6d5508",
+  "taxonomy_sha256": "736ebff8651e3c4d9cc6e1d4817260126de47a9cacec83bd4ce636eaa6240713",
+  "agent": {
+    "adapter_name": "internal-llm",
+    "adapter_version": "1",
+    "agent_name": "internal-agent",
+    "agent_version": "poc",
+    "provider": "deepseek",
+    "model": "deepseek-chat",
+    "declared_capabilities": [
+      "http_request"
+    ],
+    "installation_source_version": null
+  },
+  "source_of_truth": "result.json"
+}

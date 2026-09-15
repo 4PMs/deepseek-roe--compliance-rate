@@ -186,9 +186,120 @@ def test_console_page_contains_required_control_types():
     assert 'type="checkbox"' in html
     assert 'id="run-button"' in html
     assert 'id="live-log"' in html
+    assert 'id="result-unclassified"' in html
     assert 'id="trajectory-map"' in html
     assert 'id="trajectory-details-json"' in html
+    assert 'id="trajectory-fullscreen-exit"' in html
+    assert 'data-fullscreen-hint' in html
     assert 'aria-labelledby="trajectory-title trajectory-description"' in html
+
+
+def test_trajectory_fullscreen_helpers_use_native_browser_api():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    module = ROOT / "src" / "benchmark_core" / "static" / "trajectory.js"
+    script = r"""
+const graph = require(process.argv[1])
+let entered = 0
+let exited = 0
+const classes = new Set()
+const element = {
+  requestFullscreen: async () => { entered += 1; documentLike.fullscreenElement = element },
+  classList: {
+    add: value => classes.add(value),
+    remove: value => classes.delete(value)
+  }
+}
+const documentLike = {
+  fullscreenElement: null,
+  exitFullscreen: async () => { exited += 1; documentLike.fullscreenElement = null }
+}
+;(async () => {
+  await graph.enterGraphFullscreen(element, documentLike)
+  await graph.exitGraphFullscreen(element, documentLike)
+  if (entered !== 1 || exited !== 1 || classes.size !== 0) process.exit(2)
+  process.stdout.write(JSON.stringify({entered, exited}))
+})().catch(() => process.exit(3))
+"""
+    completed = subprocess.run(
+        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+    )
+
+    assert json.loads(completed.stdout) == {"entered": 1, "exited": 1}
+
+
+def test_trajectory_dispatch_details_include_request_and_roe_reason():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    module = ROOT / "src" / "benchmark_core" / "static" / "trajectory.js"
+    script = r"""
+const graph = require(process.argv[1])
+const trajectory = graph.normalizeTrajectory({
+  nodes: [{id: 'action-5:dispatch', type: 'dispatch', action_id: 'action-5', status: 'violation'}],
+  actions: [{
+    action_id: 'action-5',
+    proposal: {method: 'GET', path: '/api/Users', operation: 'read'},
+    dispatch: {classification: 'violation', roe_categories: ['R3'], evidence: {seq: 413}}
+  }]
+}, {
+  violations: [{
+    event_key: ['run', 413, 'action-5'], rule_id: 'r3_authorization',
+    roe_category: 'R3', roe_category_name: 'activity_authorization',
+    reason: 'prohibited', value: 'bulk_collection', severity: 'violation'
+  }]
+})
+const details = graph.stagePayload(trajectory, trajectory.nodes[0])
+if (details.request.path !== '/api/Users') process.exit(2)
+if (details.violations[0].value !== 'bulk_collection') process.exit(3)
+process.stdout.write(JSON.stringify(details))
+"""
+    completed = subprocess.run(
+        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+    )
+    details = json.loads(completed.stdout)
+
+    assert details["request"] == {
+        "method": "GET",
+        "path": "/api/Users",
+        "operation": "read",
+    }
+    assert details["violations"][0]["roe_category_name"] == "activity_authorization"
+    assert details["violations"][0]["value"] == "bulk_collection"
+
+
+def test_trajectory_dispatch_details_separate_unclassified_records():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    module = ROOT / "src" / "benchmark_core" / "static" / "trajectory.js"
+    script = r"""
+const graph = require(process.argv[1])
+const trajectory = graph.normalizeTrajectory({
+  nodes: [{id: 'action-5:dispatch', type: 'dispatch', action_id: 'action-5', status: 'unclassified'}],
+  actions: [{
+    action_id: 'action-5',
+    proposal: {method: 'GET', path: '/rest/user/authentication-details', operation: 'read'},
+    dispatch: {classification: 'unclassified', roe_categories: ['R3'], evidence: {seq: 413}}
+  }]
+}, {
+  violations: [{
+    event_key: ['run', 413, 'action-5'], rule_id: 'r3_unclassified',
+    roe_category: 'R3', roe_category_name: 'activity_authorization',
+    reason: 'missing_activity_classification', value: null, severity: 'unclassified'
+  }]
+})
+process.stdout.write(JSON.stringify(graph.stagePayload(trajectory, trajectory.nodes[0])))
+"""
+    completed = subprocess.run(
+        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+    )
+    details = json.loads(completed.stdout)
+
+    assert details["classification"] == "unclassified"
+    assert details["violations"] == []
+    assert details["unclassified"][0]["reason"] == "missing_activity_classification"
 
 
 def test_trajectory_layout_is_deterministic_and_keeps_acceptance_impact_branches():
@@ -262,3 +373,23 @@ def test_job_manager_runs_process_and_captures_output(tmp_path):
     assert status["status"] == "completed"
     assert status["return_code"] == 0
     assert status["log"] == "console-smoke"
+
+
+def test_job_manager_generates_database_observer_token(monkeypatch, tmp_path):
+    monkeypatch.delenv("DB_OBSERVER_TOKEN", raising=False)
+    manager = ConsoleJobManager(tmp_path)
+    command = [
+        sys.executable,
+        "-c",
+        "import os; print(bool(os.environ.get('DB_OBSERVER_TOKEN')))",
+    ]
+    launched = manager.launch(command, "observer-token")
+
+    deadline = time.monotonic() + 5
+    status = launched
+    while status["status"] not in {"completed", "failed"} and time.monotonic() < deadline:
+        time.sleep(0.02)
+        status = manager.get(launched["job_id"])
+
+    assert status["status"] == "completed"
+    assert status["log"] == "True"

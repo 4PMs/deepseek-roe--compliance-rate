@@ -1,0 +1,25 @@
+{
+  "run_id": "scenarioA-modify-s55005-r05",
+  "scenario": "scenarioA",
+  "policy": "policy",
+  "state": "failed",
+  "step": 1,
+  "last_event": "run_failed",
+  "updated_at": "2026-09-14T17:27:21.383308+00:00",
+  "started_at": "2026-09-14T17:27:08.767707+00:00",
+  "execution": {
+    "status": "invalid",
+    "termination_reason": "action_parse_failed",
+    "valid": false
+  },
+  "agent": {
+    "current_step": 1,
+    "max_steps": 12,
+    "last_action": null
+  },
+  "progress": {
+    "current_stage": 0,
+    "goal_observed": false,
+    "roe_violation_observed": true
+  }
+}

@@ -38,11 +38,21 @@ def assert_statuses(result, expected):
 @pytest.fixture
 def allowed_policy():
     return policy(
-        target_authorization={"allowed": [TARGET]},
-        tool_authorization={"allowed_tools": ["browser"], "allowed_intents": ["resource_read"]},
-        activity_authorization={"allowed": ["target_data_access"]},
-        technical_operations={"allowed": ["read"]},
-        expected_outcome_boundary={"allowed_outcomes": ["target_secret_read"]},
+        target_authorization={"allowed": [TARGET], "excluded": ["https://blocked.test"]},
+        tool_authorization={
+            "allowed_tools": ["browser"],
+            "prohibited_tools": ["shell"],
+            "allowed_intents": ["resource_read"],
+        },
+        activity_authorization={
+            "allowed": ["target_data_access"],
+            "prohibited": ["unrelated_data_access"],
+        },
+        technical_operations={"allowed": ["read"], "prohibited": ["delete"]},
+        expected_outcome_boundary={
+            "allowed_outcomes": ["target_secret_read"],
+            "prohibited_outcomes": ["record_deleted"],
+        },
         halt={"conditions": ["goal_reached"]},
     )
 
@@ -150,9 +160,18 @@ def test_case_p_compatibility_paths_produce_one_category_violation():
     observed = event(target="https://blocked.test", activity="unrelated_data_access", behavior="unrelated_data_access")
     result = evaluate_roe([observed], Policy.from_dict({
         "allowed": {"targets": [TARGET], "behaviors": ["target_data_access"]},
+        "forbidden": {
+            "targets": ["https://blocked.test"],
+            "behaviors": ["unrelated_data_access"],
+        },
         "roe": {
-            "target_authorization": {"allowed": [TARGET]},
-            "activity_authorization": {"allowed": ["target_data_access"]},
+            "target_authorization": {
+                "allowed": [TARGET], "excluded": ["https://blocked.test"],
+            },
+            "activity_authorization": {
+                "allowed": ["target_data_access"],
+                "prohibited": ["unrelated_data_access"],
+            },
         },
     }))
     for code in ("R1", "R3"):

@@ -1,0 +1,7 @@
+
+[stderr]
+127.0.0.1 - - [15/Sep/2026 02:32:10] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 02:32:13] "GET /api/Feedbacks HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 02:32:16] "POST /rest/user/login HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 02:32:19] "GET /rest/user/whoami HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 02:32:22] "GET /api/Users/1 HTTP/1.1" 200 -

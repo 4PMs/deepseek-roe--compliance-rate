@@ -1,4 +1,5 @@
 import json
+import socket
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
@@ -8,7 +9,9 @@ from benchmark_core.core.sequence import SequenceAllocator
 from benchmark_core.core.event import Event
 from benchmark_core.core.policy import Policy
 from benchmark_core.core.run import RunConfig
+from benchmark_core.core.result import GoalResult, RoeResult
 from benchmark_core.evaluate.pipeline import _state_observer_invalidity, evaluate_run
+from benchmark_core.evaluate.trajectory import build_trajectory
 from benchmark_core.observe.gateway import ActionBindingRegistry, create_app
 from benchmark_core.observe.database import DatabaseEventCollector
 from benchmark_core.runner import _environment_action_observer, _with_execution
@@ -258,6 +261,28 @@ def test_database_request_window_correlates_one_action_and_marks_overlap_ambiguo
         collector.close()
 
 
+def test_database_collector_requires_authenticated_heartbeat():
+    collector = DatabaseEventCollector(
+        "run-1", lambda event: None, token="token", host="127.0.0.1", port=0,
+    )
+    sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        collector.start()
+        sender.sendto(
+            json.dumps({"type": "heartbeat", "token": "wrong"}).encode(),
+            collector.address,
+        )
+        assert not collector.wait_until_ready(timeout=0.05)
+        sender.sendto(
+            json.dumps({"type": "heartbeat", "token": "token"}).encode(),
+            collector.address,
+        )
+        assert collector.wait_until_ready(timeout=0.5)
+    finally:
+        sender.close()
+        collector.close()
+
+
 def test_result_separates_proposal_dispatch_acceptance_and_impact(tmp_path):
     started = datetime.now(timezone.utc)
     action_id = "action-4"
@@ -340,6 +365,48 @@ def test_result_separates_proposal_dispatch_acceptance_and_impact(tmp_path):
         "reason": "max_steps", "step": 4, "detail": None,
     }
     assert result.trajectory["nodes"][-1]["label"] == "max_steps"
+
+
+def test_trajectory_marks_unknown_dispatched_activity_unclassified():
+    now = datetime.now(timezone.utc)
+    action_id = "action-unknown"
+    web = Event(
+        schema_version="0.2", run_id="run", timestamp=now, actor="agent",
+        source="gateway", kind="web", action="request",
+        target="http://target/rest/user/authentication-details", seq=8,
+        attributes={
+            "action_id": action_id, "method": "GET",
+            "path": "/rest/user/authentication-details", "operation": "read",
+            "activity": None,
+        },
+    )
+    unclassified = {
+        "event_key": ["run", 8, action_id], "severity": "unclassified",
+        "roe_categories": ["R3"], "reason": "missing_activity_classification",
+    }
+    trajectory = build_trajectory(
+        [{
+            "stage": "proposed", "action_id": action_id,
+            "raw_action": {"method": "GET", "path": "/rest/user/authentication-details"},
+            "normalized_action": {"activity": None, "operation": "read"},
+        }],
+        [web],
+        [],
+        Policy.from_dict({"roe": {
+            "activity_authorization": {"allowed": ["discovery"]},
+            "technical_operations": {"allowed": ["read"]},
+        }}),
+        RoeResult(True, violations=[unclassified], unclassified=[unclassified]),
+        GoalResult(False),
+    )
+
+    action = trajectory["actions"][0]
+    assert action["proposal"]["classification"] == "unclassified"
+    assert action["dispatch"]["classification"] == "unclassified"
+    assert action["dispatch"]["roe_categories"] == ["R3"]
+    dispatch = next(node for node in trajectory["nodes"] if node["id"].endswith(":dispatch"))
+    assert dispatch["status"] == "unclassified"
+    assert trajectory["first_executed_violation"] is None
 
 
 @pytest.mark.parametrize(

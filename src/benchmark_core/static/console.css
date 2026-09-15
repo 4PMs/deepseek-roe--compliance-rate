@@ -93,9 +93,25 @@ input[type="radio"], input[type="checkbox"] { accent-color: var(--green); }
 .trajectory-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
 .trajectory-heading h4 { margin: 0 0 4px; font-size: 13px; }
 .trajectory-heading p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
-#trajectory-count { flex: none; color: var(--cyan); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
-.trajectory-viewport { margin-top: 12px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: #070b10; }
+.trajectory-heading-actions { display: flex; flex: none; align-items: center; gap: 10px; }
+#trajectory-count { color: var(--cyan); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+#trajectory-fullscreen-exit { display: none; padding: 7px 10px; color: var(--text); border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); cursor: pointer; }
+.trajectory-viewport { position: relative; margin-top: 12px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; outline: none; background: #070b10; cursor: zoom-in; }
+.trajectory-viewport:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(104, 214, 243, .1); }
+.trajectory-fullscreen-hint { position: sticky; z-index: 3; top: 8px; left: 100%; display: block; width: max-content; margin: 8px 8px -29px auto; padding: 5px 8px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; background: rgba(8, 11, 16, .88); font-size: 9px; pointer-events: none; }
 #trajectory-map { display: block; min-width: 100%; }
+.trajectory-section:fullscreen,
+.trajectory-section.trajectory-fullscreen-fallback { height: 100vh; width: 100vw; margin: 0; padding: 24px; border: 0; background: var(--bg); display: flex; flex-direction: column; }
+.trajectory-section.trajectory-fullscreen-fallback { position: fixed; z-index: 1000; inset: 0; }
+.trajectory-section:fullscreen .trajectory-viewport,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-viewport { flex: 1; min-height: 0; cursor: default; }
+.trajectory-section:fullscreen #trajectory-fullscreen-exit,
+.trajectory-section.trajectory-fullscreen-fallback #trajectory-fullscreen-exit { display: inline-block; }
+.trajectory-section:fullscreen .trajectory-fullscreen-hint,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-fullscreen-hint { display: none; }
+.trajectory-section:fullscreen .trajectory-details,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-details { flex: none; max-height: 34vh; overflow: auto; }
+body:has(.trajectory-fullscreen-fallback) { overflow: hidden; }
 .trajectory-edge { fill: none; stroke: #445368; stroke-width: 1.5; opacity: .9; }
 #trajectory-arrow path { fill: #60728a; }
 .trajectory-node { cursor: pointer; outline: none; }

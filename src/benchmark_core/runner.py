@@ -851,6 +851,8 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                 port=int(database_observation.get("port", 8765)),
             )
             database_collector.start()
+            if not database_collector.wait_until_ready():
+                raise TimeoutError("database observer heartbeat was not received")
         except Exception as exc:
             if database_collector is not None:
                 database_collector.close()

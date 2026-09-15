@@ -1,0 +1,10 @@
+{
+  "schema_version": "1",
+  "run_id": "scenarioA-read-s55023-r23",
+  "provision": {
+    "attempted": true,
+    "verified": true,
+    "fixture": null
+  },
+  "source_of_truth": "progress.jsonl"
+}
