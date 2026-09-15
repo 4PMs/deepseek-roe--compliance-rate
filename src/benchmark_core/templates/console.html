@@ -113,30 +113,53 @@
               <button id="trajectory-fullscreen-exit" type="button" aria-label="전체 화면 닫기">전체 화면 닫기</button>
             </div>
           </div>
-          <div class="trajectory-viewport" tabindex="0"
-               aria-label="클릭하면 trajectory 그래프를 전체 화면으로 엽니다">
-            <span class="trajectory-fullscreen-hint" data-fullscreen-hint aria-hidden="true">클릭하여 전체 화면</span>
-            <svg id="trajectory-map" role="img"
-                 aria-labelledby="trajectory-title trajectory-description"
-                 preserveAspectRatio="xMinYMin meet">
-              <desc id="trajectory-description">Action stages and their directed evidence relationships.</desc>
-              <defs>
-                <marker id="trajectory-arrow" markerWidth="8" markerHeight="8"
-                        refX="7" refY="4" orient="auto">
-                  <path d="M0,0 L8,4 L0,8 Z"></path>
-                </marker>
-              </defs>
-              <g id="trajectory-edges"></g>
-              <g id="trajectory-nodes"></g>
-            </svg>
+          <!-- Compact toolbar: action navigation + info + expand button -->
+          <div class="trajectory-toolbar" id="trajectory-toolbar">
+            <div class="trajectory-action-nav">
+              <button id="trajectory-action-prev" type="button" class="traj-nav-btn" aria-label="이전 action" disabled>‹</button>
+              <span id="trajectory-action-index" class="traj-nav-index">— / —</span>
+              <button id="trajectory-action-next" type="button" class="traj-nav-btn" aria-label="다음 action" disabled>›</button>
+            </div>
+            <span id="trajectory-action-info" class="trajectory-action-info"></span>
+            <button id="trajectory-expand-btn" type="button" class="trajectory-expand-btn" aria-label="전체 화면으로 보기">⛶ 전체 화면</button>
+          </div>
+          <!-- Body: action list (fullscreen only) + graph + detail panel -->
+          <div class="trajectory-body" id="trajectory-body">
+            <div class="trajectory-action-list-panel" id="trajectory-action-list"
+                 role="list" aria-label="Action 목록"></div>
+            <div class="trajectory-graph-panel">
+              <div class="trajectory-viewport" tabindex="0"
+                   aria-label="클릭하면 trajectory 그래프를 전체 화면으로 엽니다">
+                <span class="trajectory-fullscreen-hint" data-fullscreen-hint aria-hidden="true">클릭하여 전체 화면</span>
+                <svg id="trajectory-map" role="img"
+                     aria-labelledby="trajectory-title trajectory-description"
+                     preserveAspectRatio="xMinYMin meet">
+                  <desc id="trajectory-description">Action stages and their directed evidence relationships.</desc>
+                  <defs>
+                    <marker id="trajectory-arrow" markerWidth="8" markerHeight="8"
+                            refX="7" refY="4" orient="auto">
+                      <path d="M0,0 L8,4 L0,8 Z"></path>
+                    </marker>
+                  </defs>
+                  <g id="trajectory-edges"></g>
+                  <g id="trajectory-nodes"></g>
+                </svg>
+              </div>
+            </div>
+            <!-- Right-side detail panel: always in DOM, visible once a node is clicked -->
+            <div class="trajectory-detail-panel" id="trajectory-detail-panel">
+              <p class="traj-detail-placeholder" id="trajectory-detail-placeholder">노드를 클릭하면<br>evidence가 표시됩니다.</p>
+              <section id="trajectory-details" class="trajectory-details hidden"
+                       aria-labelledby="trajectory-details-title">
+                <h5 id="trajectory-details-title">Selected Evidence</h5>
+                <dl id="trajectory-details-summary" class="traj-evidence-summary"></dl>
+                <h6 class="traj-raw-json-heading">Raw JSON</h6>
+                <pre id="trajectory-details-json" tabindex="0"></pre>
+              </section>
+            </div>
           </div>
           <p id="trajectory-empty" class="trajectory-empty hidden">이 결과에는 trajectory가 없습니다.</p>
           <ol id="trajectory-accessible-list" class="sr-only"></ol>
-          <section id="trajectory-details" class="trajectory-details hidden"
-                   aria-labelledby="trajectory-details-title">
-            <h5 id="trajectory-details-title">Selected evidence JSON</h5>
-            <pre id="trajectory-details-json" tabindex="0"></pre>
-          </section>
         </div>
       </section>
 

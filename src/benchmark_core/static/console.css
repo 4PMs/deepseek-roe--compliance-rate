@@ -89,46 +89,331 @@ input[type="radio"], input[type="checkbox"] { accent-color: var(--green); }
 .metric-grid article { padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); }
 .metric-grid span { display: block; margin-bottom: 5px; color: var(--muted); font-size: 10px; text-transform: uppercase; }
 .metric-grid strong { font-size: 12px; overflow-wrap: anywhere; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Trajectory section
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Base ───────────────────────────────────────────────────────── */
 .trajectory-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
 .trajectory-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
 .trajectory-heading h4 { margin: 0 0 4px; font-size: 13px; }
-.trajectory-heading p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.trajectory-heading p  { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .trajectory-heading-actions { display: flex; flex: none; align-items: center; gap: 10px; }
 #trajectory-count { color: var(--cyan); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
-#trajectory-fullscreen-exit { display: none; padding: 7px 10px; color: var(--text); border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); cursor: pointer; }
-.trajectory-viewport { position: relative; margin-top: 12px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; outline: none; background: #070b10; cursor: zoom-in; }
-.trajectory-viewport:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(104, 214, 243, .1); }
-.trajectory-fullscreen-hint { position: sticky; z-index: 3; top: 8px; left: 100%; display: block; width: max-content; margin: 8px 8px -29px auto; padding: 5px 8px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; background: rgba(8, 11, 16, .88); font-size: 9px; pointer-events: none; }
-#trajectory-map { display: block; min-width: 100%; }
+#trajectory-fullscreen-exit {
+  display: none; padding: 6px 10px;
+  color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel-2); cursor: pointer; font-size: 11px;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────── */
+.trajectory-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
+  margin-top: 8px; padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: #0b1017; min-width: 0; overflow: hidden;
+}
+.trajectory-action-nav { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.traj-nav-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; padding: 0;
+  border: 1px solid var(--line); border-radius: 6px;
+  color: var(--text); background: var(--panel-2);
+  cursor: pointer; font-size: 13px; line-height: 1;
+  transition: border-color .12s, background .12s;
+}
+.traj-nav-btn:hover:not(:disabled) { border-color: var(--cyan); background: rgba(104,214,243,.08); }
+.traj-nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+.traj-nav-index {
+  color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap; flex-shrink: 0;
+}
+.trajectory-action-info {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--cyan); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.trajectory-expand-btn {
+  flex-shrink: 0; padding: 4px 8px;
+  border: 1px solid var(--line); border-radius: 7px;
+  color: var(--muted); background: var(--panel-2); cursor: pointer;
+  font-size: 10px; white-space: nowrap;
+  transition: border-color .12s, color .12s;
+}
+.trajectory-expand-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* ══════════════════════════════════════════════════════════════════
+   Body — CSS GRID (never wraps, unlike flex)
+   Card default:  [ graph : 1fr ] [ detail : 230px ]
+   Fullscreen:    [ list : 220px ] [ graph : 1fr ] [ detail : 360px ]
+   ══════════════════════════════════════════════════════════════════ */
+.trajectory-body {
+  display: grid;
+  /* Simple 2-col: graph fills available space, detail panel fixed */
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 10px;
+  margin-top: 8px;
+  align-items: start;
+}
+
+/* ── Action list — HIDDEN in compact card, injected by fullscreen ── */
+/* The action-list div is first child in HTML but not in the grid
+   in compact mode — we hide it so the grid stays 2-col. */
+.trajectory-action-list-panel {
+  display: none;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ── Graph panel (left/main column) ─────────────────────────────── */
+.trajectory-graph-panel { min-width: 0; min-height: 0; }
+
+/* ── Viewport — scrolls SVG; no CSS size override on SVG ────────── */
+.trajectory-viewport {
+  position: relative; overflow: auto;
+  border: 1px solid var(--line); border-radius: 12px; outline: none;
+  background: #070b10; cursor: zoom-in;
+  min-height: 280px;   /* always show graph area even before first render */
+  max-height: 420px;
+}
+.trajectory-viewport:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(104,214,243,.1); }
+.trajectory-fullscreen-hint {
+  position: sticky; z-index: 3; top: 8px; left: 100%;
+  display: block; width: max-content; margin: 8px 8px -29px auto;
+  padding: 4px 7px; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; background: rgba(8,11,16,.88); font-size: 9px; pointer-events: none;
+}
+/* JS sets explicit px width/height on the SVG — do NOT override */
+#trajectory-map { display: block; }
+
+/* ── Detail panel (right column) ────────────────────────────────── */
+.trajectory-detail-panel {
+  min-width: 0;
+  display: flex; flex-direction: column;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: #090e16;
+  min-height: 280px;   /* matches viewport min-height */
+  max-height: 420px; overflow-y: auto;
+}
+/* Placeholder before node click */
+.traj-detail-placeholder {
+  margin: 0; padding: 20px 10px;
+  color: var(--muted); font-size: 11px; line-height: 1.6;
+  text-align: center; flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Fullscreen — outer flex-column, inner 3-col grid
+   The action-list column is only added in fullscreen.
+   ══════════════════════════════════════════════════════════════════ */
 .trajectory-section:fullscreen,
-.trajectory-section.trajectory-fullscreen-fallback { height: 100vh; width: 100vw; margin: 0; padding: 24px; border: 0; background: var(--bg); display: flex; flex-direction: column; }
+.trajectory-section.trajectory-fullscreen-fallback {
+  height: 100vh; width: 100vw; margin: 0; padding: 0; border: 0;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
 .trajectory-section.trajectory-fullscreen-fallback { position: fixed; z-index: 1000; inset: 0; }
+
+.trajectory-section:fullscreen .trajectory-heading,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-heading {
+  padding: 14px 24px 0; flex-shrink: 0;
+}
+.trajectory-section:fullscreen .trajectory-toolbar,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-toolbar {
+  margin: 6px 24px 0; flex-shrink: 0;
+}
+
+/* Body → 3-column grid filling remaining height */
+.trajectory-section:fullscreen .trajectory-body,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-body {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 360px;
+  gap: 12px;
+  padding: 10px 24px 12px;
+  align-items: stretch;
+}
+
+/* Action list — show in fullscreen */
+.trajectory-section:fullscreen .trajectory-action-list-panel,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-action-list-panel {
+  display: flex; flex-direction: column;
+  min-height: 0; min-width: 0;
+  padding: 10px 0;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: #0b1017; overflow-y: auto;
+}
+
+/* Graph panel — middle column, full height */
+.trajectory-section:fullscreen .trajectory-graph-panel,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-graph-panel {
+  min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+}
+
+/* Viewport fills graph column */
 .trajectory-section:fullscreen .trajectory-viewport,
-.trajectory-section.trajectory-fullscreen-fallback .trajectory-viewport { flex: 1; min-height: 0; cursor: default; }
-.trajectory-section:fullscreen #trajectory-fullscreen-exit,
-.trajectory-section.trajectory-fullscreen-fallback #trajectory-fullscreen-exit { display: inline-block; }
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-viewport {
+  flex: 1; min-height: 0;
+  max-height: none; overflow: auto; cursor: default;
+}
 .trajectory-section:fullscreen .trajectory-fullscreen-hint,
 .trajectory-section.trajectory-fullscreen-fallback .trajectory-fullscreen-hint { display: none; }
+
+/* Detail panel — right column, full height, independent scroll */
+.trajectory-section:fullscreen .trajectory-detail-panel,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-detail-panel {
+  min-height: 0; min-width: 0;
+  max-height: none; overflow-y: auto;
+}
+
+/* trajectory-details inside detail panel — fullscreen: fill space */
 .trajectory-section:fullscreen .trajectory-details,
-.trajectory-section.trajectory-fullscreen-fallback .trajectory-details { flex: none; max-height: 34vh; overflow: auto; }
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-details {
+  flex: 1; min-height: 0;
+}
+
+/* Swap expand/exit */
+.trajectory-section:fullscreen .trajectory-expand-btn,
+.trajectory-section.trajectory-fullscreen-fallback .trajectory-expand-btn { display: none; }
+.trajectory-section:fullscreen #trajectory-fullscreen-exit,
+.trajectory-section.trajectory-fullscreen-fallback #trajectory-fullscreen-exit { display: inline-block; }
+
 body:has(.trajectory-fullscreen-fallback) { overflow: hidden; }
-.trajectory-edge { fill: none; stroke: #445368; stroke-width: 1.5; opacity: .9; }
-#trajectory-arrow path { fill: #60728a; }
+
+/* ── Action list items (fullscreen sidebar) ─────────────────────── */
+.traj-list-heading {
+  padding: 0 12px 6px; color: var(--muted);
+  font: 800 9px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .1em; text-transform: uppercase;
+  border-bottom: 1px solid var(--line); flex-shrink: 0;
+}
+.traj-action-item {
+  padding: 8px 12px; cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background .12s, border-color .12s;
+}
+.traj-action-item:hover { background: rgba(104,214,243,.05); }
+.traj-action-item.selected { border-left-color: var(--cyan); background: rgba(104,214,243,.08); }
+.traj-action-item-id   { color: var(--text); font: 700 11px ui-monospace, SFMono-Regular, Consolas, monospace; margin-bottom: 3px; }
+.traj-action-item-path { color: var(--muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; }
+.traj-action-badge {
+  display: inline-block; padding: 2px 6px; border-radius: 999px;
+  font: 800 9px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .05em;
+}
+.traj-badge-violation  { color: var(--red);   background: rgba(255,133,133,.12); }
+.traj-badge-compliant, .traj-badge-accepted, .traj-badge-observed { color: var(--green); background: rgba(117,240,177,.10); }
+.traj-badge-unclassified { color: var(--amber); background: rgba(244,197,109,.10); }
+.traj-badge-not-evaluated, .traj-badge-missing, .traj-badge-not-applicable { color: var(--muted); background: rgba(140,154,170,.10); }
+
+/* ── SVG: edges ─────────────────────────────────────────────────── */
+.trajectory-edge        { fill: none; stroke: #3d5570; stroke-width: 1.5; opacity: .9; }
+.trajectory-edge-inter  { stroke: #2a4060; stroke-dasharray: 4 2; opacity: .75; }
+#trajectory-arrow path  { fill: #4e6e90; }
+
+/* ── SVG: stage nodes ────────────────────────────────────────────── */
 .trajectory-node { cursor: pointer; outline: none; }
-.trajectory-node rect { fill: #121a24; stroke: #344256; stroke-width: 1.5; transition: stroke .15s, filter .15s; }
-.trajectory-node:hover rect, .trajectory-node:focus rect { stroke: var(--cyan); filter: brightness(1.12); }
-.trajectory-stage { fill: var(--muted); font: 800 9px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .08em; }
-.trajectory-label { fill: var(--text); font: 700 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.trajectory-node rect {
+  fill: #101820; stroke: #2a3d52; stroke-width: 1.5;
+  transition: stroke .15s, filter .15s;
+}
+.trajectory-node:hover rect,
+.trajectory-node:focus rect { stroke: var(--cyan); filter: brightness(1.2); }
+
+/* Highlighted action */
+.trajectory-action-highlighted rect {
+  stroke: var(--cyan) !important;
+  fill: #132030 !important;
+  filter: brightness(1.08);
+}
+.trajectory-action-highlighted .trajectory-stage { fill: var(--cyan) !important; }
+
+.trajectory-stage       { fill: #5a7590; font: 800 8px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .07em; }
+.trajectory-label       { fill: var(--text); font: 600 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
 .trajectory-node-status { fill: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
-.trajectory-status-violation rect { stroke: var(--red); fill: rgba(255, 133, 133, .08); }
-.trajectory-status-accepted rect, .trajectory-status-observed rect,
-.trajectory-status-compliant rect { stroke: var(--green); fill: rgba(117, 240, 177, .06); }
-.trajectory-status-unclassified rect, .trajectory-status-not-evaluated rect,
-.trajectory-status-missing rect { stroke: var(--amber); stroke-dasharray: 5 3; }
+
+/* Status colours */
+.trajectory-status-violation rect { stroke: var(--red); fill: rgba(255,133,133,.10); }
+.trajectory-status-violation .trajectory-stage { fill: var(--red); }
+.trajectory-status-accepted rect,
+.trajectory-status-compliant rect { stroke: var(--green); fill: rgba(117,240,177,.07); }
+.trajectory-status-observed rect  { stroke: #3ecfcf;     fill: rgba(62,207,207,.06); }
+.trajectory-status-unclassified rect { stroke: var(--amber); fill: rgba(244,197,109,.07); stroke-dasharray: 5 3; }
+.trajectory-status-not-evaluated rect,
+.trajectory-status-not-applicable rect,
+.trajectory-status-missing rect  { stroke: #3a4e60; stroke-dasharray: 4 3; fill: #0d141e; }
+
+/* ── SVG: context nodes (START / END) ───────────────────────────── */
+.trajectory-node-context { cursor: default; outline: none; }
+.trajectory-node-context rect {
+  fill: #070b10; stroke: #1e3045; stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.trajectory-ctx-label {
+  fill: #3a5065;
+  font: 700 8px ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+
+/* ── Detail panel content ───────────────────────────────────────── */
 .trajectory-empty { margin: 12px 0 0; color: var(--muted); font-size: 11px; }
-.trajectory-details { margin-top: 10px; }
-.trajectory-details h5 { margin: 0 0 7px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
-#trajectory-details-json { max-height: 260px; margin: 0; padding: 12px; overflow: auto; color: #c6d4df; border: 1px solid var(--line); border-radius: 9px; background: #06090e; font: 10px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* trajectory-details lives inside .trajectory-detail-panel */
+.trajectory-details { padding: 12px; display: flex; flex-direction: column; gap: 0; }
+.trajectory-details h5 {
+  margin: 0 0 8px; color: var(--muted); font-size: 10px;
+  text-transform: uppercase; letter-spacing: .08em;
+}
+/* Evidence summary table */
+.traj-evidence-summary {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 3px 10px; margin: 0 0 10px;
+}
+.traj-evidence-summary dt {
+  color: var(--muted); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .06em; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: nowrap; padding-top: 1px;
+}
+.traj-evidence-summary dd {
+  margin: 0; color: var(--text);
+  font: 10px ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere; word-break: break-all;
+}
+/* Raw JSON heading */
+.traj-raw-json-heading {
+  margin: 0 0 6px; color: var(--muted);
+  font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+#trajectory-details-json {
+  margin: 0; padding: 10px; overflow: auto;
+  max-height: 300px;
+  color: #c6d4df; border: 1px solid var(--line); border-radius: 8px; background: #06090e;
+  font: 9.5px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+/* In fullscreen JSON fills available height */
+.trajectory-section:fullscreen #trajectory-details-json,
+.trajectory-section.trajectory-fullscreen-fallback #trajectory-details-json {
+  flex: 1; max-height: none;
+}
+
+/* ── Responsive — narrow screens ────────────────────────────────── */
+@media (max-width: 680px) {
+  /* Stack graph above detail panel */
+  .trajectory-body {
+    grid-template-columns: 1fr !important;
+  }
+  .trajectory-detail-panel { max-height: 280px; }
+  /* Fullscreen: single column */
+  .trajectory-section:fullscreen .trajectory-body,
+  .trajectory-section.trajectory-fullscreen-fallback .trajectory-body {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .scope-note { margin: 20px 24px 24px; padding: 14px; border-left: 2px solid var(--cyan); background: rgba(104, 214, 243, .05); }
 .scope-note strong { font-size: 12px; }
