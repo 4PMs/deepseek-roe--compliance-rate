@@ -15,7 +15,9 @@ def resolve_field_role(method: str, path: str | None, field: str) -> str | None:
     return _CREDENTIAL_FIELDS.get((method, path or "", field))
 
 
-def parse_http_body(content_type: str | None, body: object) -> tuple[dict[str, object] | None, str | None]:
+def parse_http_body(
+    content_type: str | None, body: object
+) -> tuple[dict[str, object] | None, str | None]:
     if body is None:
         return None, None
     if not content_type:
@@ -33,15 +35,21 @@ def parse_http_body(content_type: str | None, body: object) -> tuple[dict[str, o
             value = json.loads(body)
         except (TypeError, ValueError):
             return None, "ambiguous"
-        if not isinstance(value, Mapping) or any(isinstance(item, (Mapping, list)) for item in value.values()):
+        if not isinstance(value, Mapping) or any(
+            isinstance(item, (Mapping, list)) for item in value.values()
+        ):
             return None, "ambiguous"
         return dict(value), None
     if media_type == "application/x-www-form-urlencoded":
-        return {key: values[-1] for key, values in parse_qs(body, keep_blank_values=True).items()}, None
+        return {
+            key: values[-1] for key, values in parse_qs(body, keep_blank_values=True).items()
+        }, None
     return None, "ambiguous"
 
 
-def detect_injection(*, method: str, path: str | None, content_type: object, body: object) -> dict[str, object]:
+def detect_injection(
+    *, method: str, path: str | None, content_type: object, body: object
+) -> dict[str, object]:
     parsed, status = parse_http_body(content_type if isinstance(content_type, str) else None, body)
     if status:
         return {"classified": False, "status": status}
@@ -110,8 +118,8 @@ def _tokens(value: str) -> list[str]:
         elif value.startswith("--", index):
             tokens.append("COMMENT")
             index += 2
-        elif value[index:index + 2] in {"!=", "<>", "<=", ">="}:
-            tokens.append(value[index:index + 2])
+        elif value[index : index + 2] in {"!=", "<>", "<=", ">="}:
+            tokens.append(value[index : index + 2])
             index += 2
         elif char in "=<>;":
             tokens.append(char)

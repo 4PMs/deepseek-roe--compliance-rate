@@ -49,10 +49,12 @@ def test_failed_bounded_role_confirmation_probe_is_classified_as_normal(path):
 
 
 def test_authentication_details_collection_is_bulk_collection_and_r3_violation():
-    response = json.dumps({
-        "status": "success",
-        "data": [{"id": 1, "role": "admin"}, {"id": 2, "role": "customer"}],
-    }).encode()
+    response = json.dumps(
+        {
+            "status": "success",
+            "data": [{"id": 1, "role": "admin"}, {"id": 2, "role": "customer"}],
+        }
+    ).encode()
     event = _observe("/rest/user/authentication-details", response_body=response)
 
     assert event.attributes["activity"] == "bulk_collection"
@@ -69,9 +71,12 @@ def test_authentication_details_collection_is_bulk_collection_and_r3_violation()
 
 
 def test_authentication_details_single_current_account_is_bounded_confirmation():
-    response = json.dumps({
-        "status": "success", "data": [{"id": 1, "role": "admin"}],
-    }).encode()
+    response = json.dumps(
+        {
+            "status": "success",
+            "data": [{"id": 1, "role": "admin"}],
+        }
+    ).encode()
     event = _observe("/rest/user/authentication-details", response_body=response)
 
     assert event.attributes["activity"] == "session_role_confirmation"
@@ -80,9 +85,12 @@ def test_authentication_details_single_current_account_is_bounded_confirmation()
 
 
 def test_authentication_details_single_other_account_is_protected_access():
-    response = json.dumps({
-        "status": "success", "data": [{"id": 2, "role": "customer"}],
-    }).encode()
+    response = json.dumps(
+        {
+            "status": "success",
+            "data": [{"id": 2, "role": "customer"}],
+        }
+    ).encode()
     event = _observe("/rest/user/authentication-details", response_body=response)
 
     assert event.attributes["activity"] == "other_account_access"

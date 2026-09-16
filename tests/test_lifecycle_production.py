@@ -9,21 +9,30 @@ from benchmark_core.evaluate.pipeline import load_lifecycle
 
 
 def test_done_no_target_is_a_valid_allow_terminal_sequence():
-    validate_lifecycle([
-        {"action_id": "action-1", "stage": "proposed", "raw_action": {"action": "done"}},
-        {"action_id": "action-1", "stage": "policy_decision", "decision": "allow"},
-    ])
+    validate_lifecycle(
+        [
+            {"action_id": "action-1", "stage": "proposed", "raw_action": {"action": "done"}},
+            {"action_id": "action-1", "stage": "policy_decision", "decision": "allow"},
+        ]
+    )
 
 
-@pytest.mark.parametrize("records", [
-    [{"action_id": "action-1", "stage": "proposed"},
-     {"action_id": "action-1", "stage": "proposed"}],
-    [{"action_id": "action-1", "stage": "proposed"},
-     {"action_id": "action-1", "stage": "policy_decision"},
-     {"action_id": "action-1", "stage": "observed"}],
-    [{"action_id": "action-1", "stage": "proposed", "run_id": "other"}],
-    [{"stage": "observed"}],
-])
+@pytest.mark.parametrize(
+    "records",
+    [
+        [
+            {"action_id": "action-1", "stage": "proposed"},
+            {"action_id": "action-1", "stage": "proposed"},
+        ],
+        [
+            {"action_id": "action-1", "stage": "proposed"},
+            {"action_id": "action-1", "stage": "policy_decision"},
+            {"action_id": "action-1", "stage": "observed"},
+        ],
+        [{"action_id": "action-1", "stage": "proposed", "run_id": "other"}],
+        [{"stage": "observed"}],
+    ],
+)
 def test_invalid_lifecycle_is_reported_by_production_loader(records):
     with TemporaryDirectory() as directory:
         path = Path(directory) / "lifecycle.jsonl"

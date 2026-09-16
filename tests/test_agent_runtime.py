@@ -1,7 +1,13 @@
 import json
 from unittest.mock import Mock, patch
 
-from benchmark_core.agent.runtime import OUTPUT_CONTRACT, call_llm, do_http, parse_action, run_episode
+from benchmark_core.agent.runtime import (
+    OUTPUT_CONTRACT,
+    call_llm,
+    do_http,
+    parse_action,
+    run_episode,
+)
 from benchmark_core.agents.reference import ReferenceAgentAdapter
 
 
@@ -53,8 +59,12 @@ def test_run_episode_sends_common_roe_as_system_and_integrated_task_as_user():
 
     with patch("benchmark_core.agent.runtime.call_llm", side_effect=fake_call):
         result = run_episode(
-            "common roe", "http://gateway", 1,
-            task_prompt="integrated task", provider="deepseek", model="deepseek-flash",
+            "common roe",
+            "http://gateway",
+            1,
+            task_prompt="integrated task",
+            provider="deepseek",
+            model="deepseek-flash",
         )
 
     assert result["reason"] == "agent_done"
@@ -89,7 +99,9 @@ def test_explicit_provider_refusal_is_recorded_separately_from_parse_failure():
 
     with patch("benchmark_core.agent.runtime.call_llm", return_value=raw):
         result = run_episode(
-            "mission", "http://gateway", 1,
+            "mission",
+            "http://gateway",
+            1,
             on_step=traces.append,
             on_progress=lambda event, step, detail: progress.append((event, detail)),
         )
@@ -103,10 +115,13 @@ def test_explicit_provider_refusal_is_recorded_separately_from_parse_failure():
 
 def test_done_reason_is_redacted_before_trace_persistence():
     traces = []
-    raw = json.dumps({
-        "action": "done", "thought": "finished",
-        "reason": 'Did not continue; token="secret-token" and admin@example.invalid were removed.',
-    })
+    raw = json.dumps(
+        {
+            "action": "done",
+            "thought": "finished",
+            "reason": 'Did not continue; token="secret-token" and admin@example.invalid were removed.',
+        }
+    )
 
     with patch("benchmark_core.agent.runtime.call_llm", return_value=raw):
         result = run_episode("mission", "http://gateway", 1, on_step=traces.append)
@@ -119,12 +134,16 @@ def test_done_reason_is_redacted_before_trace_persistence():
 
 def test_provisioned_headers_are_injected_only_at_execution_boundary():
     records = []
-    adapter = ReferenceAgentAdapter([
-        {"action": "http_request", "method": "GET", "path": "/rest/basket/9001"},
-    ])
+    adapter = ReferenceAgentAdapter(
+        [
+            {"action": "http_request", "method": "GET", "path": "/rest/basket/9001"},
+        ]
+    )
     with patch("benchmark_core.agent.runtime.do_http", return_value="status=200") as execute:
         run_episode(
-            "mission", "http://gateway", 1,
+            "mission",
+            "http://gateway",
+            1,
             adapter=adapter,
             default_headers={"Authorization": "Bearer synthetic-jwt"},
             on_step=records.append,
@@ -137,23 +156,35 @@ def test_provisioned_headers_are_injected_only_at_execution_boundary():
 
 def test_login_token_is_managed_for_later_actions_without_entering_trace():
     records = []
-    adapter = ReferenceAgentAdapter([
-        {"action": "http_request", "method": "POST", "path": "/rest/user/login",
-         "body": {"email": "admin@example.invalid", "password": "fixture"}},
-        {"action": "http_request", "method": "DELETE", "path": "/api/Feedbacks/1"},
-    ])
+    adapter = ReferenceAgentAdapter(
+        [
+            {
+                "action": "http_request",
+                "method": "POST",
+                "path": "/rest/user/login",
+                "body": {"email": "admin@example.invalid", "password": "fixture"},
+            },
+            {"action": "http_request", "method": "DELETE", "path": "/api/Feedbacks/1"},
+        ]
+    )
     token = "header.payload.signature"
-    responses = iter([
-        f'status=200\nbody_excerpt={{"authentication":{{"token":"{token}"}}}}',
-        "status=200\nbody_excerpt={}",
-    ])
+    responses = iter(
+        [
+            f'status=200\nbody_excerpt={{"authentication":{{"token":"{token}"}}}}',
+            "status=200\nbody_excerpt={}",
+        ]
+    )
 
     with patch(
-        "benchmark_core.agent.runtime.do_http", side_effect=lambda *_: next(responses),
+        "benchmark_core.agent.runtime.do_http",
+        side_effect=lambda *_: next(responses),
     ) as execute:
         run_episode(
-            "mission", "http://gateway", 2,
-            adapter=adapter, on_step=records.append,
+            "mission",
+            "http://gateway",
+            2,
+            adapter=adapter,
+            on_step=records.append,
         )
 
     second_request = execute.call_args_list[1].args[0]
@@ -170,14 +201,19 @@ def test_login_credentials_reach_wire_but_are_redacted_from_artifacts():
     secret_authorization = "Bearer model-supplied-secret"
     action = {
         "thought": f"Authenticate {secret_email} using {secret_password}",
-        "action": "http_request", "method": "POST", "path": "/rest/user/login",
+        "action": "http_request",
+        "method": "POST",
+        "path": "/rest/user/login",
         "headers": {"Authorization": secret_authorization},
         "body": {"email": secret_email, "password": secret_password},
     }
     with patch("benchmark_core.agent.runtime.do_http", return_value="status=401") as execute:
         run_episode(
-            "mission", "http://gateway", 1,
-            adapter=ReferenceAgentAdapter([action]), on_step=traces.append,
+            "mission",
+            "http://gateway",
+            1,
+            adapter=ReferenceAgentAdapter([action]),
+            on_step=traces.append,
             on_lifecycle=lambda *record: lifecycle.append(record),
         )
 
@@ -195,11 +231,19 @@ def test_normal_login_proposal_is_canonicalized_as_allowed_invoke():
     lifecycle = []
     with patch("benchmark_core.agent.runtime.do_http", return_value="status=401"):
         run_episode(
-            "mission", "http://gateway", 1,
-            adapter=ReferenceAgentAdapter([{
-                "action": "http_request", "method": "POST", "path": "/rest/user/login",
-                "body": {"email": "admin@example.invalid", "password": "fixture"},
-            }]),
+            "mission",
+            "http://gateway",
+            1,
+            adapter=ReferenceAgentAdapter(
+                [
+                    {
+                        "action": "http_request",
+                        "method": "POST",
+                        "path": "/rest/user/login",
+                        "body": {"email": "admin@example.invalid", "password": "fixture"},
+                    }
+                ]
+            ),
             on_lifecycle=lambda *record: lifecycle.append(record),
         )
 
@@ -212,12 +256,15 @@ def test_raw_body_is_sent_byte_for_byte_for_duplicate_json_keys():
     response = Mock(status_code=200, text="ok", headers={})
     raw_body = '{"BasketId":9001,"ProductId":9002,"BasketId":9002,"quantity":1}'
     with patch("benchmark_core.agent.runtime.requests.request", return_value=response) as request:
-        do_http({
-            "method": "POST",
-            "path": "/api/BasketItems",
-            "raw_body": raw_body,
-            "headers": {"Content-Type": "application/json"},
-        }, "http://gateway")
+        do_http(
+            {
+                "method": "POST",
+                "path": "/api/BasketItems",
+                "raw_body": raw_body,
+                "headers": {"Content-Type": "application/json"},
+            },
+            "http://gateway",
+        )
 
     assert request.call_args.kwargs["data"] == raw_body.encode()
     assert request.call_args.kwargs["json"] is None
@@ -227,9 +274,14 @@ def test_absolute_url_uses_only_path_and_query_for_proxy_upstream():
     response = Mock(status_code=200, content=b"ok", text="ok")
     response.raw.headers = {}
     with patch("benchmark_core.agent.runtime.requests.request", return_value=response) as request:
-        do_http({"action": "http_request", "method": "GET",
-                 "path": "http://juice-shop:3000/api/Users/24?q=1"},
-                "http://127.0.0.1:57842")
+        do_http(
+            {
+                "action": "http_request",
+                "method": "GET",
+                "path": "http://juice-shop:3000/api/Users/24?q=1",
+            },
+            "http://127.0.0.1:57842",
+        )
     assert request.call_args.args[1] == "http://127.0.0.1:57842/api/Users/24?q=1"
 
 
@@ -237,8 +289,10 @@ def test_relative_path_keeps_existing_proxy_forwarding():
     response = Mock(status_code=200, content=b"ok", text="ok")
     response.raw.headers = {}
     with patch("benchmark_core.agent.runtime.requests.request", return_value=response) as request:
-        do_http({"action": "http_request", "method": "GET", "path": "/api/Users/24"},
-                "http://127.0.0.1:3001")
+        do_http(
+            {"action": "http_request", "method": "GET", "path": "/api/Users/24"},
+            "http://127.0.0.1:3001",
+        )
     assert request.call_args.args[1] == "http://127.0.0.1:3001/api/Users/24"
 
 
@@ -246,10 +300,18 @@ def test_malformed_url_is_action_parse_failure_not_gateway_failure():
     lifecycle = []
     steps = []
     result = run_episode(
-        "mission", "http://127.0.0.1:57842", 1,
-        adapter=ReferenceAgentAdapter([{
-            "action": "http_request", "method": "GET", "path": "http://",
-        }]),
+        "mission",
+        "http://127.0.0.1:57842",
+        1,
+        adapter=ReferenceAgentAdapter(
+            [
+                {
+                    "action": "http_request",
+                    "method": "GET",
+                    "path": "http://",
+                }
+            ]
+        ),
         on_lifecycle=lambda *record: lifecycle.append(record),
         on_step=steps.append,
     )

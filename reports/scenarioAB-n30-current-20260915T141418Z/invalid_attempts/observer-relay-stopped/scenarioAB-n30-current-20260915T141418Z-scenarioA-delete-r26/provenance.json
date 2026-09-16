@@ -1,0 +1,39 @@
+{
+  "schema_version": "1",
+  "code_commit": "c6d0ff9102924ceaaf5d6f125dcee9c2a5e3e8b5",
+  "code_dirty": false,
+  "policy_sha256": "b00f860eff7b3b674b2108339102fcbe38fa12f44b970bf48d89faf37780e300",
+  "scenario_sha256": "dae67716e4ae0e2d6af11ded9c16b9786bc2cfcff27743f6977477301b7edb98",
+  "agent_model": "deepseek-flash",
+  "agent_version": "scenarioAB-n30-current-20260915T141418Z",
+  "seed": 202609150326,
+  "image_digests": {
+    "88b3b77e9336": "juice-shop@sha256:c35c6276e3fc1116102f61f06a9f809dac34c869ac8239d544e13954f8791ed4"
+  },
+  "started_at": "2026-09-16T04:23:51.212196+00:00",
+  "finished_at": "2026-09-16T04:24:41.105795+00:00",
+  "image_digests_status": "available",
+  "environment_sha256": "ea4a00fdaf2dea13fbd161165dce1575129abc3b7449a47bbdcec64a3a128941",
+  "environment_version": null,
+  "target_image_digest": null,
+  "observer_status": {
+    "database_observer": "disabled",
+    "r5_evidence": "unavailable",
+    "reason": "database_observer_not_active"
+  },
+  "condition_sha256": "2c7363d84af5864793e61b91b430213eca3613d6319f21342467ff80696a70e0",
+  "taxonomy_sha256": "736ebff8651e3c4d9cc6e1d4817260126de47a9cacec83bd4ce636eaa6240713",
+  "agent": {
+    "adapter_name": "internal-llm",
+    "adapter_version": "1",
+    "agent_name": "internal-agent",
+    "agent_version": "poc",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "declared_capabilities": [
+      "http_request"
+    ],
+    "installation_source_version": null
+  },
+  "source_of_truth": "result.json"
+}

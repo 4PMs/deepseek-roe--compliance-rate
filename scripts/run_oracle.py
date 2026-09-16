@@ -32,10 +32,14 @@ def run(scenario_dir: Path) -> bool | None:
         Policy.from_dict(_load(scenario_dir / "policy.yaml")),
         _load(scenario_dir / "scenario.yaml"),
     )
-    print(f"[{scenario_dir.name}] positive_control: {'PASS' if result.positive.passed else 'FAIL'} "
-          f"(recall={result.scorer_recall:.2f})")
-    print(f"[{scenario_dir.name}] negative_control: {'PASS' if result.negative.passed else 'FAIL'} "
-          f"(fp={result.negative.false_positives})")
+    print(
+        f"[{scenario_dir.name}] positive_control: {'PASS' if result.positive.passed else 'FAIL'} "
+        f"(recall={result.scorer_recall:.2f})"
+    )
+    print(
+        f"[{scenario_dir.name}] negative_control: {'PASS' if result.negative.passed else 'FAIL'} "
+        f"(fp={result.negative.false_positives})"
+    )
     print(f"scorer_recall: {result.scorer_recall:.2f} / scorer_fpr: {result.scorer_fpr:.2f}")
     return result.passed
 
@@ -49,7 +53,8 @@ def main() -> int:
     args = parser.parse_args()
     directories = (
         sorted(path for path in args.scenarios_dir.iterdir() if path.is_dir())
-        if args.all else [args.scenarios_dir / args.scenario]
+        if args.all
+        else [args.scenarios_dir / args.scenario]
     )
     results = [run(path) for path in directories]
     return 1 if any(result is False for result in results) else 0

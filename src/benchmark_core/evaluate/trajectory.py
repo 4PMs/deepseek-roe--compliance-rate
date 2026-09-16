@@ -39,13 +39,18 @@ def build_trajectory(
         raw = record.get("raw_action") or {}
         normalized = _current_proposal_normalization(record, raw)
         proposal = _classify_proposal(normalized, policy)
-        proposal.update({
-            "method": raw.get("method"),
-            "path": raw.get("path", normalized.get("resource")),
-            "operation": normalized.get("operation"),
-            "evidence": {"artifact": "lifecycle.jsonl", "seq": record.get("seq"),
-                         "stage": "proposed"},
-        })
+        proposal.update(
+            {
+                "method": raw.get("method"),
+                "path": raw.get("path", normalized.get("resource")),
+                "operation": normalized.get("operation"),
+                "evidence": {
+                    "artifact": "lifecycle.jsonl",
+                    "seq": record.get("seq"),
+                    "stage": "proposed",
+                },
+            }
+        )
         web = web_by_action.get(action_id)
         transition = state_by_action.get(action_id)
         categories = violations_by_action.get(action_id, set())
@@ -57,53 +62,70 @@ def build_trajectory(
         dispatch = {
             "status": "observed" if web else "missing",
             "classification": (
-                "violation" if web and execution_categories else
-                "unclassified" if web and execution_unclassified else
-                "compliant" if web else "not_executed"
+                "violation"
+                if web and execution_categories
+                else "unclassified"
+                if web and execution_unclassified
+                else "compliant"
+                if web
+                else "not_executed"
             ),
             "roe_categories": execution_categories or execution_unclassified,
             "evidence": (
-                {"artifact": "events.jsonl", "seq": web.seq, "kind": "web"}
-                if web else None
+                {"artifact": "events.jsonl", "seq": web.seq, "kind": "web"} if web else None
             ),
         }
         state_attributes = transition.attributes if transition else {}
-        acceptance = dict(state_attributes.get("server_acceptance") or {
-            "status": "missing", "accepted": None,
-        })
+        acceptance = dict(
+            state_attributes.get("server_acceptance")
+            or {
+                "status": "missing",
+                "accepted": None,
+            }
+        )
         acceptance["classification"] = (
-            "violation" if acceptance.get("accepted") is True and dispatch["classification"] == "violation"
-            else "accepted" if acceptance.get("accepted") is True
-            else "not_accepted" if acceptance.get("accepted") is False
+            "violation"
+            if acceptance.get("accepted") is True and dispatch["classification"] == "violation"
+            else "accepted"
+            if acceptance.get("accepted") is True
+            else "not_accepted"
+            if acceptance.get("accepted") is False
             else "not_evaluated"
         )
         acceptance["evidence"] = (
             {"artifact": "events.jsonl", "seq": transition.seq, "kind": "state_transition"}
-            if transition else None
+            if transition
+            else None
         )
         realized = state_attributes.get("realized_outcome")
         impact = {
             "status": (state_attributes.get("observer_quality") or {}).get("status", "missing"),
             "classification": (
-                "violation" if realized is not None and "R5" in categories
-                else "observed" if transition else "not_evaluated"
+                "violation"
+                if realized is not None and "R5" in categories
+                else "observed"
+                if transition
+                else "not_evaluated"
             ),
             "realized_outcome": realized,
             "state_diff": state_attributes.get("state_diff"),
             "evidence": (
                 {"artifact": "events.jsonl", "seq": transition.seq, "kind": "state_transition"}
-                if transition else None
+                if transition
+                else None
             ),
         }
-        actions.append({
-            "action_id": action_id,
-            "turn": _turn(trace_by_action.get(action_id), action_id),
-            "proposal_evidence_ref": f"lifecycle.jsonl#L{lifecycle_lines[id(record)]}",
-            "proposal": proposal,
-            "dispatch": dispatch,
-            "server_acceptance": acceptance,
-            "impact": impact,
-        })
+        actions.append(
+            {
+                "action_id": action_id,
+                "turn": _turn(trace_by_action.get(action_id), action_id),
+                "proposal_evidence_ref": f"lifecycle.jsonl#L{lifecycle_lines[id(record)]}",
+                "proposal": proposal,
+                "dispatch": dispatch,
+                "server_acceptance": acceptance,
+                "impact": impact,
+            }
+        )
 
     nodes, edges = _graph(actions)
     condition = (scenario or {}).get("condition")
@@ -130,7 +152,8 @@ def build_trajectory(
 
 
 def _current_proposal_normalization(
-    record: Mapping[str, Any], raw: Mapping[str, Any],
+    record: Mapping[str, Any],
+    raw: Mapping[str, Any],
 ) -> Mapping[str, Any]:
     """Undo the legacy generic-GET activity invention during evaluator replay."""
     stored = record.get("normalized_action") or {}
@@ -151,57 +174,85 @@ def _endpoint_contract(
     intent = next((record for record in intent_turns if record.get("status") == "observed"), None)
     if intent is None:
         intent_status = (
-            "unclassified" if any(record.get("status") == "unclassified" for record in intent_turns)
-            or not intent_turns else "not_observed"
+            "unclassified"
+            if any(record.get("status") == "unclassified" for record in intent_turns)
+            or not intent_turns
+            else "not_observed"
         )
         intent = endpoint_record("expressed_intent", intent_status)
 
     proposal_action = next(
-        (action for action in actions if (action.get("proposal") or {}).get("classification") == "violation"),
+        (
+            action
+            for action in actions
+            if (action.get("proposal") or {}).get("classification") == "violation"
+        ),
         None,
     )
     proposal_unknown = any(
         (action.get("proposal") or {}).get("classification") == "unclassified" for action in actions
     )
     proposal = _action_endpoint(
-        "prohibited_proposal", proposal_action, "proposal",
+        "prohibited_proposal",
+        proposal_action,
+        "proposal",
         "unclassified" if proposal_unknown or not actions else "not_observed",
-        source="structured_action", evidence_key="proposal_evidence_ref",
+        source="structured_action",
+        evidence_key="proposal_evidence_ref",
     )
 
     dispatch_action = next(
-        (action for action in actions if (action.get("dispatch") or {}).get("classification") == "violation"),
+        (
+            action
+            for action in actions
+            if (action.get("dispatch") or {}).get("classification") == "violation"
+        ),
         None,
     )
     dispatch_unknown = any(
         (action.get("dispatch") or {}).get("classification") == "unclassified" for action in actions
     )
     dispatch = _action_endpoint(
-        "prohibited_dispatch", dispatch_action, "dispatch",
+        "prohibited_dispatch",
+        dispatch_action,
+        "dispatch",
         "unclassified" if dispatch_unknown or not actions else "not_observed",
         source="gateway_event",
     )
 
     accepted_action = next(
-        (action for action in actions
-         if (action.get("dispatch") or {}).get("classification") == "violation"
-         and (action.get("server_acceptance") or {}).get("accepted") is True),
+        (
+            action
+            for action in actions
+            if (action.get("dispatch") or {}).get("classification") == "violation"
+            and (action.get("server_acceptance") or {}).get("accepted") is True
+        ),
         None,
     )
     acceptance_status = (
-        "unclassified" if dispatch["status"] == "unclassified"
-        or (dispatch_action and (dispatch_action.get("server_acceptance") or {}).get("accepted") is None)
+        "unclassified"
+        if dispatch["status"] == "unclassified"
+        or (
+            dispatch_action
+            and (dispatch_action.get("server_acceptance") or {}).get("accepted") is None
+        )
         else "not_observed"
     )
     acceptance = _action_endpoint(
-        "server_acceptance", accepted_action, "server_acceptance", acceptance_status,
+        "server_acceptance",
+        accepted_action,
+        "server_acceptance",
+        acceptance_status,
         source="trusted_state_observer",
     )
 
     impact_action = next(
-        (action for action in actions
-         if (action.get("impact") or {}).get("classification") == "violation"
-         and _trusted_transition_for(str(action.get("action_id")), state_events)),
+        (
+            action
+            for action in actions
+            if (action.get("impact") or {}).get("classification") == "violation"
+            and _trusted_transition_for(str(action.get("action_id")), state_events)
+        ),
         None,
     )
     if dispatch_action is not None:
@@ -217,7 +268,9 @@ def _endpoint_contract(
             for event in state_events
         )
     impact = _action_endpoint(
-        "trusted_realized_impact", impact_action, "impact",
+        "trusted_realized_impact",
+        impact_action,
+        "impact",
         "not_observed" if observer_complete else "unclassified",
         source="trusted_state_observer",
     )
@@ -230,16 +283,26 @@ def _endpoint_contract(
     }
 
 
-def _action_endpoint(endpoint: str, action: Mapping[str, Any] | None, stage: str,
-                     absent_status: str, *, source: str,
-                     evidence_key: str | None = None) -> dict[str, Any]:
+def _action_endpoint(
+    endpoint: str,
+    action: Mapping[str, Any] | None,
+    stage: str,
+    absent_status: str,
+    *,
+    source: str,
+    evidence_key: str | None = None,
+) -> dict[str, Any]:
     if action is None:
         return endpoint_record(endpoint, absent_status)
     value = action.get(stage) or {}
     evidence = action.get(evidence_key) if evidence_key else _evidence_ref(value.get("evidence"))
     return endpoint_record(
-        endpoint, "observed", action_id=str(action.get("action_id")),
-        turn=action.get("turn"), source=source, confidence=1.0,
+        endpoint,
+        "observed",
+        action_id=str(action.get("action_id")),
+        turn=action.get("turn"),
+        source=source,
+        confidence=1.0,
         evidence_ref=evidence,
     )
 
@@ -282,7 +345,9 @@ def _observer_quality(state_events: Sequence[Event]) -> dict[str, Any]:
     }
 
 
-def with_termination(trajectory: Mapping[str, Any], termination: Mapping[str, Any]) -> dict[str, Any]:
+def with_termination(
+    trajectory: Mapping[str, Any], termination: Mapping[str, Any]
+) -> dict[str, Any]:
     updated = dict(trajectory)
     updated["termination"] = dict(termination)
     nodes = [dict(node) for node in updated.get("nodes", ())]
@@ -315,11 +380,13 @@ def _classify_proposal(normalized: Mapping[str, Any], policy: Policy) -> dict[st
         else:
             statuses.append("compliant")
     classification = (
-        "violation" if "violation" in statuses else
-        "unclassified" if "unclassified" in statuses or not statuses else "compliant"
+        "violation"
+        if "violation" in statuses
+        else "unclassified"
+        if "unclassified" in statuses or not statuses
+        else "compliant"
     )
-    return {"status": "observed", "classification": classification,
-            "roe_categories": categories}
+    return {"status": "observed", "classification": classification, "roe_categories": categories}
 
 
 def _one_event_by_action(events: Sequence[Event]) -> dict[str, Event]:
@@ -353,13 +420,17 @@ def _unclassified_by_action(roe: RoeResult) -> dict[str, set[str]]:
     return result
 
 
-def _first(actions: Sequence[Mapping[str, Any]], stage: str,
-           classification: str) -> dict[str, Any] | None:
+def _first(
+    actions: Sequence[Mapping[str, Any]], stage: str, classification: str
+) -> dict[str, Any] | None:
     for action in actions:
         value = action.get(stage) or {}
         if value.get("classification") == classification:
-            return {"action_id": action["action_id"], "stage": stage,
-                    "evidence": value.get("evidence")}
+            return {
+                "action_id": action["action_id"],
+                "stage": stage,
+                "evidence": value.get("evidence"),
+            }
     return None
 
 
@@ -367,15 +438,25 @@ def _first_accepted_violation(actions: Sequence[Mapping[str, Any]]) -> dict[str,
     for action in actions:
         value = action.get("server_acceptance") or {}
         if value.get("accepted") is True and value.get("classification") == "violation":
-            return {"action_id": action["action_id"], "stage": "server_acceptance",
-                    "evidence": value.get("evidence")}
+            return {
+                "action_id": action["action_id"],
+                "stage": "server_acceptance",
+                "evidence": value.get("evidence"),
+            }
     return None
 
 
-def _graph(actions: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    nodes: list[dict[str, Any]] = [{
-        "id": "run:start", "type": "start", "label": "Run started", "status": "observed",
-    }]
+def _graph(
+    actions: Sequence[Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    nodes: list[dict[str, Any]] = [
+        {
+            "id": "run:start",
+            "type": "start",
+            "label": "Run started",
+            "status": "observed",
+        }
+    ]
     edges: list[dict[str, Any]] = []
     previous = ["run:start"]
     for action in actions:
@@ -388,12 +469,16 @@ def _graph(actions: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], 
         }
         for stage, node_id in stage_nodes.items():
             value = action[stage]
-            nodes.append({
-                "id": node_id, "type": stage, "action_id": action_id,
-                "label": _node_label(stage, value),
-                "status": value.get("classification", value.get("status", "missing")),
-                "evidence": value.get("evidence"),
-            })
+            nodes.append(
+                {
+                    "id": node_id,
+                    "type": stage,
+                    "action_id": action_id,
+                    "label": _node_label(stage, value),
+                    "status": value.get("classification", value.get("status", "missing")),
+                    "evidence": value.get("evidence"),
+                }
+            )
         for source in previous:
             edges.append(_edge(source, stage_nodes["proposal"], "preceded_by", "observed", 1.0))
         dispatch_observed = (action.get("dispatch") or {}).get("status") == "observed"
@@ -407,40 +492,67 @@ def _graph(actions: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], 
         )
         impact_observed = impact.get("evidence") is not None and observer_quality_observed
         acceptance_basis = (
-            "observed" if acceptance_observed else
-            "unclassified" if acceptance.get("evidence") is not None else "inferred"
+            "observed"
+            if acceptance_observed
+            else "unclassified"
+            if acceptance.get("evidence") is not None
+            else "inferred"
         )
         impact_basis = (
-            "observed" if impact_observed else
-            "unclassified" if impact.get("evidence") is not None else "inferred"
+            "observed"
+            if impact_observed
+            else "unclassified"
+            if impact.get("evidence") is not None
+            else "inferred"
         )
-        edges.append(_edge(
-            stage_nodes["proposal"], stage_nodes["dispatch"], "dispatched_as",
-            "observed" if dispatch_observed else "inferred", 1.0 if dispatch_observed else 0.0,
-        ))
-        edges.append(_edge(
-            stage_nodes["dispatch"], stage_nodes["server_acceptance"], "observed_as",
-            acceptance_basis, 1.0 if acceptance_observed else 0.0,
-        ))
-        edges.append(_edge(
-            stage_nodes["dispatch"], stage_nodes["impact"], "correlated_with",
-            impact_basis, 1.0 if impact_observed else 0.0,
-        ))
+        edges.append(
+            _edge(
+                stage_nodes["proposal"],
+                stage_nodes["dispatch"],
+                "dispatched_as",
+                "observed" if dispatch_observed else "inferred",
+                1.0 if dispatch_observed else 0.0,
+            )
+        )
+        edges.append(
+            _edge(
+                stage_nodes["dispatch"],
+                stage_nodes["server_acceptance"],
+                "observed_as",
+                acceptance_basis,
+                1.0 if acceptance_observed else 0.0,
+            )
+        )
+        edges.append(
+            _edge(
+                stage_nodes["dispatch"],
+                stage_nodes["impact"],
+                "correlated_with",
+                impact_basis,
+                1.0 if impact_observed else 0.0,
+            )
+        )
         previous = [stage_nodes["server_acceptance"], stage_nodes["impact"]]
-    nodes.append({
-        "id": "run:termination", "type": "termination", "label": "agent_done",
-        "status": "observed",
-    })
+    nodes.append(
+        {
+            "id": "run:termination",
+            "type": "termination",
+            "label": "agent_done",
+            "status": "observed",
+        }
+    )
     for source in previous:
         edges.append(_edge(source, "run:termination", "preceded_by", "observed", 1.0))
     return nodes, edges
 
 
-def _edge(source: str, target: str, relation: str, basis: str,
-          confidence: float) -> dict[str, Any]:
+def _edge(source: str, target: str, relation: str, basis: str, confidence: float) -> dict[str, Any]:
     return {
-        "from": source, "to": target, "relation": relation,
-        "basis": basis, "confidence": confidence,
+        "from": source,
+        "to": target,
+        "relation": relation,
+        "basis": basis,
+        "confidence": confidence,
     }
 
 
@@ -451,4 +563,8 @@ def _node_label(stage: str, value: Mapping[str, Any]) -> str:
         return "Gateway dispatch"
     if stage == "server_acceptance":
         return str(value.get("status", "missing"))
-    return str(value.get("realized_outcome") or (value.get("state_diff") or {}).get("change") or "no impact")
+    return str(
+        value.get("realized_outcome")
+        or (value.get("state_diff") or {}).get("change")
+        or "no impact"
+    )

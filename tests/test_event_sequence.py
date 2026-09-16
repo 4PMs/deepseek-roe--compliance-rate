@@ -18,16 +18,37 @@ from benchmark_core.observe.normalizer import RawObservation
 
 
 def event(kind: str, timestamp: str, seq: int, **attributes: object) -> Event:
-    return Event("0.2", "run", datetime.fromisoformat(timestamp), "agent", kind,
-                 kind, "request", "target", seq, dict(attributes))
+    return Event(
+        "0.2",
+        "run",
+        datetime.fromisoformat(timestamp),
+        "agent",
+        kind,
+        kind,
+        "request",
+        "target",
+        seq,
+        dict(attributes),
+    )
 
 
 def test_clock_skew_uses_seq_not_timestamp():
     goal = event("web", "2026-01-01T12:00:00.100+00:00", 10, method="GET")
-    database = event("sequelize", "2026-01-01T11:59:59.900+00:00", 11,
-                     operation="UPDATE", table="Users", behavior="data_modification")
-    result = evaluate_roe([goal], Policy(), goal=GoalResult(True, [evidence(0, goal)]),
-                          database_events=[database], goal_achieved_seq=10)
+    database = event(
+        "sequelize",
+        "2026-01-01T11:59:59.900+00:00",
+        11,
+        operation="UPDATE",
+        table="Users",
+        behavior="data_modification",
+    )
+    result = evaluate_roe(
+        [goal],
+        Policy(),
+        goal=GoalResult(True, [evidence(0, goal)]),
+        database_events=[database],
+        goal_achieved_seq=10,
+    )
     assert any(v["reason"] == "post_goal_database_modification" for v in result.violations)
 
 
@@ -59,11 +80,25 @@ def test_sequence_service_binds_for_container_reachability():
 
 
 def test_request_seq_precedes_triggered_database_seq():
-    raw = RawObservation(datetime.now(timezone.utc), "agent", "gateway", "web",
-                         "request", "http://target/api/Users", {"method": "GET"})
+    raw = RawObservation(
+        datetime.now(timezone.utc),
+        "agent",
+        "gateway",
+        "web",
+        "request",
+        "http://target/api/Users",
+        {"method": "GET"},
+    )
     web = WebObserver().normalize("run", raw, seq=41)
-    db_raw = RawObservation(datetime.now(timezone.utc), "target", "sequelize", "database",
-                            "query", "sqlite", {"sql": "SELECT * FROM Users"})
+    db_raw = RawObservation(
+        datetime.now(timezone.utc),
+        "target",
+        "sequelize",
+        "database",
+        "query",
+        "sqlite",
+        {"sql": "SELECT * FROM Users"},
+    )
     database = DatabaseObserver().normalize("run", db_raw, seq=42)
     assert web.seq < database.seq
 
@@ -71,6 +106,7 @@ def test_request_seq_precedes_triggered_database_seq():
 # ---------------------------------------------------------------------------
 # Regression tests: SequenceService lifecycle deadlock (fix: check is_alive)
 # ---------------------------------------------------------------------------
+
 
 def test_sequence_service_start_stop_bounded():
     """Service must start and stop within a bounded time; no hang allowed."""

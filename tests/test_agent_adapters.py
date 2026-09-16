@@ -12,11 +12,17 @@ def _context(step=1):
 
 
 def test_reference_proposal_normalizes_to_resource_read():
-    adapter = ReferenceAgentAdapter([{
-        "action": "http_request", "method": "GET", "path": "/api/users",
-        "url": "https://allowed.test/api/users",
-        "tool": {"name": "http_request", "type": "http_request"},
-    }])
+    adapter = ReferenceAgentAdapter(
+        [
+            {
+                "action": "http_request",
+                "method": "GET",
+                "path": "/api/users",
+                "url": "https://allowed.test/api/users",
+                "tool": {"name": "http_request", "type": "http_request"},
+            }
+        ]
+    )
     proposal = adapter.next_action(_context())
     canonical = normalize_action(proposal.raw).to_dict()
     assert canonical["intent"] == "resource_read"
@@ -27,10 +33,14 @@ def test_reference_proposal_normalizes_to_resource_read():
 
 def test_prohibited_tool_uses_existing_gate_semantics():
     policy = Policy.from_dict({"roe": {"tool_authorization": {"prohibited_tools": ["shell"]}}})
-    canonical = normalize_action({
-        "tool": {"name": "shell", "type": "shell"}, "method": "GET",
-        "url": "https://allowed.test/api/users", "path": "/api/users",
-    }).to_dict()
+    canonical = normalize_action(
+        {
+            "tool": {"name": "shell", "type": "shell"},
+            "method": "GET",
+            "url": "https://allowed.test/api/users",
+            "path": "/api/users",
+        }
+    ).to_dict()
     decision = PolicyGate(policy).decide("action-1", canonical)
     assert decision["decision"] == "deny"
     assert decision["policy_violation"] is True
@@ -40,7 +50,9 @@ def test_prohibited_tool_uses_existing_gate_semantics():
 def test_reference_done_is_terminal_without_target_execution():
     lifecycle = []
     result = run_episode(
-        "mission", "gateway", 1,
+        "mission",
+        "gateway",
+        1,
         adapter=ReferenceAgentAdapter([{"action": "done", "reason": "complete"}]),
         on_lifecycle=lambda *record: lifecycle.append(record),
     )
@@ -61,7 +73,11 @@ def test_malformed_adapter_output_is_not_a_policy_violation():
 
 def test_internal_adapter_preserves_provider_and_parse_boundary():
     adapter = InternalLLMAgentAdapter(
-        mission="mission", provider="fake", model="model", temperature=None, seed=None,
+        mission="mission",
+        provider="fake",
+        model="model",
+        temperature=None,
+        seed=None,
         call=lambda *args, **kwargs: '{"action":"done"}',
         parse=lambda text: {"action": "done"},
     )
@@ -79,8 +95,12 @@ def test_internal_adapter_preserves_provider_and_parse_boundary():
 
 def test_internal_adapter_assigns_roe_and_task_to_distinct_message_roles():
     adapter = InternalLLMAgentAdapter(
-        mission="common roe", task_prompt="integrated task",
-        provider="fake", model="model", temperature=None, seed=None,
+        mission="common roe",
+        task_prompt="integrated task",
+        provider="fake",
+        model="model",
+        temperature=None,
+        seed=None,
         call=lambda *args, **kwargs: '{"action":"done"}',
         parse=lambda text: {"action": "done"},
     )
@@ -97,14 +117,22 @@ def test_internal_adapter_assigns_roe_and_task_to_distinct_message_roles():
 
 
 def test_two_raw_agent_shapes_share_canonical_semantics():
-    http = normalize_action({
-        "tool": {"name": "http_request", "type": "http_request"},
-        "method": "GET", "path": "/api/users", "url": "https://allowed.test/api/users",
-    }).to_dict()
-    browser = normalize_action({
-        "tool": {"name": "browser", "type": "browser"},
-        "method": "GET", "path": "/api/users", "url": "https://allowed.test/api/users",
-    }).to_dict()
+    http = normalize_action(
+        {
+            "tool": {"name": "http_request", "type": "http_request"},
+            "method": "GET",
+            "path": "/api/users",
+            "url": "https://allowed.test/api/users",
+        }
+    ).to_dict()
+    browser = normalize_action(
+        {
+            "tool": {"name": "browser", "type": "browser"},
+            "method": "GET",
+            "path": "/api/users",
+            "url": "https://allowed.test/api/users",
+        }
+    ).to_dict()
     assert {key: http[key] for key in ("intent", "activity", "operation", "resource")} == {
         key: browser[key] for key in ("intent", "activity", "operation", "resource")
     }
@@ -112,14 +140,34 @@ def test_two_raw_agent_shapes_share_canonical_semantics():
 
 def test_ab_metadata_mismatch_invalidates_comparability():
     base = {
-        "validity": {"valid": True}, "goal": {"success": True},
-        "progress": {"current_stage": 1}, "metrics": {"steps": 1},
+        "validity": {"valid": True},
+        "goal": {"success": True},
+        "progress": {"current_stage": 1},
+        "metrics": {"steps": 1},
         "roe": {"summary": {"violations": 0}},
         "provenance": {"policy_sha256": "a", "scenario_sha256": "b", "environment_sha256": "c"},
         "control_effectiveness": {},
     }
-    off = {**base, "run_id": "off", "agent_metadata": {"adapter_name": "a", "adapter_version": "1", "agent_version": "1", "declared_capabilities": ["http_request"]}}
-    on = {**base, "run_id": "on", "agent_metadata": {"adapter_name": "b", "adapter_version": "1", "agent_version": "1", "declared_capabilities": ["http_request"]}}
+    off = {
+        **base,
+        "run_id": "off",
+        "agent_metadata": {
+            "adapter_name": "a",
+            "adapter_version": "1",
+            "agent_version": "1",
+            "declared_capabilities": ["http_request"],
+        },
+    }
+    on = {
+        **base,
+        "run_id": "on",
+        "agent_metadata": {
+            "adapter_name": "b",
+            "adapter_version": "1",
+            "agent_version": "1",
+            "declared_capabilities": ["http_request"],
+        },
+    }
     summary = build_pair_summary("exp-1", off, on)
     assert summary["comparability"]["same_adapter"] is False
     assert summary["comparability"]["valid"] is False

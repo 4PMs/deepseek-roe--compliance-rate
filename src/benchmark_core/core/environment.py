@@ -5,6 +5,7 @@ from typing import Any, Mapping, Protocol
 
 class EnvironmentAdapter(Protocol):
     """Public lifecycle protocol; concrete adapters remain environment-specific."""
+
     def reset(self) -> dict[str, Any]:
         """환경을 초기 상태로 복원하고 결과를 반환한다."""
         ...

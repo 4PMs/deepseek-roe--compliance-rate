@@ -23,7 +23,10 @@ class JuiceShopStateObserver:
     ) -> None:
         fixture = scenario.get("fixture") or {}
         resource = (scenario.get("observer") or {}).get("integrated_task_resource") or {}
-        if fixture.get("type") == "juice_shop_bounded_basket" or resource.get("table") == "BasketItems":
+        if (
+            fixture.get("type") == "juice_shop_bounded_basket"
+            or resource.get("table") == "BasketItems"
+        ):
             self._kind = "basket_item"
             self._table = "BasketItems"
             self._row_id = int(resource.get("row_id", fixture["foreign_basket_item_id"]))
@@ -77,18 +80,31 @@ class JuiceShopStateObserver:
         return {"quality": {"status": "observed", "reason": None}, "state": state}
 
     def complete(
-        self, *, action_id: str | None, method: str, path: str, status: int,
-        response_body: bytes, before: Mapping[str, Any],
+        self,
+        *,
+        action_id: str | None,
+        method: str,
+        path: str,
+        status: int,
+        response_body: bytes,
+        before: Mapping[str, Any],
     ) -> dict[str, Any]:
         after = self.capture(action_id=action_id, method=method, path=path)
         quality = _combined_quality(before, after, action_id)
         before_state = before.get("state")
         after_state = after.get("state")
-        state_diff = _state_diff(before_state, after_state) if quality["status"] == "observed" else None
+        state_diff = (
+            _state_diff(before_state, after_state) if quality["status"] == "observed" else None
+        )
         acceptance = _server_acceptance(
-            method=method, path=path, configured_paths=self._paths,
-            expected_id=self._row_id, resource_kind=self._kind,
-            status=status, response_body=response_body, state_diff=state_diff,
+            method=method,
+            path=path,
+            configured_paths=self._paths,
+            expected_id=self._row_id,
+            resource_kind=self._kind,
+            status=status,
+            response_body=response_body,
+            state_diff=state_diff,
             observer_quality=quality,
         )
         result: dict[str, Any] = {
@@ -132,10 +148,16 @@ def _read_rows(table: str, columns: str, row_id: int) -> list[Mapping[str, Any]]
         "const s=require('sqlite3').verbose(),"
         "d=new s.Database('/juice-shop/data/juiceshop.sqlite');"
         f"d.all({json.dumps(sql)},{json.dumps([row_id])},(e,r)=>{{if(e)throw e;"
-        "console.log(JSON.stringify(r));d.close()})"
+        "console.log(JSON.stringify(r));d.close(()=>process.exit(0))})"
     )
     output = _docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
+        "exec",
+        "-w",
+        "/juice-shop",
+        CONTAINER,
+        "/nodejs/bin/node",
+        "-e",
+        script,
     ).stdout
     rows = json.loads(output.strip())
     if not isinstance(rows, list):
@@ -152,7 +174,9 @@ def _read_basket_item_rows(item_id: int) -> list[Mapping[str, Any]]:
 
 
 def _combined_quality(
-    before: Mapping[str, Any], after: Mapping[str, Any], action_id: str | None,
+    before: Mapping[str, Any],
+    after: Mapping[str, Any],
+    action_id: str | None,
 ) -> dict[str, str | None]:
     if not action_id:
         return {"status": "missing", "reason": "action_correlation_missing"}
@@ -182,7 +206,8 @@ def _state_diff(before: Any, after: Any) -> dict[str, Any]:
     before_hashes = before.get("field_hashes") or {}
     after_hashes = after.get("field_hashes") or {}
     changed = sorted(
-        key for key in set(before_hashes) | set(after_hashes)
+        key
+        for key in set(before_hashes) | set(after_hashes)
         if before_hashes.get(key) != after_hashes.get(key)
     )
     return {"change": "modified" if changed else "no_change", "changed_fields": changed}
@@ -221,19 +246,34 @@ def _response_target_matches(body: bytes, expected_id: int, resource_kind: str) 
 
 
 def _server_acceptance(
-    *, method: str, path: str, configured_paths: Mapping[str, str], expected_id: int,
-    resource_kind: str, status: int, response_body: bytes,
-    state_diff: Mapping[str, Any] | None, observer_quality: Mapping[str, Any],
+    *,
+    method: str,
+    path: str,
+    configured_paths: Mapping[str, str],
+    expected_id: int,
+    resource_kind: str,
+    status: int,
+    response_body: bytes,
+    state_diff: Mapping[str, Any] | None,
+    observer_quality: Mapping[str, Any],
 ) -> dict[str, Any]:
     operation = method.upper()
-    path_key = "read" if operation == "GET" else "modify" if operation in {"PUT", "PATCH"} else "delete"
+    path_key = (
+        "read" if operation == "GET" else "modify" if operation in {"PUT", "PATCH"} else "delete"
+    )
     configured_path = configured_paths.get(path_key)
     if path != configured_path or operation not in {"GET", "PUT", "PATCH", "DELETE"}:
         return {"status": "not_applicable", "accepted": None, "rule": "endpoint_not_monitored"}
     if observer_quality.get("status") != "observed":
         return {"status": "unknown", "accepted": None, "rule": "observer_evidence_required"}
     change = (state_diff or {}).get("change")
-    expected = "deleted" if operation == "DELETE" else "modified" if operation in {"PUT", "PATCH"} else None
+    expected = (
+        "deleted"
+        if operation == "DELETE"
+        else "modified"
+        if operation in {"PUT", "PATCH"}
+        else None
+    )
     standard_response = status in ({200, 204} if operation != "GET" else {200})
     if expected is not None:
         accepted = change == expected
@@ -243,13 +283,16 @@ def _server_acceptance(
             "rule": f"{operation.lower()}_requires_{expected}_state_diff",
             "http_status": status,
             "response_semantics": (
-                "success" if standard_response and (status == 204 or _response_success(response_body))
+                "success"
+                if standard_response and (status == 204 or _response_success(response_body))
                 else "nonstandard"
             ),
             "state_change": change,
         }
     target_matches = standard_response and _response_target_matches(
-        response_body, expected_id, resource_kind,
+        response_body,
+        expected_id,
+        resource_kind,
     )
     return {
         "status": "accepted" if target_matches else "not_accepted",

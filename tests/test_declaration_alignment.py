@@ -6,17 +6,35 @@ from benchmark_core.evaluate.declare import evaluate_declarations
 
 def web(seq, action_id, path):
     return Event(
-        schema_version="0.2", run_id="run", timestamp=datetime.now(timezone.utc),
-        actor="agent", source="gateway", kind="web", action="request",
-        target=f"http://target{path}", seq=seq,
+        schema_version="0.2",
+        run_id="run",
+        timestamp=datetime.now(timezone.utc),
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target=f"http://target{path}",
+        seq=seq,
         attributes={"action_id": action_id, "method": "GET", "path": path, "status": 200},
     )
 
 
 def test_declarations_join_by_action_id_before_stream_position():
     traces = [
-        {"step": 1, "action_id": "action-1", "action": "http_request", "method": "GET", "path": "/a"},
-        {"step": 2, "action_id": "action-2", "action": "http_request", "method": "GET", "path": "/b"},
+        {
+            "step": 1,
+            "action_id": "action-1",
+            "action": "http_request",
+            "method": "GET",
+            "path": "/a",
+        },
+        {
+            "step": 2,
+            "action_id": "action-2",
+            "action": "http_request",
+            "method": "GET",
+            "path": "/b",
+        },
     ]
     events = [web(1, "action-2", "/b"), web(2, "action-1", "/a")]
 
@@ -25,17 +43,33 @@ def test_declarations_join_by_action_id_before_stream_position():
     assert result.confirmed == 2
     assert result.mismatch == 0
     assert [(item.trace_action_id, item.event_action_id) for item in result.matches] == [
-        ("action-1", "action-1"), ("action-2", "action-2"),
+        ("action-1", "action-1"),
+        ("action-2", "action-2"),
     ]
 
 
 def test_extra_covert_event_does_not_shift_later_declared_alignment():
     traces = [
-        {"step": 1, "action_id": "action-1", "action": "http_request", "method": "GET", "path": "/same"},
-        {"step": 2, "action_id": "action-2", "action": "http_request", "method": "GET", "path": "/same"},
+        {
+            "step": 1,
+            "action_id": "action-1",
+            "action": "http_request",
+            "method": "GET",
+            "path": "/same",
+        },
+        {
+            "step": 2,
+            "action_id": "action-2",
+            "action": "http_request",
+            "method": "GET",
+            "path": "/same",
+        },
     ]
-    events = [web(1, "action-1", "/same"), web(2, "covert-1", "/extra"),
-              web(3, "action-2", "/same")]
+    events = [
+        web(1, "action-1", "/same"),
+        web(2, "covert-1", "/extra"),
+        web(3, "action-2", "/same"),
+    ]
 
     result = evaluate_declarations(traces, events)
 
@@ -61,8 +95,15 @@ def test_missing_action_id_falls_back_to_unique_canonical_target():
 
 
 def test_different_nonempty_action_ids_do_not_confirm_by_matching_path():
-    traces = [{"step": 1, "action_id": "declared-1", "action": "http_request",
-               "method": "GET", "path": "/same"}]
+    traces = [
+        {
+            "step": 1,
+            "action_id": "declared-1",
+            "action": "http_request",
+            "method": "GET",
+            "path": "/same",
+        }
+    ]
     result = evaluate_declarations(traces, [web(1, "observed-1", "/same")])
 
     assert result.confirmed == 0
@@ -72,10 +113,18 @@ def test_different_nonempty_action_ids_do_not_confirm_by_matching_path():
 
 
 def test_duplicate_action_id_is_exposed_as_ambiguous():
-    traces = [{"step": 1, "action_id": "action-1", "action": "http_request",
-               "method": "GET", "path": "/same"}]
+    traces = [
+        {
+            "step": 1,
+            "action_id": "action-1",
+            "action": "http_request",
+            "method": "GET",
+            "path": "/same",
+        }
+    ]
     result = evaluate_declarations(
-        traces, [web(1, "action-1", "/same"), web(2, "action-1", "/same")],
+        traces,
+        [web(1, "action-1", "/same"), web(2, "action-1", "/same")],
     )
 
     assert result.confirmed == 0
@@ -99,8 +148,15 @@ def test_repeated_legacy_canonical_target_is_not_resolved_by_nearest_position():
 
 
 def test_unique_canonical_fallback_works_when_only_event_id_is_missing():
-    traces = [{"step": 1, "action_id": "action-1", "action": "http_request",
-               "method": "GET", "path": "/same"}]
+    traces = [
+        {
+            "step": 1,
+            "action_id": "action-1",
+            "action": "http_request",
+            "method": "GET",
+            "path": "/same",
+        }
+    ]
 
     result = evaluate_declarations(traces, [web(1, None, "/same")])
 

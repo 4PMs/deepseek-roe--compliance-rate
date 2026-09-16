@@ -11,8 +11,14 @@ from ..core.event import Event
 from ..core.lifecycle import validate_lifecycle
 from ..core.policy import Policy
 from ..core.result import (
-    BenchmarkResult, DatabaseImpact, GoalResult, Metrics, ObserverHealth,
-    ProgressResult, RoeResult, Validity,
+    BenchmarkResult,
+    DatabaseImpact,
+    GoalResult,
+    Metrics,
+    ObserverHealth,
+    ProgressResult,
+    RoeResult,
+    Validity,
 )
 from ..core.run import RunConfig
 from .goal import evaluate_goal
@@ -52,7 +58,8 @@ def _load_lifecycle_records(lifecycle_path: Path | None) -> list[dict[str, Any]]
 
 
 def _enrich_web_events(
-    web_events: list[Event], state_events: list[Event],
+    web_events: list[Event],
+    state_events: list[Event],
 ) -> list[Event]:
     transitions: dict[str, list[Event]] = {}
     for event in state_events:
@@ -86,8 +93,10 @@ def _enrich_web_events(
             "evidence_type": "state_transition",
             "trust_level": "trusted",
             "status": (
-                "confirmed" if realized is not None else
-                "no_change" if quality.get("status") == "observed" and change == "no_change"
+                "confirmed"
+                if realized is not None
+                else "no_change"
+                if quality.get("status") == "observed" and change == "no_change"
                 else "unclassified"
             ),
             "realized_outcome": realized,
@@ -96,11 +105,13 @@ def _enrich_web_events(
         existing_outcome_evidence = attributes.get("outcome_evidence")
         if realized is None and isinstance(existing_outcome_evidence, Mapping):
             attributes["outcome_evidence"] = [
-                dict(existing_outcome_evidence), state_outcome_evidence,
+                dict(existing_outcome_evidence),
+                state_outcome_evidence,
             ]
         elif realized is None and isinstance(existing_outcome_evidence, list):
             attributes["outcome_evidence"] = [
-                *existing_outcome_evidence, state_outcome_evidence,
+                *existing_outcome_evidence,
+                state_outcome_evidence,
             ]
         elif realized is None and attributes.get("realized_outcome") is not None:
             attributes["outcome_evidence"] = [
@@ -129,7 +140,9 @@ def _operational_signals(attributes: Mapping[str, Any]) -> dict[str, Any]:
         status = None
     if status is not None and status >= 500 and not enriched.get("availability"):
         enriched["availability"] = {
-            "status": "unavailable", "basis": "gateway_http_status", "http_status": status,
+            "status": "unavailable",
+            "basis": "gateway_http_status",
+            "http_status": status,
         }
     if status in {401, 403} and not enriched.get("authorization_status"):
         enriched["authorization_status"] = "unresolved"
@@ -138,13 +151,20 @@ def _operational_signals(attributes: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _state_observer_invalidity(
-    web_events: list[Event], state_events: list[Event], scenario: Mapping[str, Any],
+    web_events: list[Event],
+    state_events: list[Event],
+    scenario: Mapping[str, Any],
 ) -> Validity | None:
-    configured = isinstance((scenario.get("observer") or {}).get("integrated_task_resource"), Mapping)
+    configured = isinstance(
+        (scenario.get("observer") or {}).get("integrated_task_resource"), Mapping
+    )
     if not configured or not web_events:
         return None
-    web_ids = [str(event.attributes.get("action_id")) for event in web_events
-               if event.attributes.get("action_id")]
+    web_ids = [
+        str(event.attributes.get("action_id"))
+        for event in web_events
+        if event.attributes.get("action_id")
+    ]
     state_by_id: dict[str, list[Event]] = {}
     for event in state_events:
         action_id = event.attributes.get("action_id")
@@ -177,8 +197,7 @@ def normalize_targets(events: list[Event], environment: Mapping[str, Any] | None
     for event in events:
         event_url = urlsplit(event.target)
         alias_url = next(
-            (urlsplit(alias) for alias in aliases
-             if _same_endpoint(event_url, urlsplit(alias))),
+            (urlsplit(alias) for alias in aliases if _same_endpoint(event_url, urlsplit(alias))),
             None,
         )
         if alias_url is None:
@@ -188,24 +207,35 @@ def normalize_targets(events: list[Event], environment: Mapping[str, Any] | None
         attributes["runtime"] = {
             key: attributes[key] for key in ("scheme", "host", "port") if key in attributes
         }
-        attributes.update({
-            "scheme": identity_url.scheme,
-            "host": identity_url.hostname,
-            "port": identity_url.port or (443 if identity_url.scheme == "https" else 80),
-        })
-        normalized.append(replace(
-            event,
-            target=urlunsplit((identity_url.scheme, identity_url.netloc,
-                               event_url.path, event_url.query, event_url.fragment)),
-            attributes=attributes,
-        ))
+        attributes.update(
+            {
+                "scheme": identity_url.scheme,
+                "host": identity_url.hostname,
+                "port": identity_url.port or (443 if identity_url.scheme == "https" else 80),
+            }
+        )
+        normalized.append(
+            replace(
+                event,
+                target=urlunsplit(
+                    (
+                        identity_url.scheme,
+                        identity_url.netloc,
+                        event_url.path,
+                        event_url.query,
+                        event_url.fragment,
+                    )
+                ),
+                attributes=attributes,
+            )
+        )
     return normalized
 
 
 def _same_endpoint(left: Any, right: Any) -> bool:
     def endpoint(url: Any) -> tuple[str, str | None, int]:
-        return (url.scheme, url.hostname,
-                url.port or (443 if url.scheme == "https" else 80))
+        return (url.scheme, url.hostname, url.port or (443 if url.scheme == "https" else 80))
+
     return endpoint(left) == endpoint(right)
 
 
@@ -224,45 +254,67 @@ def _halt_summary(category: Mapping[str, Any] | None, policy: Policy) -> dict[st
     }
 
 
-def summarize_database_impact(events: list[Event], goal_achieved_seq: int | None = None,
-                              bookkeeping_tables: Collection[str] = (),
-                              legacy_goal_at: datetime | None = None
-                              ) -> DatabaseImpact:
+def summarize_database_impact(
+    events: list[Event],
+    goal_achieved_seq: int | None = None,
+    bookkeeping_tables: Collection[str] = (),
+    legacy_goal_at: datetime | None = None,
+) -> DatabaseImpact:
     database_events = [event for event in events if event.kind == "database"]
     writes = [
-        (event, {
-            key: event.attributes[key]
-            for key in ("operation", "table", "behavior", "affected_rows")
-            if key in event.attributes
-        })
+        (
+            event,
+            {
+                key: event.attributes[key]
+                for key in ("operation", "table", "behavior", "affected_rows")
+                if key in event.attributes
+            },
+        )
         for event in database_events
         if event.attributes.get("behavior") != "read"
     ]
     modifications = [modification for _, modification in writes]
     pre_goal = [
-        modification for event, modification in writes
-        if (event.timestamp <= legacy_goal_at if legacy_goal_at is not None
-            else goal_achieved_seq is None or event.seq <= goal_achieved_seq)
+        modification
+        for event, modification in writes
+        if (
+            event.timestamp <= legacy_goal_at
+            if legacy_goal_at is not None
+            else goal_achieved_seq is None or event.seq <= goal_achieved_seq
+        )
     ]
     post_goal = [
-        modification for event, modification in writes
-        if ((event.timestamp > legacy_goal_at if legacy_goal_at is not None
-             else goal_achieved_seq is not None and event.seq > goal_achieved_seq))
+        modification
+        for event, modification in writes
+        if (
+            event.timestamp > legacy_goal_at
+            if legacy_goal_at is not None
+            else goal_achieved_seq is not None and event.seq > goal_achieved_seq
+        )
     ]
     bookkeeping = {table.casefold() for table in bookkeeping_tables}
     business = [
-        (event, modification) for event, modification in writes
+        (event, modification)
+        for event, modification in writes
         if str(modification.get("table", "")).casefold() not in bookkeeping
     ]
     pre_goal_business = [
-        modification for event, modification in business
-        if (event.timestamp <= legacy_goal_at if legacy_goal_at is not None
-            else goal_achieved_seq is None or event.seq <= goal_achieved_seq)
+        modification
+        for event, modification in business
+        if (
+            event.timestamp <= legacy_goal_at
+            if legacy_goal_at is not None
+            else goal_achieved_seq is None or event.seq <= goal_achieved_seq
+        )
     ]
     post_goal_business = [
-        modification for event, modification in business
-        if ((event.timestamp > legacy_goal_at if legacy_goal_at is not None
-             else goal_achieved_seq is not None and event.seq > goal_achieved_seq))
+        modification
+        for event, modification in business
+        if (
+            event.timestamp > legacy_goal_at
+            if legacy_goal_at is not None
+            else goal_achieved_seq is not None and event.seq > goal_achieved_seq
+        )
     ]
     return DatabaseImpact(
         queries=len(database_events),
@@ -279,22 +331,26 @@ def summarize_database_impact(events: list[Event], goal_achieved_seq: int | None
     )
 
 
-def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
-                 config: RunConfig, *, environment: Mapping[str, Any] | None = None,
-                 observers: ObserverHealth | None = None,
-                 lifecycle_path: Path | None = None
-                 ) -> BenchmarkResult:
+def evaluate_run(
+    events_path: Path,
+    scenario: Mapping[str, Any],
+    policy: Policy,
+    config: RunConfig,
+    *,
+    environment: Mapping[str, Any] | None = None,
+    observers: ObserverHealth | None = None,
+    lifecycle_path: Path | None = None,
+) -> BenchmarkResult:
     observers = observers or ObserverHealth()
     observer_failure = next(
-        (name for name in ("gateway", "database")
-         if getattr(observers, name) != "ok"),
+        (name for name in ("gateway", "database") if getattr(observers, name) != "ok"),
         None,
     )
     invalidity = (
-        Validity(False, f"observer_failed:{observer_failure}")
-        if observer_failure else None
+        Validity(False, f"observer_failed:{observer_failure}") if observer_failure else None
     )
     lifecycle_records: list[dict[str, Any]] = []
+    lifecycle_valid = False
     if lifecycle_path is not None:
         lifecycle_valid, lifecycle_reason = load_lifecycle(lifecycle_path, run_id=config.run_id)
         if not lifecycle_valid and invalidity is None:
@@ -321,11 +377,19 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
         trace_records,
         [event for event in events if event.kind == "web"],
         scenario,
+        gateway_complete=observers.gateway == "ok",
+        lifecycle_complete=lifecycle_valid,
     )
     if not events:
         trajectory = build_trajectory(
-            lifecycle_records, [], [], policy, RoeResult(False), GoalResult(False),
-            trace_entries=trace_records, scenario=scenario,
+            lifecycle_records,
+            [],
+            [],
+            policy,
+            RoeResult(False),
+            GoalResult(False),
+            trace_entries=trace_records,
+            scenario=scenario,
         )
         return BenchmarkResult(
             run_id=config.run_id,
@@ -358,10 +422,10 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
     environment_rules = (environment or {}).get("lifecycle", {}).get("progress") or []
     scenario_rules = scenario.get("goal", {}).get("progress") or []
     merged_rules = environment_rules + scenario_rules
-    bookkeeping_tables = (environment or {}).get("database", {}).get(
-        "bookkeeping_tables", ()
-    )
-    web_events = [event for event in events if event.kind != "database" and event.kind != "state_transition"]
+    bookkeeping_tables = (environment or {}).get("database", {}).get("bookkeeping_tables", ())
+    web_events = [
+        event for event in events if event.kind != "database" and event.kind != "state_transition"
+    ]
     state_events = [event for event in events if event.kind == "state_transition"]
     state_invalidity = _state_observer_invalidity(web_events, state_events, scenario)
     if invalidity is None and state_invalidity is not None:
@@ -373,14 +437,22 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
         goal_event = benchmark_events[goal_result.achieved_step - 1]
         goal_achieved_seq = goal_event.seq if goal_event.seq >= 0 else None
     legacy_goal_at = None
-    if goal_achieved_seq is None and goal_result.evidence and all(event.seq < 0 for event in events):
+    if (
+        goal_achieved_seq is None
+        and goal_result.evidence
+        and all(event.seq < 0 for event in events)
+    ):
         legacy_goal_at = datetime.fromisoformat(goal_result.evidence[0]["timestamp"])
     db_impact = summarize_database_impact(
-        events, goal_achieved_seq, legacy_goal_at=legacy_goal_at,
+        events,
+        goal_achieved_seq,
+        legacy_goal_at=legacy_goal_at,
         bookkeeping_tables=bookkeeping_tables,
     )
     roe_result = evaluate_roe(
-        benchmark_events, policy, goal=goal_result,
+        benchmark_events,
+        policy,
+        goal=goal_result,
         database_events=[event for event in events if event.kind == "database"],
         bookkeeping_tables=bookkeeping_tables,
         goal_achieved_seq=goal_achieved_seq,
@@ -389,7 +461,8 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
         run_id=config.run_id,
         goal=goal_result,
         progress=evaluate_progress(
-            benchmark_events, scenario.get("goal", {}),
+            benchmark_events,
+            scenario.get("goal", {}),
             stage_rules=merged_rules if merged_rules else None,
         ),
         roe=roe_result,
@@ -406,8 +479,14 @@ def evaluate_run(events_path: Path, scenario: Mapping[str, Any], policy: Policy,
         halt=_halt_summary(roe_result.categories.get("R6"), policy),
         final_disposition_text=safe_response["final_disposition_text"],
         trajectory=build_trajectory(
-            lifecycle_records, benchmark_events, state_events, policy, roe_result, goal_result,
-            trace_entries=trace_records, scenario=scenario,
+            lifecycle_records,
+            benchmark_events,
+            state_events,
+            policy,
+            roe_result,
+            goal_result,
+            trace_entries=trace_records,
+            scenario=scenario,
         ),
     )
     return replace(result, status="invalid", validity=invalidity) if invalidity else result

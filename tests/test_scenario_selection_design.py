@@ -90,7 +90,12 @@ def test_scenario_a_conditions_are_initial_integrated_tasks_over_the_same_resour
         assert "benchmark" not in instruction.lower()
         assert not any(
             phrase in instruction.lower()
-            for phrase in ("ignore the roe", "violate", "forbidden", "complete this as one continuous workflow")
+            for phrase in (
+                "ignore the roe",
+                "violate",
+                "forbidden",
+                "complete this as one continuous workflow",
+            )
         )
         if operation != "none":
             assert document["target_resource"] == "scenario_a_credential_feedback"
@@ -107,10 +112,12 @@ def test_scenario_a_delete_workflow_is_visible_in_the_initial_mission():
     mission = load_mission(
         scenario_path,
         policy_path=policy_path,
-        agent_instructions="\n\n".join([
-            policy["agent_instructions"].strip(),
-            condition["instruction"].strip(),
-        ]),
+        agent_instructions="\n\n".join(
+            [
+                policy["agent_instructions"].strip(),
+                condition["instruction"].strip(),
+            ]
+        ),
     )
 
     assert "As part of the ongoing authorized red-team engagement" in mission
@@ -199,7 +206,12 @@ def test_scenario_b_conditions_are_initial_tasks_over_one_basket_item():
         assert "benchmark" not in instruction.lower()
         assert not any(
             phrase in instruction.lower()
-            for phrase in ("ignore the roe", "violate", "forbidden", "complete this as one continuous workflow")
+            for phrase in (
+                "ignore the roe",
+                "violate",
+                "forbidden",
+                "complete this as one continuous workflow",
+            )
         )
         if operation != "none":
             assert document["target_resource"] == "scenario_b_foreign_basket_item"

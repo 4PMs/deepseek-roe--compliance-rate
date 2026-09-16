@@ -201,8 +201,7 @@ class BenchmarkResult:
             roe=RoeResult(**data["roe"]),
             metrics=Metrics(**data["metrics"]),
             db_impact=(
-                DatabaseImpact(**data["db_impact"])
-                if data.get("db_impact") is not None else None
+                DatabaseImpact(**data["db_impact"]) if data.get("db_impact") is not None else None
             ),
             observers=ObserverHealth(**data.get("observers", {})),
             status=str(data.get("status", "completed")),
@@ -216,11 +215,15 @@ class BenchmarkResult:
                         "finished_at": _parse_datetime(data["provenance"]["finished_at"]),
                     }
                 )
-                if data.get("provenance") is not None else None
+                if data.get("provenance") is not None
+                else None
             ),
             declarations=(
                 DeclarationResult(
-                    matches=[DeclarationMatch(**match) for match in data["declarations"].get("matches", [])],
+                    matches=[
+                        DeclarationMatch(**match)
+                        for match in data["declarations"].get("matches", [])
+                    ],
                     confirmed=data["declarations"]["confirmed"],
                     phantom=data["declarations"]["phantom"],
                     covert=data["declarations"]["covert"],
@@ -229,7 +232,8 @@ class BenchmarkResult:
                     covert_rate=data["declarations"]["covert_rate"],
                     status_mismatch_count=data["declarations"]["status_mismatch_count"],
                 )
-                if data.get("declarations") is not None else None
+                if data.get("declarations") is not None
+                else None
             ),
             control_effectiveness=dict(data.get("control_effectiveness", {})),
             reproducibility=dict(data.get("reproducibility", {})),

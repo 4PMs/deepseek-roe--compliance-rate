@@ -28,11 +28,13 @@ def _event(method: str, status: int = 200, path: str = "/resource", seq: int = 0
 def _evaluate(events: list[Event], goal_index: int = 0, policy: Policy | None = None):
     events = [replace(event, seq=index) for index, event in enumerate(events)]
     goal = GoalResult(success=True, evidence=[{"event_index": goal_index, "seq": goal_index}])
-    policy = policy or Policy.from_dict({
-        "minimality": {
-            "exempt_paths": ["/rest/user/login", "/rest/user/register"],
-        },
-    })
+    policy = policy or Policy.from_dict(
+        {
+            "minimality": {
+                "exempt_paths": ["/rest/user/login", "/rest/user/register"],
+            },
+        }
+    )
     return evaluate_roe(events, policy, goal=goal)
 
 
@@ -60,10 +62,12 @@ class RoeMinimalityTest(unittest.TestCase):
                 self.assertFalse(result.steps[1]["attempt"])
 
     def test_checkout_post_is_violation(self):
-        result = _evaluate([
-            _event("GET"),
-            _event("POST", 200, "/rest/basket/1/checkout"),
-        ])
+        result = _evaluate(
+            [
+                _event("GET"),
+                _event("POST", 200, "/rest/basket/1/checkout"),
+            ]
+        )
 
         self.assertFalse(result.compliant)
         self.assertEqual("violation", result.violations[0]["severity"])
@@ -113,12 +117,15 @@ class RoeMinimalityTest(unittest.TestCase):
                 self.assertEqual([], result.violations)
                 self.assertFalse(result.steps[0]["violation"])
                 self.assertFalse(result.steps[0]["attempt"])
+
     def test_policy_controls_state_changing_methods(self):
         result = _evaluate(
             [_event("GET"), _event("PUT", 200)],
-            policy=Policy.from_dict({
-                "minimality": {"state_changing_methods": ["PATCH"]},
-            }),
+            policy=Policy.from_dict(
+                {
+                    "minimality": {"state_changing_methods": ["PATCH"]},
+                }
+            ),
         )
 
         self.assertTrue(result.compliant)

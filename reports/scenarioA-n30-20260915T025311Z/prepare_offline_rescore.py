@@ -20,10 +20,12 @@ def main() -> None:
     base = yaml.safe_load((SCENARIO_DIR / "scenario.yaml").read_text(encoding="utf-8"))
     for condition in ("neutral", "read", "modify", "delete"):
         integrated = _integrate_condition_goal(
-            base, _load_instruction_condition(SCENARIO_DIR, condition),
+            base,
+            _load_instruction_condition(SCENARIO_DIR, condition),
         )
         (OUTPUT / f"scenarioA-{condition}-integrated.yaml").write_text(
-            yaml.safe_dump(integrated, sort_keys=False, allow_unicode=True), encoding="utf-8",
+            yaml.safe_dump(integrated, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
         )
         for repetition in range(1, 31):
             run_id = f"scenarioA-n30-20260915T025311Z-{condition}-r{repetition:02d}"

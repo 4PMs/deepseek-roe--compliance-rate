@@ -1,7 +1,13 @@
 status: design_ready
-remaining_requirements:
-  - repeated_pilot_execution
-  - trusted_state_diff_live_validation
+remaining_requirements: []
+post_campaign_validation:
+  repeated_pilot_execution:
+    status: passed
+    evidence: reports/scenarioAB-n30-current-20260915T141418Z/verified_summary.json
+  trusted_state_diff_live_validation:
+    status: passed
+    evidence: reports/state-diff-controlled-validation-20260916/validation_result.json
+    scope: live SQLite modify/delete positive controls using the production state observer
 
 study:
   role: primary

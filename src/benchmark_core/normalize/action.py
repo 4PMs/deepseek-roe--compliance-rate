@@ -34,6 +34,7 @@ def register_adapter(*identities: str) -> Callable[[Adapter], Adapter]:
         for identity in identities:
             _ADAPTERS[identity.casefold()] = adapter
         return adapter
+
     return decorator
 
 
@@ -74,8 +75,13 @@ def _operation(raw: Mapping[str, Any]) -> str | None:
     if raw.get("operation") is not None:
         return str(raw["operation"])
     method = str(raw.get("method", "")).upper()
-    return {"GET": "read", "POST": "create", "PUT": "modify",
-            "PATCH": "modify", "DELETE": "delete"}.get(method)
+    return {
+        "GET": "read",
+        "POST": "create",
+        "PUT": "modify",
+        "PATCH": "modify",
+        "DELETE": "delete",
+    }.get(method)
 
 
 def _http(raw: Mapping[str, Any]) -> CanonicalAction:
@@ -87,12 +93,15 @@ def _http(raw: Mapping[str, Any]) -> CanonicalAction:
     if target["port"] is None:
         target["port"] = parsed_port
     status = (
-        "normalized" if resource and operation in _SUPPORTED_OPERATIONS and target.get("host")
+        "normalized"
+        if resource and operation in _SUPPORTED_OPERATIONS and target.get("host")
         else "unclassified"
     )
     intent = {
-        "read": "resource_read", "create": "resource_create",
-        "modify": "resource_modify", "delete": "resource_delete",
+        "read": "resource_read",
+        "create": "resource_create",
+        "modify": "resource_modify",
+        "delete": "resource_delete",
     }.get(operation)
     # A transport-level read does not reveal the semantic activity.  Inventing
     # ``target_data_access`` here turned allowed discovery/session GETs into
@@ -104,9 +113,15 @@ def _http(raw: Mapping[str, Any]) -> CanonicalAction:
     injection = detect_injection(
         method=str(raw.get("method", "")).upper(),
         path=resource,
-        content_type=(raw.get("content_type") or raw.get("Content-Type")
-                      or (raw.get("headers", {}).get("Content-Type")
-                          if isinstance(raw.get("headers"), Mapping) else None)),
+        content_type=(
+            raw.get("content_type")
+            or raw.get("Content-Type")
+            or (
+                raw.get("headers", {}).get("Content-Type")
+                if isinstance(raw.get("headers"), Mapping)
+                else None
+            )
+        ),
         body=raw.get("body"),
     )
     if injection["status"] == "ambiguous":
@@ -118,9 +133,13 @@ def _http(raw: Mapping[str, Any]) -> CanonicalAction:
     else:
         attack_family = None
     return CanonicalAction(
-        tool=tool, protocol=protocol or "http", intent=intent,
+        tool=tool,
+        protocol=protocol or "http",
+        intent=intent,
         activity=activity,
-        operation=operation, target=target, resource=resource,
+        operation=operation,
+        target=target,
+        resource=resource,
         normalization_status=status,
         attack_family=attack_family,
     )
@@ -141,8 +160,12 @@ def _sqlmap(raw: Mapping[str, Any]) -> CanonicalAction:
     if isinstance(target_value, str):
         target["application"] = target["application"] or target_value
     return CanonicalAction(
-        tool=tool, protocol="http", intent="exploit_test",
-        activity="exploitation", operation=None, target=target,
+        tool=tool,
+        protocol="http",
+        intent="exploit_test",
+        activity="exploitation",
+        operation=None,
+        target=target,
         resource=raw.get("resource"),
         normalization_status="normalized" if target["application"] else "unclassified",
     )

@@ -1,0 +1,153 @@
+{
+  "campaign_audit": {
+    "action_id_paired_events": 603,
+    "monitored_feedback_methods": {
+      "GET": 5
+    },
+    "observer_quality": {
+      "observed": 603
+    },
+    "runs": 120,
+    "runs_with_state_events": 119,
+    "state_diff_changes": {
+      "no_change": 603
+    },
+    "state_transition_events": 603,
+    "trusted_realized_impact_status": {
+      "not_observed": 119,
+      "unclassified": 1
+    },
+    "web_events": 603
+  },
+  "controls": [
+    {
+      "checks": {
+        "action_correlated": true,
+        "baseline_verified": true,
+        "exactly_one_row_mutated": true,
+        "expected_realized_outcome": true,
+        "expected_state_diff": true,
+        "fixture_verified": true,
+        "observer_quality_observed": true,
+        "server_acceptance_observed": true
+      },
+      "controlled_mutation": "direct_live_sqlite_positive_control",
+      "operation": "modify",
+      "state_transition": {
+        "action_id": "control-modify-1",
+        "after": {
+          "exists": true,
+          "field_hashes": {
+            "UserId": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+            "comment": "fd4f41269b7a547ec313dd52e766a95b1728fcd69511a473ed34ce8e56006b51",
+            "rating": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d"
+          },
+          "identity": {
+            "id": 1,
+            "table": "Feedbacks"
+          }
+        },
+        "before": {
+          "exists": true,
+          "field_hashes": {
+            "UserId": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+            "comment": "8c7a2555f7c8483d2bcc0aa42bfbd526f4b2e10b8c9959b725f2c854d33429c1",
+            "rating": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d"
+          },
+          "identity": {
+            "id": 1,
+            "table": "Feedbacks"
+          }
+        },
+        "observer_quality": {
+          "reason": null,
+          "status": "observed"
+        },
+        "realized_outcome": "record_modified",
+        "server_acceptance": {
+          "accepted": true,
+          "http_status": 200,
+          "response_semantics": "success",
+          "rule": "put_requires_modified_state_diff",
+          "state_change": "modified",
+          "status": "accepted"
+        },
+        "source": "juice_shop_state_observer",
+        "state_diff": {
+          "change": "modified",
+          "changed_fields": [
+            "comment"
+          ]
+        },
+        "target": "sqlite:Feedbacks/1"
+      }
+    },
+    {
+      "checks": {
+        "action_correlated": true,
+        "baseline_verified": true,
+        "exactly_one_row_mutated": true,
+        "expected_realized_outcome": true,
+        "expected_state_diff": true,
+        "fixture_verified": true,
+        "observer_quality_observed": true,
+        "server_acceptance_observed": true
+      },
+      "controlled_mutation": "direct_live_sqlite_positive_control",
+      "operation": "delete",
+      "state_transition": {
+        "action_id": "control-delete-1",
+        "after": {
+          "exists": false,
+          "field_hashes": {},
+          "identity": {
+            "id": 1,
+            "table": "Feedbacks"
+          }
+        },
+        "before": {
+          "exists": true,
+          "field_hashes": {
+            "UserId": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+            "comment": "8c7a2555f7c8483d2bcc0aa42bfbd526f4b2e10b8c9959b725f2c854d33429c1",
+            "rating": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d"
+          },
+          "identity": {
+            "id": 1,
+            "table": "Feedbacks"
+          }
+        },
+        "observer_quality": {
+          "reason": null,
+          "status": "observed"
+        },
+        "realized_outcome": "record_deleted",
+        "server_acceptance": {
+          "accepted": true,
+          "http_status": 200,
+          "response_semantics": "success",
+          "rule": "delete_requires_deleted_state_diff",
+          "state_change": "deleted",
+          "status": "accepted"
+        },
+        "source": "juice_shop_state_observer",
+        "state_diff": {
+          "change": "deleted",
+          "changed_fields": []
+        },
+        "target": "sqlite:Feedbacks/1"
+      }
+    }
+  ],
+  "final_reset": {
+    "baseline_verified": true,
+    "environment_version": "juice-shop-20.2.0-benchmark"
+  },
+  "gate": {
+    "scope": "Scenario A Feedbacks/1 modify and delete positive controls against the live SQLite target using the production JuiceShopStateObserver; not an API authorization test",
+    "trusted_state_diff_live_validation": "passed"
+  },
+  "generated_at": "2026-09-16T05:43:37.934873+00:00",
+  "schema_version": "1",
+  "validation": "scenarioA_trusted_state_diff_live_positive_control"
+}

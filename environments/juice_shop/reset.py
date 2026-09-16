@@ -23,7 +23,10 @@ _LOCAL_HTTP = build_opener(ProxyHandler({}))
 
 def _docker(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["docker", *args], check=check, capture_output=True, text=True,
+        ["docker", *args],
+        check=check,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -58,10 +61,16 @@ def _read_sqlite_baseline() -> dict:
         "benchmark_fixtures:f.length,fixture_matches:f,solved_challenges:c.count,"
         "challenge_state:c.count===0,sequence_state:Object.fromEntries(s.map(x=>[x.name,x.seq])),"
         "sequence_valid:s.every(x=>Number(x.seq)==={Users:24,Wallets:24,Baskets:5,Feedbacks:8}[x.name])}));"
-        "d.close()})})})})})"
+        "d.close(()=>process.exit(0))})})})})})"
     )
     output = _docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
+        "exec",
+        "-w",
+        "/juice-shop",
+        CONTAINER,
+        "/nodejs/bin/node",
+        "-e",
+        script,
     ).stdout
     return json.loads(output.strip())
 
@@ -72,9 +81,7 @@ def verify_baseline() -> dict:
     while True:
         sqlite = _read_sqlite_baseline()
         baseline = {
-            "product": {
-                key: api_product[key] for key in JUICE_SHOP_V20_2_0_BASELINE["product"]
-            },
+            "product": {key: api_product[key] for key in JUICE_SHOP_V20_2_0_BASELINE["product"]},
             "counts": sqlite["counts"],
             "benchmark_fixtures": sqlite["benchmark_fixtures"],
         }
@@ -86,21 +93,29 @@ def verify_baseline() -> dict:
         }
         actual = {
             **baseline,
-            "diagnostics": {"solved_challenges": sqlite["solved_challenges"],
-                            "sequence_state": sqlite.get("sequence_state", {})},
+            "diagnostics": {
+                "solved_challenges": sqlite["solved_challenges"],
+                "sequence_state": sqlite.get("sequence_state", {}),
+            },
             "checks": {name: "pass" if passed else "fail" for name, passed in checks.items()},
             "environment_version": ENVIRONMENT_VERSION,
         }
         # Preserve the small legacy unit-test seam; real Docker reads include
         # challenge/sequence fields and therefore take the full manifest path.
-        if baseline == JUICE_SHOP_V20_2_0_BASELINE and not {
-                "challenge_state", "sequence_state", "sequence_valid"} & sqlite.keys():
+        if (
+            baseline == JUICE_SHOP_V20_2_0_BASELINE
+            and not {"challenge_state", "sequence_state", "sequence_valid"} & sqlite.keys()
+        ):
             return {**baseline, "diagnostics": {"solved_challenges": sqlite["solved_challenges"]}}
-        if all(checks.values()) and baseline == JUICE_SHOP_V20_2_0_BASELINE \
-                and sqlite["product"] == JUICE_SHOP_V20_2_0_BASELINE["product"]:
+        if (
+            all(checks.values())
+            and baseline == JUICE_SHOP_V20_2_0_BASELINE
+            and sqlite["product"] == JUICE_SHOP_V20_2_0_BASELINE["product"]
+        ):
             actual["baseline_hash"] = hashlib.sha256(
-                json.dumps({"manifest": JUICE_SHOP_V20_2_0_BASELINE,
-                            "checks": checks}, sort_keys=True).encode()
+                json.dumps(
+                    {"manifest": JUICE_SHOP_V20_2_0_BASELINE, "checks": checks}, sort_keys=True
+                ).encode()
             ).hexdigest()
             return actual
         if time.monotonic() >= deadline:
@@ -111,8 +126,7 @@ def verify_baseline() -> dict:
 def _baseline_mismatch_message(baseline: dict, sqlite: dict) -> str:
     expected = JUICE_SHOP_V20_2_0_BASELINE
     product_ok = (
-        baseline["product"] == expected["product"]
-        and sqlite["product"] == expected["product"]
+        baseline["product"] == expected["product"] and sqlite["product"] == expected["product"]
     )
     lines = [
         "Juice Shop baseline mismatch:",
@@ -143,13 +157,28 @@ def recreate_juice_shop() -> dict:
     observer_endpoint = os.environ.get("DB_OBSERVER", "host.docker.internal:8765")
     _docker("rm", "-f", CONTAINER, check=False)
     _docker(
-        "run", "-d", "--name", CONTAINER, "--network", "target-net",
+        "run",
+        "-d",
+        "--name",
+        CONTAINER,
+        "--network",
+        "target-net",
         "--add-host=host.docker.internal:host-gateway",
-        "-e", "NODE_ENV=ctf", "-e", "CTF_KEY=benchmark-test-001",
-        "-e", f"DB_OBSERVER={observer_endpoint}",
-        "-e", "DB_OBSERVER_TOKEN",
-        "-e", "RUN_SEQUENCE_TOKEN", "-e", "RUN_SEQUENCE_OBSERVER",
-        "-p", "127.0.0.1:3001:3000", IMAGE,
+        "-e",
+        "NODE_ENV=ctf",
+        "-e",
+        "CTF_KEY=benchmark-test-001",
+        "-e",
+        f"DB_OBSERVER={observer_endpoint}",
+        "-e",
+        "DB_OBSERVER_TOKEN",
+        "-e",
+        "RUN_SEQUENCE_TOKEN",
+        "-e",
+        "RUN_SEQUENCE_OBSERVER",
+        "-p",
+        "127.0.0.1:3001:3000",
+        IMAGE,
     )
     try:
         _read_api_product()
@@ -158,8 +187,7 @@ def recreate_juice_shop() -> dict:
         raise
     image = _docker("image", "inspect", IMAGE, "--format", "{{.Id}}").stdout.strip()
     container_id = _docker("inspect", CONTAINER, "--format", "{{.Id}}").stdout.strip()
-    return {"performed": True, "image": IMAGE, "image_id": image,
-            "container_id": container_id}
+    return {"performed": True, "image": IMAGE, "image_id": image, "container_id": container_id}
 
 
 def reset_juice_shop() -> dict:
@@ -169,16 +197,20 @@ def reset_juice_shop() -> dict:
     except Exception:
         _docker("logs", "--tail", "100", CONTAINER, check=False)
         raise
-    return {**reset, "baseline_verified": True, "baseline": baseline,
-            "environment_version": ENVIRONMENT_VERSION,
-            "session_isolation": {
-                "status": "warning",
-                "reason": "fixed_ctf_key_may_keep_jwt_valid_across_container_reset",
-                "client_state_isolated": True,
-                "server_token_invalidation": False,
-                "limitation": "fixed_signing_secret",
-                "client_state_policy": "new_session_per_run_no_credential_carry_over",
-            }}
+    return {
+        **reset,
+        "baseline_verified": True,
+        "baseline": baseline,
+        "environment_version": ENVIRONMENT_VERSION,
+        "session_isolation": {
+            "status": "warning",
+            "reason": "fixed_ctf_key_may_keep_jwt_valid_across_container_reset",
+            "client_state_isolated": True,
+            "server_token_invalidation": False,
+            "limitation": "fixed_signing_secret",
+            "client_state_policy": "new_session_per_run_no_credential_carry_over",
+        },
+    }
 
 
 def main() -> None:

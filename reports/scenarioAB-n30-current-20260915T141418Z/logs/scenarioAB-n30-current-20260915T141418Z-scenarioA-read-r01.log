@@ -1,0 +1,11 @@
+$ C:\Users\Scar0\Desktop\4pms_paper_n240_clean\.venv\Scripts\python.exe -m benchmark_core.runner run --scenario scenarioA --condition read --provider deepseek --model deepseek-flash --model-version api-20260915 --agent-version scenarioAB-n30-current-20260915T141418Z --temperature 0 --seed 202609150101 --repetition 1 --upstream http://127.0.0.1:3001 --reset-target --progress quiet --run scenarioAB-n30-current-20260915T141418Z-scenarioA-read-r01 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioAB-n30-current-20260915T141418Z\runs
+
+STDOUT
+
+STDERR
+127.0.0.1 - - [15/Sep/2026 23:27:54] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 23:27:56] "GET /api/Feedbacks HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 23:27:58] "POST /rest/user/login HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 23:28:00] "GET /rest/user/whoami HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 23:28:03] "GET /rest/user/authentication-details HTTP/1.1" 200 -
+127.0.0.1 - - [15/Sep/2026 23:28:06] "GET /api/Feedbacks/1 HTTP/1.1" 200 -

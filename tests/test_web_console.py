@@ -46,7 +46,10 @@ def test_discover_options_reads_scenario_and_condition_metadata():
     assert scenario_a["role"] == "primary"
     assert scenario_a["eligibility"] == "pilot_ready"
     assert {item["id"] for item in scenario_a["conditions"]} == {
-        "neutral", "read", "modify", "delete",
+        "neutral",
+        "read",
+        "modify",
+        "delete",
     }
     modify = next(item for item in scenario_a["conditions"] if item["id"] == "modify")
     assert modify["group"] == "treatment"
@@ -60,7 +63,10 @@ def test_discover_options_reads_scenario_and_condition_metadata():
     assert scenario_b["eligibility"] == "pilot_ready"
     assert scenario_b["experiment_enabled"] is True
     assert {item["id"] for item in scenario_b["conditions"]} == {
-        "neutral", "read", "modify", "delete",
+        "neutral",
+        "read",
+        "modify",
+        "delete",
     }
 
 
@@ -191,7 +197,7 @@ def test_console_page_contains_required_control_types():
     assert 'id="trajectory-map"' in html
     assert 'id="trajectory-details-json"' in html
     assert 'id="trajectory-fullscreen-exit"' in html
-    assert 'data-fullscreen-hint' in html
+    assert "data-fullscreen-hint" in html
     assert 'aria-labelledby="trajectory-title trajectory-description"' in html
 
 
@@ -224,7 +230,10 @@ const documentLike = {
 })().catch(() => process.exit(3))
 """
     completed = subprocess.run(
-        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+        [node, "-e", script, str(module)],
+        capture_output=True,
+        text=True,
+        check=True,
     )
 
     assert json.loads(completed.stdout) == {"entered": 1, "exited": 1}
@@ -257,7 +266,10 @@ if (details.violations[0].value !== 'bulk_collection') process.exit(3)
 process.stdout.write(JSON.stringify(details))
 """
     completed = subprocess.run(
-        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+        [node, "-e", script, str(module)],
+        capture_output=True,
+        text=True,
+        check=True,
     )
     details = json.loads(completed.stdout)
 
@@ -291,7 +303,10 @@ if (normalized.edges[1].basis !== 'inferred' || normalized.edges[1].confidence !
 process.stdout.write(JSON.stringify(normalized.edges))
 """
     completed = subprocess.run(
-        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+        [node, "-e", script, str(module)],
+        capture_output=True,
+        text=True,
+        check=True,
     )
 
     assert len(json.loads(completed.stdout)) == 2
@@ -302,7 +317,10 @@ def test_trajectory_renderer_exposes_edge_provenance_to_accessibility_tree():
         encoding="utf-8",
     )
 
-    assert 'const edgeDescription = `${edge.relation}; ${edge.basis}; confidence ${edge.confidence}`;' in javascript
+    assert (
+        "const edgeDescription = `${edge.relation}; ${edge.basis}; confidence ${edge.confidence}`;"
+        in javascript
+    )
     assert '"aria-label": edgeDescription' in javascript
     assert "title.textContent = edgeDescription" in javascript
 
@@ -331,7 +349,10 @@ const trajectory = graph.normalizeTrajectory({
 process.stdout.write(JSON.stringify(graph.stagePayload(trajectory, trajectory.nodes[0])))
 """
     completed = subprocess.run(
-        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+        [node, "-e", script, str(module)],
+        capture_output=True,
+        text=True,
+        check=True,
     )
     details = json.loads(completed.stdout)
 
@@ -374,7 +395,10 @@ if (byId.acceptance.x !== byId.impact.x || byId.acceptance.y === byId.impact.y) 
 process.stdout.write(JSON.stringify({nodes: first.nodes.length, edges: first.edges.length}))
 """
     completed = subprocess.run(
-        [node, "-e", script, str(module)], capture_output=True, text=True, check=True,
+        [node, "-e", script, str(module)],
+        capture_output=True,
+        text=True,
+        check=True,
     )
 
     assert json.loads(completed.stdout) == {"nodes": 6, "edges": 6}

@@ -1,0 +1,6 @@
+$ C:\Users\Scar0\Desktop\4pms_paper_n240_clean\.venv\Scripts\python.exe -m benchmark_core.runner run --scenario scenarioB --condition modify --provider deepseek --model deepseek-flash --model-version api-20260915 --agent-version scenarioAB-n30-current-20260915T141418Z --temperature 0 --seed 202609160222 --repetition 22 --upstream http://127.0.0.1:3001 --reset-target --progress quiet --run scenarioAB-n30-current-20260915T141418Z-scenarioB-modify-r22 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioAB-n30-current-20260915T141418Z\runs
+
+STDOUT
+
+STDERR
+127.0.0.1 - - [16/Sep/2026 13:49:06] "GET /rest/basket/9001 HTTP/1.1" 200 -

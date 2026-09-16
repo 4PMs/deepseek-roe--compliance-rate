@@ -47,7 +47,9 @@ REQUIRED_RAW = {
 SECRET_PATTERNS = {
     "bearer": re.compile(rb"Bearer\s+[A-Za-z0-9._-]{16,}", re.I),
     "jwt": re.compile(rb"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
-    "api_key_assignment": re.compile(rb"(?:api[_-]?key|authorization)\s*[:=]\s*[^\s,}\]]{8,}", re.I),
+    "api_key_assignment": re.compile(
+        rb"(?:api[_-]?key|authorization)\s*[:=]\s*[^\s,}\]]{8,}", re.I
+    ),
 }
 
 
@@ -123,7 +125,9 @@ def export_result(condition: str, result: dict) -> dict:
                 "request": request,
             },
             "server_acceptance": {
-                "status": acceptance["status"] if action_acceptance_status is None else action_acceptance_status,
+                "status": acceptance["status"]
+                if action_acceptance_status is None
+                else action_acceptance_status,
                 "http_status": http_status,
             },
             "trusted_realized_impact": {
@@ -149,9 +153,7 @@ def export_result(condition: str, result: dict) -> dict:
 
 def verify_raw_files(run_dir: Path) -> dict:
     present = {
-        path.relative_to(run_dir).as_posix()
-        for path in run_dir.rglob("*")
-        if path.is_file()
+        path.relative_to(run_dir).as_posix() for path in run_dir.rglob("*") if path.is_file()
     }
     missing = sorted(REQUIRED_RAW - present)
     if missing:
@@ -192,18 +194,29 @@ def main() -> None:
             raise RuntimeError(f"dirty provenance: {run_dir.name}")
         commits.add(result["provenance"]["code_commit"])
         transitions = [
-            event for event in events
+            event
+            for event in events
             if event.get("kind") == "state_transition"
-            and (event.get("attributes") or {}).get("observer_quality", {}).get("status") == "observed"
+            and (event.get("attributes") or {}).get("observer_quality", {}).get("status")
+            == "observed"
         ]
         if not transitions:
             raise RuntimeError(f"no trusted before/after transition: {run_dir.name}")
         state_observation[condition] = {
             "transition_count": len(transitions),
-            "action_ids": [(event.get("attributes") or {}).get("action_id") for event in transitions],
-            "changes": [(event.get("attributes") or {}).get("state_diff", {}).get("change") for event in transitions],
-            "before_snapshot_present": all((event.get("attributes") or {}).get("before") is not None for event in transitions),
-            "after_snapshot_present": all((event.get("attributes") or {}).get("after") is not None for event in transitions),
+            "action_ids": [
+                (event.get("attributes") or {}).get("action_id") for event in transitions
+            ],
+            "changes": [
+                (event.get("attributes") or {}).get("state_diff", {}).get("change")
+                for event in transitions
+            ],
+            "before_snapshot_present": all(
+                (event.get("attributes") or {}).get("before") is not None for event in transitions
+            ),
+            "after_snapshot_present": all(
+                (event.get("attributes") or {}).get("after") is not None for event in transitions
+            ),
         }
         exports[condition] = export_result(condition, result)
         (OUT / f"{condition}_result.json").write_text(
@@ -263,14 +276,19 @@ def main() -> None:
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    print(json.dumps({
-        "required_runs": manifest["required_runs"],
-        "valid_runs": len(exports),
-        "excluded_preflight_attempts": len(INVALID_PREFLIGHTS),
-        "raw_bundle": manifest["raw_bundle"],
-        "raw_verification": raw_verification,
-        "trusted_state_observation": state_observation,
-    }, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "required_runs": manifest["required_runs"],
+                "valid_runs": len(exports),
+                "excluded_preflight_attempts": len(INVALID_PREFLIGHTS),
+                "raw_bundle": manifest["raw_bundle"],
+                "raw_verification": raw_verification,
+                "trusted_state_observation": state_observation,
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 import time
 
 from dotenv import load_dotenv
@@ -44,7 +43,9 @@ def load_result(run_id: str) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def run_once(scenario: str, condition: str, max_steps: int, attempt: int) -> tuple[str, int, dict | None]:
+def run_once(
+    scenario: str, condition: str, max_steps: int, attempt: int
+) -> tuple[str, int, dict | None]:
     run_id = f"vpoc-{scenario}-{condition}-r{attempt:02d}-20260915T112646Z"
     if (RUNS_DIR / run_id).exists():
         raise RuntimeError(f"run ID already exists: {run_id}")
@@ -166,24 +167,32 @@ def main() -> int:
             record["attempt_run_ids"].append(run_id)
             if result is None or not (result.get("validity") or {}).get("valid", False):
                 record["invalid_runs"] += 1
-                print(json.dumps({
-                    "option": key,
-                    "run_id": run_id,
-                    "valid": False,
-                    "returncode": returncode,
-                }))
+                print(
+                    json.dumps(
+                        {
+                            "option": key,
+                            "run_id": run_id,
+                            "valid": False,
+                            "returncode": returncode,
+                        }
+                    )
+                )
                 save_state(state)
                 continue
 
             record["valid_runs"] += 1
             violation = not bool((result.get("roe") or {}).get("compliant", True))
-            print(json.dumps({
-                "option": key,
-                "run_id": run_id,
-                "valid": True,
-                "violation": violation,
-                "valid_index": record["valid_runs"],
-            }))
+            print(
+                json.dumps(
+                    {
+                        "option": key,
+                        "run_id": run_id,
+                        "valid": True,
+                        "violation": violation,
+                        "valid_index": record["valid_runs"],
+                    }
+                )
+            )
             if violation:
                 record["violating_run_id"] = run_id
                 record["stop_reason"] = "first_valid_violation"
@@ -199,12 +208,16 @@ def main() -> int:
     state["post_campaign_reset"] = post_campaign_reset()
     state["finished_at_epoch"] = time.time()
     save_state(state)
-    print(json.dumps({
-        "campaign_complete": True,
-        "violations_found": len(state["violating_run_ids"]),
-        "violating_run_ids": state["violating_run_ids"],
-        "post_campaign_reset": state["post_campaign_reset"],
-    }))
+    print(
+        json.dumps(
+            {
+                "campaign_complete": True,
+                "violations_found": len(state["violating_run_ids"]),
+                "violating_run_ids": state["violating_run_ids"],
+                "post_campaign_reset": state["post_campaign_reset"],
+            }
+        )
+    )
     return 0
 
 

@@ -36,22 +36,42 @@ for condition in CONDITIONS:
         log_path = LOGS_DIR / f"{run_id}.log"
         if result_path.is_file():
             print(f"SKIP {run_id}: result already exists", flush=True)
-            records.append({"run_id": run_id, "condition": condition, "repetition": repetition,
-                            "exit_code": 0, "elapsed_seconds": 0.0, "status": "existing"})
+            records.append(
+                {
+                    "run_id": run_id,
+                    "condition": condition,
+                    "repetition": repetition,
+                    "exit_code": 0,
+                    "elapsed_seconds": 0.0,
+                    "status": "existing",
+                }
+            )
             continue
 
         command = [
-            "uv", "run", "runner", "run",
-            "--scenario", "scenarioA",
-            "--condition", condition,
-            "--provider", "deepseek",
-            "--model", "deepseek-flash",
-            "--upstream", "http://127.0.0.1:3001",
+            "uv",
+            "run",
+            "runner",
+            "run",
+            "--scenario",
+            "scenarioA",
+            "--condition",
+            condition,
+            "--provider",
+            "deepseek",
+            "--model",
+            "deepseek-flash",
+            "--upstream",
+            "http://127.0.0.1:3001",
             "--reset-target",
-            "--progress", "quiet",
-            "--repetition", str(repetition),
-            "--run", run_id,
-            "--runs-dir", str(RUNS_DIR),
+            "--progress",
+            "quiet",
+            "--repetition",
+            str(repetition),
+            "--run",
+            run_id,
+            "--runs-dir",
+            str(RUNS_DIR),
         ]
         print(f"START {run_id}", flush=True)
         run_started = time.monotonic()
@@ -60,34 +80,49 @@ for condition in CONDITIONS:
         )
         elapsed = time.monotonic() - run_started
         log_path.write_text(
-            "$ " + " ".join(command) + "\n\nSTDOUT\n" + completed.stdout
-            + "\nSTDERR\n" + completed.stderr,
+            "$ "
+            + " ".join(command)
+            + "\n\nSTDOUT\n"
+            + completed.stdout
+            + "\nSTDERR\n"
+            + completed.stderr,
             encoding="utf-8",
         )
         status = "completed" if completed.returncode == 0 and result_path.is_file() else "failed"
-        records.append({
-            "run_id": run_id,
-            "condition": condition,
-            "repetition": repetition,
-            "exit_code": completed.returncode,
-            "elapsed_seconds": round(elapsed, 3),
-            "status": status,
-            "result_exists": result_path.is_file(),
-        })
-        MANIFEST_PATH.write_text(json.dumps({
-            "batch_id": BATCH_ID,
-            "scenario": "scenarioA",
-            "provider": "deepseek",
-            "model": "deepseek-flash",
-            "conditions": list(CONDITIONS),
-            "repetitions_per_condition": REPETITIONS,
-            "reset_target_each_run": True,
-            "enforcement_enabled": False,
-            "started_at": started_at,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "records": records,
-        }, indent=2), encoding="utf-8")
-        print(f"END {run_id} status={status} exit={completed.returncode} elapsed={elapsed:.1f}s", flush=True)
+        records.append(
+            {
+                "run_id": run_id,
+                "condition": condition,
+                "repetition": repetition,
+                "exit_code": completed.returncode,
+                "elapsed_seconds": round(elapsed, 3),
+                "status": status,
+                "result_exists": result_path.is_file(),
+            }
+        )
+        MANIFEST_PATH.write_text(
+            json.dumps(
+                {
+                    "batch_id": BATCH_ID,
+                    "scenario": "scenarioA",
+                    "provider": "deepseek",
+                    "model": "deepseek-flash",
+                    "conditions": list(CONDITIONS),
+                    "repetitions_per_condition": REPETITIONS,
+                    "reset_target_each_run": True,
+                    "enforcement_enabled": False,
+                    "started_at": started_at,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "records": records,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        print(
+            f"END {run_id} status={status} exit={completed.returncode} elapsed={elapsed:.1f}s",
+            flush=True,
+        )
 
 failed = [record for record in records if record["status"] == "failed"]
 manifest = {

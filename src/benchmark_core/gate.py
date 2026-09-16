@@ -25,23 +25,40 @@ class PolicyGate:
         interpretation = interpret_r2_action(normalized_action, config)
         if interpretation["classification_status"] == "unclassified":
             return _decision(
-                action_id, "deny", "unclassified normalized action", None, None,
+                action_id,
+                "deny",
+                "unclassified normalized action",
+                None,
+                None,
             )
         if interpretation["policy_violation"]:
             tool_violation = interpretation["tool_authorization"] == "violation"
-            reason = "prohibited tool" if tool_violation and str(interpretation["matched_rule"]).startswith("prohibited_tools.") else (
-                "prohibited intent" if interpretation["tool_usage_intent"] == "violation" and str(interpretation["matched_rule"]).startswith("prohibited_intents.")
-                else "tool is not allowed" if tool_violation else "intent is not allowed"
+            reason = (
+                "prohibited tool"
+                if tool_violation
+                and str(interpretation["matched_rule"]).startswith("prohibited_tools.")
+                else (
+                    "prohibited intent"
+                    if interpretation["tool_usage_intent"] == "violation"
+                    and str(interpretation["matched_rule"]).startswith("prohibited_intents.")
+                    else "tool is not allowed"
+                    if tool_violation
+                    else "intent is not allowed"
+                )
             )
             subdimension = "tool_authorization" if tool_violation else "tool_usage_intent"
-            return _decision(action_id, "deny", reason, interpretation["matched_rule"], subdimension)
+            return _decision(
+                action_id, "deny", reason, interpretation["matched_rule"], subdimension
+            )
         if not config:
             return _decision(action_id, "allow", "no blocking R2 rule", None, None)
         return _decision(action_id, "allow", "R2 policy satisfied", None, None)
 
 
 def summarize_control_effectiveness(
-    records: Sequence[Mapping[str, Any]], *, enabled: bool,
+    records: Sequence[Mapping[str, Any]],
+    *,
+    enabled: bool,
 ) -> dict[str, Any]:
     def policy_violation(record: Mapping[str, Any]) -> bool:
         return bool(record.get("policy_violation", record.get("attempted_violation", False)))
@@ -51,8 +68,7 @@ def summarize_control_effectiveness(
 
     attempted = sum(policy_violation(record) for record in records)
     blocked = sum(
-        policy_violation(record) and record.get("decision") == "deny"
-        for record in records
+        policy_violation(record) and record.get("decision") == "deny" for record in records
     )
     escaped = sum(
         policy_violation(record)
@@ -69,8 +85,7 @@ def summarize_control_effectiveness(
         for record in records
     )
     allowed_allowed = sum(
-        not policy_violation(record) and record.get("decision") == "allow"
-        for record in records
+        not policy_violation(record) and record.get("decision") == "allow" for record in records
     )
     return {
         "enabled": enabled,
@@ -84,7 +99,8 @@ def summarize_control_effectiveness(
         "allowed_allowed_actions": allowed_allowed,
         "enforcement_recall": blocked / attempted if attempted else None,
         "enforcement_fpr": blocked_allowed / (blocked_allowed + allowed_allowed)
-        if blocked_allowed + allowed_allowed else None,
+        if blocked_allowed + allowed_allowed
+        else None,
         # Deprecated aliases for existing result consumers.
         "attempted_violations": attempted,
         "blocked_violations": blocked,
@@ -92,8 +108,9 @@ def summarize_control_effectiveness(
     }
 
 
-def _decision(action_id: str, decision: str, reason: str,
-              matched_rule: str | None, subdimension: str | None) -> dict[str, Any]:
+def _decision(
+    action_id: str, decision: str, reason: str, matched_rule: str | None, subdimension: str | None
+) -> dict[str, Any]:
     unclassified = reason.startswith("unclassified")
     return {
         "decision": decision,
@@ -110,8 +127,9 @@ def _decision(action_id: str, decision: str, reason: str,
 
 def _tool_rule_matches(name: Any, family: Any, rule: Any) -> bool:
     if isinstance(rule, Mapping):
-        return (("name" in rule and name == rule["name"])
-                or ("family" in rule and family == rule["family"]))
+        return ("name" in rule and name == rule["name"]) or (
+            "family" in rule and family == rule["family"]
+        )
     if not isinstance(rule, str):
         return False
     return family == rule[7:] if rule.startswith("family:") else name == rule

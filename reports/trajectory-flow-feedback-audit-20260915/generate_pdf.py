@@ -14,7 +14,6 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
-    KeepTogether,
     LongTable,
     PageBreak,
     PageTemplate,
@@ -41,46 +40,98 @@ MARGIN_BOTTOM = 16 * mm
 
 styles = getSampleStyleSheet()
 TITLE = ParagraphStyle(
-    "KTitle", parent=styles["Title"], fontName="MalgunBold", fontSize=20,
-    leading=27, textColor=colors.HexColor("#172554"), alignment=TA_CENTER,
+    "KTitle",
+    parent=styles["Title"],
+    fontName="MalgunBold",
+    fontSize=20,
+    leading=27,
+    textColor=colors.HexColor("#172554"),
+    alignment=TA_CENTER,
     spaceAfter=12,
 )
 H1 = ParagraphStyle(
-    "KH1", parent=styles["Heading1"], fontName="MalgunBold", fontSize=14,
-    leading=19, textColor=colors.HexColor("#1D4ED8"), spaceBefore=5, spaceAfter=7,
+    "KH1",
+    parent=styles["Heading1"],
+    fontName="MalgunBold",
+    fontSize=14,
+    leading=19,
+    textColor=colors.HexColor("#1D4ED8"),
+    spaceBefore=5,
+    spaceAfter=7,
 )
 H2 = ParagraphStyle(
-    "KH2", parent=styles["Heading2"], fontName="MalgunBold", fontSize=11.5,
-    leading=16, textColor=colors.HexColor("#334155"), spaceBefore=5, spaceAfter=5,
+    "KH2",
+    parent=styles["Heading2"],
+    fontName="MalgunBold",
+    fontSize=11.5,
+    leading=16,
+    textColor=colors.HexColor("#334155"),
+    spaceBefore=5,
+    spaceAfter=5,
 )
 BODY = ParagraphStyle(
-    "KBody", parent=styles["BodyText"], fontName="Malgun", fontSize=8.7,
-    leading=13.2, textColor=colors.HexColor("#172033"), spaceAfter=4,
+    "KBody",
+    parent=styles["BodyText"],
+    fontName="Malgun",
+    fontSize=8.7,
+    leading=13.2,
+    textColor=colors.HexColor("#172033"),
+    spaceAfter=4,
     splitLongWords=True,
 )
 BULLET = ParagraphStyle(
-    "KBullet", parent=BODY, leftIndent=10, firstLineIndent=-7, bulletIndent=2,
+    "KBullet",
+    parent=BODY,
+    leftIndent=10,
+    firstLineIndent=-7,
+    bulletIndent=2,
     spaceAfter=2.5,
 )
 CODE = ParagraphStyle(
-    "KCode", parent=BODY, fontName="Malgun", fontSize=7.5, leading=11,
-    leftIndent=7, rightIndent=7, borderColor=colors.HexColor("#CBD5E1"),
-    borderWidth=0.5, borderPadding=6, backColor=colors.HexColor("#F8FAFC"),
-    spaceBefore=3, spaceAfter=6,
+    "KCode",
+    parent=BODY,
+    fontName="Malgun",
+    fontSize=7.5,
+    leading=11,
+    leftIndent=7,
+    rightIndent=7,
+    borderColor=colors.HexColor("#CBD5E1"),
+    borderWidth=0.5,
+    borderPadding=6,
+    backColor=colors.HexColor("#F8FAFC"),
+    spaceBefore=3,
+    spaceAfter=6,
 )
 TABLE_HEADER = ParagraphStyle(
-    "KTableHeader", parent=BODY, fontName="MalgunBold", fontSize=7.4,
-    leading=10, textColor=colors.white, alignment=TA_CENTER,
+    "KTableHeader",
+    parent=BODY,
+    fontName="MalgunBold",
+    fontSize=7.4,
+    leading=10,
+    textColor=colors.white,
+    alignment=TA_CENTER,
 )
 TABLE_CELL = ParagraphStyle(
-    "KTableCell", parent=BODY, fontSize=7.2, leading=10.2, spaceAfter=0,
+    "KTableCell",
+    parent=BODY,
+    fontSize=7.2,
+    leading=10.2,
+    spaceAfter=0,
 )
 SMALL = ParagraphStyle(
-    "KSmall", parent=BODY, fontSize=7.4, leading=10.5, textColor=colors.HexColor("#475569"),
+    "KSmall",
+    parent=BODY,
+    fontSize=7.4,
+    leading=10.5,
+    textColor=colors.HexColor("#475569"),
 )
 
 PAGE_BREAK_PREFIXES = (
-    "## 2.", "## 4.", "## 5.", "## 7.", "## 8.",
+    "## 2.",
+    "## 4.",
+    "## 5.",
+    "## 7.",
+    "## 8.",
 )
 
 
@@ -103,10 +154,18 @@ def col_widths(headers: list[str], rows: list[list[str]]) -> list[float]:
     if n == 4:
         return [available * 0.19, available * 0.16, available * 0.10, available * 0.55]
     if n == 5:
-        return [available * 0.09, available * 0.20, available * 0.32, available * 0.23, available * 0.16]
+        return [
+            available * 0.09,
+            available * 0.20,
+            available * 0.32,
+            available * 0.23,
+            available * 0.16,
+        ]
     weights = []
     for index in range(n):
-        longest = max([len(headers[index])] + [len(row[index]) if index < len(row) else 0 for row in rows])
+        longest = max(
+            [len(headers[index])] + [len(row[index]) if index < len(row) else 0 for row in rows]
+        )
         weights.append(min(max(longest, 8), 42))
     total = sum(weights)
     return [available * weight / total for weight in weights]
@@ -118,17 +177,21 @@ def make_table(headers: list[str], rows: list[list[str]]) -> LongTable:
         padded = row + [""] * (len(headers) - len(row))
         data.append([Paragraph(inline(cell), TABLE_CELL) for cell in padded[: len(headers)]])
     table = LongTable(data, colWidths=col_widths(headers, rows), repeatRows=1, hAlign="LEFT")
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
-        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#F8FAFC")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#F8FAFC")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
     return table
 
 
@@ -161,7 +224,11 @@ def parse_markdown(text: str) -> list:
             code_lines.append(line)
             i += 1
             continue
-        if line.startswith("| ") and i + 1 < len(lines) and re.match(r"^\|?\s*:?-+", lines[i + 1].strip("| ")):
+        if (
+            line.startswith("| ")
+            and i + 1 < len(lines)
+            and re.match(r"^\|?\s*:?-+", lines[i + 1].strip("| "))
+        ):
             flush_paragraph()
             headers = split_table_row(line)
             i += 2
@@ -221,16 +288,24 @@ def draw_page(canvas, doc) -> None:
 
 def main() -> None:
     doc = BaseDocTemplate(
-        str(OUTPUT), pagesize=A4,
-        leftMargin=MARGIN_X, rightMargin=MARGIN_X,
-        topMargin=MARGIN_TOP, bottomMargin=MARGIN_BOTTOM,
+        str(OUTPUT),
+        pagesize=A4,
+        leftMargin=MARGIN_X,
+        rightMargin=MARGIN_X,
+        topMargin=MARGIN_TOP,
+        bottomMargin=MARGIN_BOTTOM,
         title="위반 흐름 계측 피드백 코드 감사 보고서",
         author="Hermes Agent",
     )
     frame = Frame(
-        MARGIN_X, MARGIN_BOTTOM,
-        PAGE_W - 2 * MARGIN_X, PAGE_H - MARGIN_TOP - MARGIN_BOTTOM,
-        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+        MARGIN_X,
+        MARGIN_BOTTOM,
+        PAGE_W - 2 * MARGIN_X,
+        PAGE_H - MARGIN_TOP - MARGIN_BOTTOM,
+        leftPadding=0,
+        rightPadding=0,
+        topPadding=0,
+        bottomPadding=0,
     )
     doc.addPageTemplates(PageTemplate(id="main", frames=[frame], onPage=draw_page))
     story = parse_markdown(SOURCE.read_text(encoding="utf-8"))

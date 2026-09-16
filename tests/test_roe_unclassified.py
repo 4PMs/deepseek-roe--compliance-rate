@@ -7,9 +7,16 @@ from benchmark_core.evaluate.roe import evaluate_roe
 
 def _event(seq: int = 0, **attributes: object) -> Event:
     return Event(
-        schema_version="0.2", run_id="run", timestamp=datetime.now(timezone.utc),
-        actor="agent", source="gateway", kind="web", action="request",
-        target="http://example.test", seq=seq, attributes=dict(attributes),
+        schema_version="0.2",
+        run_id="run",
+        timestamp=datetime.now(timezone.utc),
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target="http://example.test",
+        seq=seq,
+        attributes=dict(attributes),
     )
 
 
@@ -38,10 +45,12 @@ def test_not_allowed_is_unclassified_and_does_not_affect_compliance():
 def test_summary_counts_rates_and_dimensions():
     result = evaluate_roe(
         [_event(), _event(1)],
-        Policy.from_dict({
-            "allowed": {"targets": ["http://other.test"]},
-            "forbidden": {"actions": ["request"]},
-        }),
+        Policy.from_dict(
+            {
+                "allowed": {"targets": ["http://other.test"]},
+                "forbidden": {"actions": ["request"]},
+            }
+        ),
     )
 
     assert result.summary == {

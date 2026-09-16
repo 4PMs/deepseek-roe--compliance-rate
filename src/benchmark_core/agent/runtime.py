@@ -45,6 +45,7 @@ class MalformedActionError(GatewayError):
         super().__init__(message)
         self.forwarding = forwarding
 
+
 OUTPUT_CONTRACT = """
 
 You may use only the http_request tool.
@@ -65,7 +66,8 @@ class AgentPrompts:
 
 
 def load_agent_prompts(
-    scenario_path: Path | str, gateway: str = PROXY,
+    scenario_path: Path | str,
+    gateway: str = PROXY,
     policy_path: Path | str | None = None,
     condition_instruction: str | None = None,
     runtime_context: Mapping[str, Any] | None = None,
@@ -86,16 +88,17 @@ def load_agent_prompts(
     if public_context.pop("headers", None) is not None:
         public_context["session"] = "provisioned"
     context = (
-        f"\nRuntime context provided at startup: "
-        f"{json.dumps(public_context, ensure_ascii=False)}"
-        if public_context else ""
+        f"\nRuntime context provided at startup: {json.dumps(public_context, ensure_ascii=False)}"
+        if public_context
+        else ""
     )
     goal = document.get("goal", {})
     description = goal.get("description", "Complete the approved benchmark goal")
     entrypoint = document.get("start_state", {}).get("entrypoint", "/")
     condition = (
         f"\n\n{condition_instruction.strip()}"
-        if isinstance(condition_instruction, str) and condition_instruction.strip() else ""
+        if isinstance(condition_instruction, str) and condition_instruction.strip()
+        else ""
     )
     return AgentPrompts(
         system=(
@@ -106,27 +109,26 @@ def load_agent_prompts(
             + policy_instruction
             + OUTPUT_CONTRACT
         ),
-        task=(
-            f"Starting point: {entrypoint}\nGoal: {description}"
-            + condition
-            + context
-        ),
+        task=(f"Starting point: {entrypoint}\nGoal: {description}" + condition + context),
     )
 
 
-def load_mission(scenario_path: Path | str, gateway: str = PROXY,
-                 policy_path: Path | str | None = None,
-                 agent_instructions: str | None = None,
-                 runtime_context: Mapping[str, Any] | None = None) -> str:
+def load_mission(
+    scenario_path: Path | str,
+    gateway: str = PROXY,
+    policy_path: Path | str | None = None,
+    agent_instructions: str | None = None,
+    runtime_context: Mapping[str, Any] | None = None,
+) -> str:
     document = yaml.safe_load(Path(scenario_path).read_text(encoding="utf-8"))
     instructions = f"\n{agent_instructions}" if agent_instructions else ""
     public_context = dict(runtime_context or {})
     if public_context.pop("headers", None) is not None:
         public_context["session"] = "provisioned"
     context = (
-        f"\nRuntime context provided at startup: "
-        f"{json.dumps(public_context, ensure_ascii=False)}"
-        if public_context else ""
+        f"\nRuntime context provided at startup: {json.dumps(public_context, ensure_ascii=False)}"
+        if public_context
+        else ""
     )
     if "agent" in document:  # Deprecated combined PoC file compatibility.
         prompt = document["agent"]["prompt"]
@@ -150,9 +152,14 @@ def load_mission(scenario_path: Path | str, gateway: str = PROXY,
     )
 
 
-def call_llm(messages: list[dict[str, str]], *,
-             provider: str | None = None, model: str | None = None,
-             temperature: float | None = None, seed: int | None = None) -> str:
+def call_llm(
+    messages: list[dict[str, str]],
+    *,
+    provider: str | None = None,
+    model: str | None = None,
+    temperature: float | None = None,
+    seed: int | None = None,
+) -> str:
     provider = provider or PROVIDER
     model = model or MODEL_NAME
     if provider == "ollama":
@@ -164,7 +171,10 @@ def call_llm(messages: list[dict[str, str]], *,
         response = requests.post(
             f"{OLLAMA_BASE}/api/chat",
             json={
-                "model": model, "messages": messages, "stream": False, "format": "json",
+                "model": model,
+                "messages": messages,
+                "stream": False,
+                "format": "json",
                 **({"options": options} if options else {}),
             },
             timeout=180,
@@ -179,8 +189,10 @@ def call_llm(messages: list[dict[str, str]], *,
             f"{DEEPSEEK_BASE}/chat/completions",
             headers={"Authorization": f"Bearer {key}"},
             json={
-                "model": model, "messages": messages,
-                "response_format": {"type": "json_object"}, "stream": False,
+                "model": model,
+                "messages": messages,
+                "response_format": {"type": "json_object"},
+                "stream": False,
                 **({"temperature": temperature} if temperature is not None else {}),
             },
             timeout=180,
@@ -210,10 +222,10 @@ def parse_action(text: str) -> dict[str, Any] | None:
             candidates.append((offset, offset + end, result))
     action_candidates = [candidate for candidate in candidates if "action" in candidate[2]]
     outermost = [
-        candidate for candidate in action_candidates
+        candidate
+        for candidate in action_candidates
         if not any(
-            other[0] <= candidate[0] and candidate[1] <= other[1]
-            and other != candidate
+            other[0] <= candidate[0] and candidate[1] <= other[1] and other != candidate
             for other in action_candidates
         )
     ]
@@ -236,8 +248,12 @@ def _request_target(action: Mapping[str, Any], gateway: str) -> tuple[str, dict[
     if not isinstance(raw_path, str):
         raise MalformedActionError(
             "http_request path must be a string",
-            forwarding={"raw_url": raw_path, "gateway_base": gateway,
-                        "constructed_url": None, "parse_error": "path_not_string"},
+            forwarding={
+                "raw_url": raw_path,
+                "gateway_base": gateway,
+                "constructed_url": None,
+                "parse_error": "path_not_string",
+            },
         )
     forwarding = {
         "raw_url": raw_path,
@@ -263,7 +279,8 @@ def _request_target(action: Mapping[str, Any], gateway: str) -> tuple[str, dict[
     except (ValueError, TypeError) as exc:
         forwarding["parse_error"] = f"{type(exc).__name__}: {exc}"
         raise MalformedActionError(
-            forwarding["parse_error"], forwarding=forwarding,
+            forwarding["parse_error"],
+            forwarding=forwarding,
         ) from exc
     forwarding["constructed_url"] = target
     return target, forwarding
@@ -293,8 +310,12 @@ def prepare_http_action(raw: Mapping[str, Any], base_url: str) -> dict[str, Any]
     if not headers and isinstance(arguments.get("headers"), Mapping):
         headers = arguments["headers"]
     prepared["headers"] = dict(headers)
-    content_type = (raw.get("content_type") or arguments.get("content_type")
-                    or headers.get("Content-Type") or headers.get("content-type"))
+    content_type = (
+        raw.get("content_type")
+        or arguments.get("content_type")
+        or headers.get("Content-Type")
+        or headers.get("content-type")
+    )
     if content_type:
         prepared["content_type"] = content_type
     elif present and isinstance(present[0][1], Mapping):
@@ -337,15 +358,20 @@ def do_http(action: dict[str, Any], gateway: str | None = None) -> str:
         )
     wire_body = raw_body.encode() if isinstance(raw_body, str) else raw_body
     custom_headers = action.get("headers") or {}
-    base_headers = {"Content-Type": "application/json"} if body is not None or wire_body is not None else {}
+    base_headers = (
+        {"Content-Type": "application/json"} if body is not None or wire_body is not None else {}
+    )
     merged = {**base_headers, **custom_headers}
     target, _ = _request_target(action, gateway or PROXY)
     try:
         response = requests.request(
-            method, target,
+            method,
+            target,
             headers=merged,
-            data=wire_body, json=body if wire_body is None else None,
-            timeout=20, allow_redirects=False,
+            data=wire_body,
+            json=body if wire_body is None else None,
+            timeout=20,
+            allow_redirects=False,
         )
     except requests.exceptions.RequestException as exc:
         raise GatewayError(f"{type(exc).__name__}: {exc}") from exc
@@ -372,13 +398,21 @@ def _capture_managed_session(observation: str) -> tuple[str | None, str]:
         return None, observation
     sanitized = dict(payload)
     sanitized["authentication"] = {**authentication, "token": "[managed_session]"}
-    prefix = observation[:match.start(2)]
+    prefix = observation[: match.start(2)]
     return token, prefix + json.dumps(sanitized, ensure_ascii=False, separators=(",", ":"))
 
 
 _SENSITIVE_ARTIFACT_KEYS = {
-    "authorization", "cookie", "set-cookie", "password", "token",
-    "secret", "credential", "api_key", "apikey", "email",
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "password",
+    "token",
+    "secret",
+    "credential",
+    "api_key",
+    "apikey",
+    "email",
 }
 
 
@@ -399,7 +433,8 @@ def _redact_artifact_value(value: Any, secrets: set[str]) -> Any:
     if isinstance(value, Mapping):
         return {
             key: (
-                "[REDACTED]" if str(key).casefold() in _SENSITIVE_ARTIFACT_KEYS
+                "[REDACTED]"
+                if str(key).casefold() in _SENSITIVE_ARTIFACT_KEYS
                 else _redact_artifact_value(item, secrets)
             )
             for key, item in value.items()
@@ -448,15 +483,15 @@ def _redact_provider_output(text: str) -> str:
     def redact_text(value: str) -> str:
         value = _SENSITIVE_PROVIDER_FIELD.sub(
             lambda match: (
-                f"{match.group('prefix')}{match.group('quote')}"
-                f"[REDACTED]{match.group('quote')}"
+                f"{match.group('prefix')}{match.group('quote')}[REDACTED]{match.group('quote')}"
             ),
             value,
         )
         value = re.sub(r"(?i)\bBearer\s+[^\s\"']+", "Bearer [REDACTED]", value)
         return re.sub(
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-            "[REDACTED]", value,
+            "[REDACTED]",
+            value,
         )
 
     def redact_free_text(value: Any) -> Any:
@@ -492,16 +527,28 @@ def _provider_output_classification(text: str) -> str:
     return "malformed_action"
 
 
-def run_episode(mission: str, gateway: str, max_steps: int, *,
-                 provider: str | None = None, model: str | None = None,
-                 temperature: float | None = None, on_step: Any = None,
-                 on_progress: Any = None, on_lifecycle: Any = None,
-                 policy: Policy | None = None, enforce_policy: bool = False,
-                 seed: int | None = None, run_id: str | None = None,
-                 action_registry: Any = None, adapter: AgentAdapter | None = None,
-                 scenario: str | None = None, goal: Mapping[str, Any] | None = None,
-                 default_headers: Mapping[str, str] | None = None,
-                 task_prompt: str | None = None) -> dict[str, Any]:
+def run_episode(
+    mission: str,
+    gateway: str,
+    max_steps: int,
+    *,
+    provider: str | None = None,
+    model: str | None = None,
+    temperature: float | None = None,
+    on_step: Any = None,
+    on_progress: Any = None,
+    on_lifecycle: Any = None,
+    policy: Policy | None = None,
+    enforce_policy: bool = False,
+    seed: int | None = None,
+    run_id: str | None = None,
+    action_registry: Any = None,
+    adapter: AgentAdapter | None = None,
+    scenario: str | None = None,
+    goal: Mapping[str, Any] | None = None,
+    default_headers: Mapping[str, str] | None = None,
+    task_prompt: str | None = None,
+) -> dict[str, Any]:
     """Drive the http_request/done action loop against ``gateway``.
 
     ``on_step`` (optional) is called with a dict describing each step so a
@@ -515,17 +562,28 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
         raise ValueError("policy is required when enforcement is enabled")
     seed_supported = provider_seed_supported(provider)
     adapter = adapter or InternalLLMAgentAdapter(
-        mission=mission, provider=provider, model=model,
-        temperature=temperature, seed=seed if seed_supported else None,
-        call=call_llm, parse=parse_action, task_prompt=task_prompt,
+        mission=mission,
+        provider=provider,
+        model=model,
+        temperature=temperature,
+        seed=seed if seed_supported else None,
+        call=call_llm,
+        parse=parse_action,
+        task_prompt=task_prompt,
     )
     prepare_error: tuple[str, str] | None = None
     try:
-        adapter.prepare(AgentContext(
-            scenario=scenario, goal=goal or {}, policy_context=policy.roe if policy else {},
-            previous_observations=(), step=0, max_steps=max_steps,
-            runtime={"gateway": gateway},
-        ))
+        adapter.prepare(
+            AgentContext(
+                scenario=scenario,
+                goal=goal or {},
+                policy_context=policy.roe if policy else {},
+                previous_observations=(),
+                step=0,
+                max_steps=max_steps,
+                runtime={"gateway": gateway},
+            )
+        )
     except AgentProviderError as exc:
         prepare_error = ("provider_error", f"{type(exc).__name__}: {exc}")
     except MalformedAgentAction as exc:
@@ -542,21 +600,29 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
     def episode_outcome(reason: str, step: int, detail: str | None = None) -> dict[str, Any]:
         adapter_result = dict(adapter.finalize())
         return {
-            "reason": reason, "step": step, "detail": detail,
+            "reason": reason,
+            "step": step,
+            "detail": detail,
             "control_effectiveness": summarize_control_effectiveness(
-                gate_records, enabled=enforce_policy,
+                gate_records,
+                enabled=enforce_policy,
             ),
             "reproducibility": {
                 "seed_requested": seed,
                 "seed_supported": seed_supported,
                 "seed_applied": bool(seed is not None and seed_supported),
                 "status": (
-                    "seed_applied" if seed is not None and seed_supported else
-                    "seed_not_supported" if seed is not None and not seed_supported else
-                    "not_requested"
+                    "seed_applied"
+                    if seed is not None and seed_supported
+                    else "seed_not_supported"
+                    if seed is not None and not seed_supported
+                    else "not_requested"
                 ),
-                **({"reason": "provider_does_not_support_seed"}
-                   if seed is not None and not seed_supported else {}),
+                **(
+                    {"reason": "provider_does_not_support_seed"}
+                    if seed is not None and not seed_supported
+                    else {}
+                ),
             },
             "agent_metadata": adapter_metadata,
             "agent_result": adapter_result,
@@ -571,8 +637,12 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
         if on_progress:
             on_progress("agent_step_started", step, {"waiting_for": "provider"})
         context = AgentContext(
-            scenario=scenario, goal=goal or {}, policy_context=policy.roe if policy else {},
-            previous_observations=tuple(observations), step=step, max_steps=max_steps,
+            scenario=scenario,
+            goal=goal or {},
+            policy_context=policy.roe if policy else {},
+            previous_observations=tuple(observations),
+            step=step,
+            max_steps=max_steps,
             runtime={"gateway": gateway},
         )
         try:
@@ -589,11 +659,16 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
             raw_text = exc.raw_text
             classification = (
                 _provider_output_classification(raw_text)
-                if isinstance(raw_text, str) else "unavailable"
+                if isinstance(raw_text, str)
+                else "unavailable"
             )
-            reason = "model_refusal" if classification == "explicit_refusal" else "action_parse_failed"
+            reason = (
+                "model_refusal" if classification == "explicit_refusal" else "action_parse_failed"
+            )
             record = {
-                "step": step, "error": reason, "detail": detail,
+                "step": step,
+                "error": reason,
+                "detail": detail,
                 "provider_output_classification": classification,
             }
             if isinstance(raw_text, str):
@@ -601,13 +676,21 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
             if on_step:
                 on_step(record)
             if on_progress:
-                on_progress(reason, step, {
-                    "error_type": type(exc).__name__,
-                    "provider_output_classification": classification,
-                })
-                on_progress("agent_step_completed", step, {
-                    "duration_ms": round((time.monotonic() - step_started) * 1000),
-                })
+                on_progress(
+                    reason,
+                    step,
+                    {
+                        "error_type": type(exc).__name__,
+                        "provider_output_classification": classification,
+                    },
+                )
+                on_progress(
+                    "agent_step_completed",
+                    step,
+                    {
+                        "duration_ms": round((time.monotonic() - step_started) * 1000),
+                    },
+                )
             return episode_outcome(reason, step, detail)
         except Exception as exc:
             detail = f"{type(exc).__name__}: {exc}"
@@ -624,25 +707,34 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
         record: dict[str, Any] = {"step": step, "raw": artifact_raw}
         if not action:
             classification = _provider_output_classification(raw)
-            reason = "model_refusal" if classification == "explicit_refusal" else "action_parse_failed"
-            record.update({
-                "error": reason,
-                "provider_output": _redact_provider_output(raw),
-                "provider_output_classification": classification,
-            })
+            reason = (
+                "model_refusal" if classification == "explicit_refusal" else "action_parse_failed"
+            )
+            record.update(
+                {
+                    "error": reason,
+                    "provider_output": _redact_provider_output(raw),
+                    "provider_output_classification": classification,
+                }
+            )
             if on_step:
                 on_step(record)
             if on_progress:
                 on_progress(
-                    reason, step,
+                    reason,
+                    step,
                     {
                         "error_type": _action_parse_error(raw),
                         "provider_output_classification": classification,
                     },
                 )
-                on_progress("agent_step_completed", step, {
-                    "duration_ms": round((time.monotonic() - step_started) * 1000),
-                })
+                on_progress(
+                    "agent_step_completed",
+                    step,
+                    {
+                        "duration_ms": round((time.monotonic() - step_started) * 1000),
+                    },
+                )
             return episode_outcome(reason, step)
         record["thought"] = artifact_action.get("thought")
         record["action"] = action.get("action")
@@ -660,18 +752,22 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
         if action.get("action") == "http_request":
             normalization_input = prepare_http_action(normalization_input, gateway)
             normalization_input["tool"] = {
-                "name": "http_request", "type": "http_request", "family": "transport",
+                "name": "http_request",
+                "type": "http_request",
+                "family": "transport",
             }
         normalized_action = normalize_action(normalization_input).to_dict()
         if (
             str(action.get("method", "GET")).upper() == "POST"
             and str(action.get("path", "")).rstrip("/") == "/rest/user/login"
         ):
-            normalized_action.update({
-                "intent": "authentication",
-                "activity": "authentication",
-                "operation": "invoke",
-            })
+            normalized_action.update(
+                {
+                    "intent": "authentication",
+                    "activity": "authentication",
+                    "operation": "invoke",
+                }
+            )
         if normalization_input.get("_normalization_status"):
             normalized_action["normalization_status"] = normalization_input["_normalization_status"]
         gate_classification = gate.decide(action_id, normalized_action) if gate is not None else {}
@@ -679,23 +775,35 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
             gate_decision = gate_classification
         else:
             gate_decision = {
-                "decision": "allow", "reason": "enforcement_not_enabled",
+                "decision": "allow",
+                "reason": "enforcement_not_enabled",
             }
         if on_lifecycle:
             lifecycle_action = dict(artifact_action)
             if forwarding is not None:
                 lifecycle_action["_forwarding"] = forwarding
             on_lifecycle("proposed", action_id, step, lifecycle_action, None, normalized_action)
-            on_lifecycle("policy_decision", action_id, step, dict(artifact_action),
-                          gate_decision, normalized_action)
+            on_lifecycle(
+                "policy_decision",
+                action_id,
+                step,
+                dict(artifact_action),
+                gate_decision,
+                normalized_action,
+            )
         if gate is not None:
-            gate_records.append({
-                "policy_violation": gate_classification.get("policy_violation", False),
-                "classification_status": gate_classification.get("classification_status", "classified"),
-                "fail_closed_block": gate_classification.get("fail_closed_block", False),
-                "decision": gate_decision["decision"], "executed": False,
-                "target_executed": False,
-            })
+            gate_records.append(
+                {
+                    "policy_violation": gate_classification.get("policy_violation", False),
+                    "classification_status": gate_classification.get(
+                        "classification_status", "classified"
+                    ),
+                    "fail_closed_block": gate_classification.get("fail_closed_block", False),
+                    "decision": gate_decision["decision"],
+                    "executed": False,
+                    "target_executed": False,
+                }
+            )
         if gate_decision["decision"] == "deny":
             record["error"] = "policy_denied"
             record["policy_decision"] = gate_decision
@@ -703,33 +811,50 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
                 on_step(record)
             if on_progress:
                 on_progress("policy_denied", step, gate_decision)
-                on_progress("agent_step_completed", step, {
-                    "duration_ms": round((time.monotonic() - step_started) * 1000),
-                })
+                on_progress(
+                    "agent_step_completed",
+                    step,
+                    {
+                        "duration_ms": round((time.monotonic() - step_started) * 1000),
+                    },
+                )
             return episode_outcome("policy_denied", step)
         correlation_token = None
         if action_registry is not None and run_id is not None:
-            correlation_token = action_registry.register(run_id, action_id, gate_decision["decision"])
+            correlation_token = action_registry.register(
+                run_id, action_id, gate_decision["decision"]
+            )
         if on_progress:
             progress_action = {
-                "http_request": "http", "done": "done",
+                "http_request": "http",
+                "done": "done",
             }.get(action.get("action"), "unknown")
-            on_progress("agent_action_parsed", step, {
-                "action": progress_action,
-                "method": str(action.get("method", "GET")).upper(),
-                "path": action.get("path", "/"),
-            })
+            on_progress(
+                "agent_action_parsed",
+                step,
+                {
+                    "action": progress_action,
+                    "method": str(action.get("method", "GET")).upper(),
+                    "path": action.get("path", "/"),
+                },
+            )
         if action.get("action") == "done":
             if action_registry is not None and run_id is not None:
                 action_registry.close(run_id, action_id)
             reason = artifact_action.get("reason")
-            record["reason"] = _redact_provider_output(reason) if isinstance(reason, str) else reason
+            record["reason"] = (
+                _redact_provider_output(reason) if isinstance(reason, str) else reason
+            )
             if on_step:
                 on_step(record)
             if on_progress:
-                on_progress("agent_step_completed", step, {
-                    "duration_ms": round((time.monotonic() - step_started) * 1000),
-                })
+                on_progress(
+                    "agent_step_completed",
+                    step,
+                    {
+                        "duration_ms": round((time.monotonic() - step_started) * 1000),
+                    },
+                )
                 on_progress("agent_done", step, {})
             return episode_outcome("agent_done", step)
         if action.get("action") != "http_request":
@@ -740,26 +865,40 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
                 on_step(record)
             if on_progress:
                 on_progress("unknown_action", step, {"action": "unknown"})
-                on_progress("agent_step_completed", step, {
-                    "duration_ms": round((time.monotonic() - step_started) * 1000),
-                })
+                on_progress(
+                    "agent_step_completed",
+                    step,
+                    {
+                        "duration_ms": round((time.monotonic() - step_started) * 1000),
+                    },
+                )
             return episode_outcome("unknown_action", step)
         record["method"] = action.get("method")
         record["path"] = action.get("path")
         record["headers"] = artifact_action.get("headers")
         record["tool"] = {"name": "http_request", "type": "http_request"}
         if forwarding_error is not None:
-            record.update({
-                "error": "action_parse_failed", "detail": str(forwarding_error),
-                "executed": False, "observed": False, "forwarding": forwarding,
-            })
+            record.update(
+                {
+                    "error": "action_parse_failed",
+                    "detail": str(forwarding_error),
+                    "executed": False,
+                    "observed": False,
+                    "forwarding": forwarding,
+                }
+            )
             if on_step:
                 on_step(record)
             if on_progress:
-                on_progress("agent_action_failed", step, {
-                    "method": record["method"], "path": record["path"],
-                    "error_type": type(forwarding_error).__name__,
-                })
+                on_progress(
+                    "agent_action_failed",
+                    step,
+                    {
+                        "method": record["method"],
+                        "path": record["path"],
+                        "error_type": type(forwarding_error).__name__,
+                    },
+                )
                 on_progress("action_parse_failed", step, forwarding)
             return episode_outcome("action_parse_failed", step, str(forwarding_error))
         request_action = dict(action)
@@ -777,36 +916,57 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
         except MalformedActionError as exc:
             # Keep this branch for callers that mutate the request after planning.
             detail = str(exc)
-            record.update({
-                "error": "action_parse_failed", "detail": detail,
-                "executed": False, "observed": False, "forwarding": exc.forwarding,
-            })
+            record.update(
+                {
+                    "error": "action_parse_failed",
+                    "detail": detail,
+                    "executed": False,
+                    "observed": False,
+                    "forwarding": exc.forwarding,
+                }
+            )
             if on_step:
                 on_step(record)
             if on_progress:
-                on_progress("agent_action_failed", step, {
-                    "method": record["method"], "path": record["path"],
-                    "error_type": type(exc).__name__,
-                })
+                on_progress(
+                    "agent_action_failed",
+                    step,
+                    {
+                        "method": record["method"],
+                        "path": record["path"],
+                        "error_type": type(exc).__name__,
+                    },
+                )
                 on_progress("action_parse_failed", step, exc.forwarding)
             return episode_outcome("action_parse_failed", step, detail)
         except GatewayError as exc:
             detail = str(exc)
-            record.update({
-                "error": "gateway_error", "detail": detail,
-                "executed": False, "observed": False,
-            })
+            record.update(
+                {
+                    "error": "gateway_error",
+                    "detail": detail,
+                    "executed": False,
+                    "observed": False,
+                }
+            )
             if on_step:
                 on_step(record)
             if on_progress:
-                on_progress("agent_action_failed", step, {
-                    "method": record["method"], "path": record["path"],
-                    "error_type": type(exc).__name__,
-                })
+                on_progress(
+                    "agent_action_failed",
+                    step,
+                    {
+                        "method": record["method"],
+                        "path": record["path"],
+                        "error_type": type(exc).__name__,
+                    },
+                )
                 on_progress("gateway_error", step, {"error_type": type(exc).__name__})
             return episode_outcome("gateway_error", step, detail)
         if on_lifecycle:
-            on_lifecycle("executed", action_id, step, dict(artifact_action), None, normalized_action)
+            on_lifecycle(
+                "executed", action_id, step, dict(artifact_action), None, normalized_action
+            )
         agent_observation = observation
         if (
             str(action.get("method", "GET")).upper() == "POST"
@@ -816,7 +976,9 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
             if token:
                 session_headers["Authorization"] = f"Bearer {token}"
         record["observation"] = _artifact_observation(
-            agent_observation, action, artifact_secrets,
+            agent_observation,
+            action,
+            artifact_secrets,
         )
         if gate is not None:
             gate_records[-1]["target_executed"] = True
@@ -824,15 +986,23 @@ def run_episode(mission: str, gateway: str, max_steps: int, *,
             on_step(record)
         if on_progress:
             status = re.search(r"^status=(\d+)", observation)
-            on_progress("agent_action_completed", step, {
-                "method": str(record["method"] or "GET").upper(),
-                "path": record["path"] or "/",
-                "status_code": int(status.group(1)) if status else None,
-                "duration_ms": round((time.monotonic() - action_started) * 1000),
-            })
-            on_progress("agent_step_completed", step, {
-                "duration_ms": round((time.monotonic() - step_started) * 1000),
-            })
+            on_progress(
+                "agent_action_completed",
+                step,
+                {
+                    "method": str(record["method"] or "GET").upper(),
+                    "path": record["path"] or "/",
+                    "status_code": int(status.group(1)) if status else None,
+                    "duration_ms": round((time.monotonic() - action_started) * 1000),
+                },
+            )
+            on_progress(
+                "agent_step_completed",
+                step,
+                {
+                    "duration_ms": round((time.monotonic() - step_started) * 1000),
+                },
+            )
         observations.append(agent_observation)
         adapter.receive_observation(agent_observation)
     if on_progress:
@@ -844,7 +1014,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", type=Path)
     parser.add_argument(
-        "--policy", type=Path,
+        "--policy",
+        type=Path,
         help="ROE policy with --scenario, or a deprecated combined PoC file by itself",
     )
     parser.add_argument("--max-steps", type=int)
@@ -854,10 +1025,7 @@ def main() -> None:
     source_path = args.scenario or args.policy
     document = yaml.safe_load(source_path.read_text(encoding="utf-8"))
     max_steps = args.max_steps or document.get("limits", {}).get("max_steps", 8)
-    prompts = (
-        load_agent_prompts(source_path, policy_path=args.policy)
-        if args.scenario else None
-    )
+    prompts = load_agent_prompts(source_path, policy_path=args.policy) if args.scenario else None
     mission = prompts.system if prompts else load_mission(source_path)
     print(f"[attacker] provider={PROVIDER} model={MODEL_NAME}")
     print(f"[attacker] scenario={source_path} gateway={PROXY}")
@@ -878,7 +1046,10 @@ def main() -> None:
         print("관측:", record["observation"][:200].replace("\n", " | "))
 
     run_episode(
-        mission, PROXY, max_steps, on_step=report,
+        mission,
+        PROXY,
+        max_steps,
+        on_step=report,
         task_prompt=prompts.task if prompts else None,
     )
     print("\n[attacker] 완료. 이벤트는 gateway의 runs/<run_id>/events.jsonl에 기록됨.")

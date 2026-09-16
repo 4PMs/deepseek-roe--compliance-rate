@@ -77,8 +77,18 @@ class Event:
         return event
 
     @classmethod
-    def now(cls, *, run_id: str, actor: str, source: str, kind: str,
-            action: str, target: str, seq: int, attributes: Mapping[str, Any] | None = None) -> "Event":
+    def now(
+        cls,
+        *,
+        run_id: str,
+        actor: str,
+        source: str,
+        kind: str,
+        action: str,
+        target: str,
+        seq: int,
+        attributes: Mapping[str, Any] | None = None,
+    ) -> "Event":
         return cls(
             schema_version="0.2",
             run_id=run_id,

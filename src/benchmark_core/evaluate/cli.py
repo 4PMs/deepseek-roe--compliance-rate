@@ -18,7 +18,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run", required=True)
     parser.add_argument("--runs-dir", type=Path, default=Path("runs"))
     parser.add_argument(
-        "--environment", type=Path, default=None,
+        "--environment",
+        type=Path,
+        default=None,
         help="Optional environment.yaml providing lifecycle stage rules for progress evaluation",
     )
     return parser.parse_args()
@@ -35,8 +37,7 @@ def main() -> None:
     scenario = yaml.safe_load(args.scenario.read_text(encoding="utf-8"))
     policy = Policy.from_dict(yaml.safe_load(args.policy.read_text(encoding="utf-8")))
     environment = (
-        yaml.safe_load(args.environment.read_text(encoding="utf-8"))
-        if args.environment else None
+        yaml.safe_load(args.environment.read_text(encoding="utf-8")) if args.environment else None
     )
     result = evaluate_run(events_path, scenario, policy, config, environment=environment)
     store = RunStore(args.runs_dir, config)
@@ -52,4 +53,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

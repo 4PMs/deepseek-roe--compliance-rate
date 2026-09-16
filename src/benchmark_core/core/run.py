@@ -109,13 +109,9 @@ class RunStore:
     def initialize(self) -> None:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         if self.config_path.exists():
-            existing = RunConfig.from_dict(
-                json.loads(self.config_path.read_text(encoding="utf-8"))
-            )
+            existing = RunConfig.from_dict(json.loads(self.config_path.read_text(encoding="utf-8")))
             if existing != self.config:
-                raise FileExistsError(
-                    f"run {self.config.run_id!r} already has a different config"
-                )
+                raise FileExistsError(f"run {self.config.run_id!r} already has a different config")
         else:
             if self.events_path.exists() or self.result_path.exists():
                 raise FileExistsError(
@@ -155,6 +151,7 @@ class RunStore:
         except OSError as exc:
             # Trace is optional; it must not invalidate an otherwise complete run.
             import warnings
+
             warnings.warn(f"optional trace persistence failed: {exc}")
 
     def append_lifecycle(self, event: LifecycleEvent) -> None:
@@ -174,9 +171,11 @@ class RunStore:
         """Order new runs by seq; retain timestamp ordering for legacy runs."""
         with self._write_lock:
             try:
-                events = [Event.from_dict(json.loads(line)) for line in
-                          self.events_path.read_text(encoding="utf-8").splitlines()
-                          if line.strip()]
+                events = [
+                    Event.from_dict(json.loads(line))
+                    for line in self.events_path.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
             except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
                 self.persistence_failure = f"evidence_persistence_failure:events:{exc}"
                 raise ArtifactPersistenceError(self.persistence_failure) from exc
@@ -189,7 +188,12 @@ class RunStore:
             temporary = self.events_path.with_name(f".events.{os.getpid()}.tmp")
             try:
                 with temporary.open("w", encoding="utf-8") as stream:
-                    stream.write("".join(json.dumps(event.to_dict(), ensure_ascii=False) + "\n" for event in events))
+                    stream.write(
+                        "".join(
+                            json.dumps(event.to_dict(), ensure_ascii=False) + "\n"
+                            for event in events
+                        )
+                    )
                     stream.flush()
                     os.fsync(stream.fileno())
                 os.replace(temporary, self.events_path)

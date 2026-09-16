@@ -12,24 +12,62 @@ from urllib.parse import parse_qsl, urlsplit
 
 
 RUN_STATES = {
-    "initializing", "resetting_target", "verifying_target", "provisioning",
-    "starting_observers", "starting_gateway", "running_agent", "evaluating",
-    "saving_result", "completed", "failed", "interrupted",
+    "initializing",
+    "resetting_target",
+    "verifying_target",
+    "provisioning",
+    "starting_observers",
+    "starting_gateway",
+    "running_agent",
+    "evaluating",
+    "saving_result",
+    "completed",
+    "failed",
+    "interrupted",
 }
 
 EVENT_TYPES = {
-    "run_created", "run_started", "state_changed",
-    "target_reset_started", "target_reset_completed", "target_reset_failed",
-    "target_verify_started", "target_verify_completed", "target_verify_failed",
-    "scenario_provision_started", "scenario_provision_completed",
-    "scenario_provision_failed", "database_observer_started",
-    "database_observer_failed", "gateway_started", "gateway_failed",
-    "agent_started", "agent_step_started", "agent_action_parsed",
-    "agent_action_completed", "agent_action_failed", "agent_step_completed",
-    "agent_done", "action_parse_failed", "model_refusal", "policy_denied", "unknown_action", "max_steps_reached",
-    "provider_error", "adapter_error", "gateway_error", "target_error", "evaluation_started",
-    "evaluation_completed", "evaluation_failed", "result_save_started",
-    "result_saved", "run_interrupted", "run_completed", "run_failed", "heartbeat",
+    "run_created",
+    "run_started",
+    "state_changed",
+    "target_reset_started",
+    "target_reset_completed",
+    "target_reset_failed",
+    "target_verify_started",
+    "target_verify_completed",
+    "target_verify_failed",
+    "scenario_provision_started",
+    "scenario_provision_completed",
+    "scenario_provision_failed",
+    "database_observer_started",
+    "database_observer_failed",
+    "gateway_started",
+    "gateway_failed",
+    "agent_started",
+    "agent_step_started",
+    "agent_action_parsed",
+    "agent_action_completed",
+    "agent_action_failed",
+    "agent_step_completed",
+    "agent_done",
+    "action_parse_failed",
+    "model_refusal",
+    "policy_denied",
+    "unknown_action",
+    "max_steps_reached",
+    "provider_error",
+    "adapter_error",
+    "gateway_error",
+    "target_error",
+    "evaluation_started",
+    "evaluation_completed",
+    "evaluation_failed",
+    "result_save_started",
+    "result_saved",
+    "run_interrupted",
+    "run_completed",
+    "run_failed",
+    "heartbeat",
 }
 # ponytail: heartbeat is producer-driven; add a scheduler only for measured long silent waits.
 
@@ -62,9 +100,16 @@ def read_progress(path: Path) -> list[dict[str, Any]]:
 class ProgressReporter:
     """Append progress events and atomically maintain status.json."""
 
-    def __init__(self, run_dir: Path, run_id: str, scenario: str, policy: str,
-                 max_steps: int, console_mode: str = "human",
-                 stream: TextIO | None = None) -> None:
+    def __init__(
+        self,
+        run_dir: Path,
+        run_id: str,
+        scenario: str,
+        policy: str,
+        max_steps: int,
+        console_mode: str = "human",
+        stream: TextIO | None = None,
+    ) -> None:
         if console_mode not in {"human", "json", "quiet"}:
             raise ValueError("console_mode must be human, json, or quiet")
         self.run_dir = Path(run_dir)
@@ -86,10 +131,7 @@ class ProgressReporter:
         history = read_progress(self.progress_path)
         self._seq = max((event.get("seq", 0) for event in history), default=0)
         self._lock = Lock()
-        started_at = (
-            history[0].get("ts") if history
-            else datetime.now(timezone.utc).isoformat()
-        )
+        started_at = history[0].get("ts") if history else datetime.now(timezone.utc).isoformat()
         self._status = {
             "run_id": run_id,
             "scenario": scenario,
@@ -110,8 +152,14 @@ class ProgressReporter:
         for event in history:
             self._update_status(event)
 
-    def emit(self, event_type: str, *, state: str, step: int | None = None,
-             detail: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    def emit(
+        self,
+        event_type: str,
+        *,
+        state: str,
+        step: int | None = None,
+        detail: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
         if event_type not in EVENT_TYPES:
             raise ValueError(f"unknown progress event type: {event_type}")
         if state not in RUN_STATES:
@@ -143,14 +191,17 @@ class ProgressReporter:
     def _update_status(self, event: Mapping[str, Any]) -> None:
         detail = event["detail"]
         self._status.update(
-            state=event["state"], step=event["step"],
-            last_event=event["type"], updated_at=event["ts"],
+            state=event["state"],
+            step=event["step"],
+            last_event=event["type"],
+            updated_at=event["ts"],
         )
         if event["step"] is not None:
             self._status["agent"]["current_step"] = event["step"]
         if event["type"] in {"agent_action_parsed", "agent_action_completed"}:
             self._status["agent"]["last_action"] = {
-                key: detail[key] for key in ("action", "method", "path", "query_keys", "status_code")
+                key: detail[key]
+                for key in ("action", "method", "path", "query_keys", "status_code")
                 if key in detail
             }
         if event["type"] == "evaluation_completed":
@@ -213,9 +264,15 @@ class ProgressReporter:
         elif event_type == "result_saved":
             message = "[runner] result: saved"
         elif event_type.endswith("_failed") or event_type in {
-            "provider_error", "adapter_error", "gateway_error", "target_error", "action_parse_failed",
+            "provider_error",
+            "adapter_error",
+            "gateway_error",
+            "target_error",
+            "action_parse_failed",
             "model_refusal",
-            "unknown_action", "max_steps_reached", "agent_done",
+            "unknown_action",
+            "max_steps_reached",
+            "agent_done",
         }:
             message = f"[runner] {event_type}"
         else:
@@ -232,7 +289,9 @@ def _sanitize_detail(detail: Mapping[str, Any]) -> dict[str, Any]:
         if name in {"path", "url", "target"} and isinstance(value, str):
             parsed = urlsplit(value)
             clean["path" if name != "target" else name] = parsed.path or "/"
-            query_keys = sorted({item[0] for item in parse_qsl(parsed.query, keep_blank_values=True)})
+            query_keys = sorted(
+                {item[0] for item in parse_qsl(parsed.query, keep_blank_values=True)}
+            )
             if query_keys:
                 clean["query_keys"] = query_keys
             continue

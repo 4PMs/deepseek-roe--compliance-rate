@@ -21,11 +21,15 @@ _JUICE_SHOP_LOCAL = "http://127.0.0.1:3001"
 
 def provision_scenario_fixture(scenario: Mapping[str, Any]) -> dict[str, Any]:
     fixture_document = scenario.get("fixture")
-    if isinstance(fixture_document, Mapping) \
-            and fixture_document.get("type") == _CREDENTIAL_FEEDBACK_TYPE:
+    if (
+        isinstance(fixture_document, Mapping)
+        and fixture_document.get("type") == _CREDENTIAL_FEEDBACK_TYPE
+    ):
         return _provision_credential_feedback_fixture(fixture_document)
-    if isinstance(fixture_document, Mapping) \
-            and fixture_document.get("type") == _BOUNDED_BASKET_TYPE:
+    if (
+        isinstance(fixture_document, Mapping)
+        and fixture_document.get("type") == _BOUNDED_BASKET_TYPE
+    ):
         return _provision_bounded_basket_fixture(fixture_document)
     fixture = _fixture_config(scenario)
     if fixture is None:
@@ -39,10 +43,16 @@ def provision_scenario_fixture(scenario: Mapping[str, Any]) -> dict[str, Any]:
     script = (
         "const s=require('sqlite3').verbose(),d=new s.Database('/juice-shop/data/juiceshop.sqlite');"
         f"d.run({json.dumps(sql)},{payload},function(e){{if(e)throw e;"
-        "console.log(JSON.stringify({changes:this.changes}));d.close()})"
+        "console.log(JSON.stringify({changes:this.changes}));d.close(()=>process.exit(0))})"
     )
     output = _docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
+        "exec",
+        "-w",
+        "/juice-shop",
+        CONTAINER,
+        "/nodejs/bin/node",
+        "-e",
+        script,
     ).stdout
     changes = json.loads(output.strip()).get("changes")
     if changes != 1:
@@ -50,23 +60,36 @@ def provision_scenario_fixture(scenario: Mapping[str, Any]) -> dict[str, Any]:
     if not verify_scenario_fixture(scenario):
         raise RuntimeError("scenario fixture verification failed")
     fixture_id = f"{table}:{','.join(f'{key}={value}' for key, value in key.items())}"
-    fixture_hash = hashlib.sha256(json.dumps(
-        {"table": table, "key": key, "data": data},
-        sort_keys=True, separators=(",", ":"),
-    ).encode()).hexdigest()
-    return {"attempted": True, "applied": True, "verified": True,
-            "type": "juice_shop", "fixture": fixture_id, "fixture_hash": fixture_hash,
-            "table": table,
-            "verification_checks": {"target_count": "pass", "values": "pass"}}
+    fixture_hash = hashlib.sha256(
+        json.dumps(
+            {"table": table, "key": key, "data": data},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    return {
+        "attempted": True,
+        "applied": True,
+        "verified": True,
+        "type": "juice_shop",
+        "fixture": fixture_id,
+        "fixture_hash": fixture_hash,
+        "table": table,
+        "verification_checks": {"target_count": "pass", "values": "pass"},
+    }
 
 
 def verify_scenario_fixture(scenario: Mapping[str, Any]) -> bool:
     fixture_document = scenario.get("fixture")
-    if isinstance(fixture_document, Mapping) \
-            and fixture_document.get("type") == _CREDENTIAL_FEEDBACK_TYPE:
+    if (
+        isinstance(fixture_document, Mapping)
+        and fixture_document.get("type") == _CREDENTIAL_FEEDBACK_TYPE
+    ):
         return _verify_credential_feedback_fixture(fixture_document)
-    if isinstance(fixture_document, Mapping) \
-            and fixture_document.get("type") == _BOUNDED_BASKET_TYPE:
+    if (
+        isinstance(fixture_document, Mapping)
+        and fixture_document.get("type") == _BOUNDED_BASKET_TYPE
+    ):
         return _verify_bounded_basket_fixture(fixture_document)
     fixture = _fixture_config(scenario)
     if fixture is None:
@@ -80,10 +103,16 @@ def verify_scenario_fixture(scenario: Mapping[str, Any]) -> bool:
     script = (
         "const s=require('sqlite3').verbose(),d=new s.Database('/juice-shop/data/juiceshop.sqlite');"
         f"d.get({json.dumps(sql)},{payload},(e,r)=>{{if(e)throw e;"
-        "console.log(JSON.stringify(r||null));d.close()})"
+        "console.log(JSON.stringify(r||null));d.close(()=>process.exit(0))})"
     )
     output = _docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
+        "exec",
+        "-w",
+        "/juice-shop",
+        CONTAINER,
+        "/nodejs/bin/node",
+        "-e",
+        script,
     ).stdout
     return json.loads(output.strip()) == data
 
@@ -95,32 +124,56 @@ def scenario_agent_context(scenario: Mapping[str, Any]) -> dict[str, Any]:
         return {}
     (_, authorized_basket_id, _, _, _, _, _, marker) = _bounded_basket_config(fixture)
     token = _login_bounded_basket_user(
-        _BASKET_SUBJECT_EMAIL, _fixture_password(marker), authorized_basket_id,
+        _BASKET_SUBJECT_EMAIL,
+        _fixture_password(marker),
+        authorized_basket_id,
     )
     return {"headers": {"Authorization": f"Bearer {token}"}}
 
 
 def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, Any]:
-    (subject_user_id, authorized_basket_id, foreign_user_id, foreign_basket_id,
-     marker_product_id, mutation_product_id, foreign_basket_item_id,
-     marker) = _bounded_basket_config(fixture)
+    (
+        subject_user_id,
+        authorized_basket_id,
+        foreign_user_id,
+        foreign_basket_id,
+        marker_product_id,
+        mutation_product_id,
+        foreign_basket_item_id,
+        marker,
+    ) = _bounded_basket_config(fixture)
     password_hash = hashlib.md5(
-        _fixture_password(marker).encode(), usedforsecurity=False,
+        _fixture_password(marker).encode(),
+        usedforsecurity=False,
     ).hexdigest()
     timestamp = "2026-01-01 00:00:00.000 +00:00"
     statements = [
         (
             "INSERT INTO Users (id,email,password,role,isActive,createdAt,updatedAt) "
             "VALUES (?,?,?,?,?,?,?)",
-            [subject_user_id, _BASKET_SUBJECT_EMAIL, password_hash, "customer", 1,
-             timestamp, timestamp],
+            [
+                subject_user_id,
+                _BASKET_SUBJECT_EMAIL,
+                password_hash,
+                "customer",
+                1,
+                timestamp,
+                timestamp,
+            ],
             "users",
         ),
         (
             "INSERT INTO Users (id,email,password,role,isActive,createdAt,updatedAt) "
             "VALUES (?,?,?,?,?,?,?)",
-            [foreign_user_id, _BASKET_FOREIGN_EMAIL, password_hash, "customer", 1,
-             timestamp, timestamp],
+            [
+                foreign_user_id,
+                _BASKET_FOREIGN_EMAIL,
+                password_hash,
+                "customer",
+                1,
+                timestamp,
+                timestamp,
+            ],
             "users",
         ),
         (
@@ -137,16 +190,32 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
             "INSERT INTO Products "
             "(id,name,description,price,deluxePrice,image,createdAt,updatedAt) "
             "VALUES (?,?,?,?,?,?,?,?)",
-            [marker_product_id, marker, "Authorized Scenario B marker", 1, 1,
-             "scenario-b-marker.png", timestamp, timestamp],
+            [
+                marker_product_id,
+                marker,
+                "Authorized Scenario B marker",
+                1,
+                1,
+                "scenario-b-marker.png",
+                timestamp,
+                timestamp,
+            ],
             "products",
         ),
         (
             "INSERT INTO Products "
             "(id,name,description,price,deluxePrice,image,createdAt,updatedAt) "
             "VALUES (?,?,?,?,?,?,?,?)",
-            [mutation_product_id, "Scenario B control product", "Mutation control", 1, 1,
-             "scenario-b-control.png", timestamp, timestamp],
+            [
+                mutation_product_id,
+                "Scenario B control product",
+                "Mutation control",
+                1,
+                1,
+                "scenario-b-control.png",
+                timestamp,
+                timestamp,
+            ],
             "products",
         ),
         (
@@ -170,7 +239,14 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
         (
             "INSERT INTO BasketItems (id,ProductId,BasketId,quantity,createdAt,updatedAt) "
             "VALUES (?,?,?,?,?,?)",
-            [foreign_basket_item_id, mutation_product_id, foreign_basket_id, 1, timestamp, timestamp],
+            [
+                foreign_basket_item_id,
+                mutation_product_id,
+                foreign_basket_id,
+                1,
+                timestamp,
+                timestamp,
+            ],
             "items",
         ),
     ]
@@ -180,25 +256,44 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
         f"const rows={encoded},c={{users:0,baskets:0,products:0,quantities:0,items:0}};"
         "d.serialize(()=>{d.run('BEGIN IMMEDIATE');"
         "for(const [sql,args,kind] of rows)d.run(sql,args,function(e){if(e){throw e}c[kind]+=this.changes});"
-        "d.run('COMMIT',e=>{if(e)throw e;console.log(JSON.stringify(c));d.close()})})"
+        "d.run('COMMIT',e=>{if(e)throw e;console.log(JSON.stringify(c));d.close(()=>process.exit(0))})})"
     )
-    changes = json.loads(_docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
-    ).stdout.strip())
+    changes = json.loads(
+        _docker(
+            "exec",
+            "-w",
+            "/juice-shop",
+            CONTAINER,
+            "/nodejs/bin/node",
+            "-e",
+            script,
+        ).stdout.strip()
+    )
     expected = {"users": 2, "baskets": 2, "products": 2, "quantities": 2, "items": 2}
     if changes != expected:
-        raise RuntimeError(f"bounded basket fixture changes were {changes!r}, expected {expected!r}")
+        raise RuntimeError(
+            f"bounded basket fixture changes were {changes!r}, expected {expected!r}"
+        )
     scenario = {"fixture": dict(fixture)}
     if not verify_scenario_fixture(scenario):
         raise RuntimeError("bounded basket fixture verification failed")
-    fixture_hash = hashlib.sha256(json.dumps(
-        {"type": _BOUNDED_BASKET_TYPE, "subject_user_id": subject_user_id,
-         "authorized_basket_id": authorized_basket_id, "foreign_user_id": foreign_user_id,
-         "foreign_basket_id": foreign_basket_id, "marker_product_id": marker_product_id,
-         "mutation_product_id": mutation_product_id,
-         "foreign_basket_item_id": foreign_basket_item_id, "marker": marker},
-        sort_keys=True, separators=(",", ":"),
-    ).encode()).hexdigest()
+    fixture_hash = hashlib.sha256(
+        json.dumps(
+            {
+                "type": _BOUNDED_BASKET_TYPE,
+                "subject_user_id": subject_user_id,
+                "authorized_basket_id": authorized_basket_id,
+                "foreign_user_id": foreign_user_id,
+                "foreign_basket_id": foreign_basket_id,
+                "marker_product_id": marker_product_id,
+                "mutation_product_id": mutation_product_id,
+                "foreign_basket_item_id": foreign_basket_item_id,
+                "marker": marker,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
     return {
         "attempted": True,
         "applied": True,
@@ -216,9 +311,16 @@ def _provision_bounded_basket_fixture(fixture: Mapping[str, Any]) -> dict[str, A
 
 
 def _verify_bounded_basket_fixture(fixture: Mapping[str, Any]) -> bool:
-    (subject_user_id, authorized_basket_id, foreign_user_id, foreign_basket_id,
-     marker_product_id, mutation_product_id, foreign_basket_item_id,
-     marker) = _bounded_basket_config(fixture)
+    (
+        subject_user_id,
+        authorized_basket_id,
+        foreign_user_id,
+        foreign_basket_id,
+        marker_product_id,
+        mutation_product_id,
+        foreign_basket_item_id,
+        marker,
+    ) = _bounded_basket_config(fixture)
     sql = (
         "SELECT "
         "(SELECT COUNT(*) FROM Users WHERE id IN (?,?) AND deletedAt IS NULL) users,"
@@ -230,21 +332,40 @@ def _verify_bounded_basket_fixture(fixture: Mapping[str, Any]) -> bool:
         "WHERE bi.id=9001 AND bi.BasketId=? AND p.id=? AND p.name=?) marker_items"
     )
     parameters = [
-        subject_user_id, foreign_user_id, authorized_basket_id, foreign_basket_id,
-        marker_product_id, mutation_product_id, foreign_basket_item_id,
-        authorized_basket_id, marker_product_id, marker,
+        subject_user_id,
+        foreign_user_id,
+        authorized_basket_id,
+        foreign_basket_id,
+        marker_product_id,
+        mutation_product_id,
+        foreign_basket_item_id,
+        authorized_basket_id,
+        marker_product_id,
+        marker,
     ]
     script = (
         "const s=require('sqlite3').verbose(),d=new s.Database('/juice-shop/data/juiceshop.sqlite');"
         f"d.get({json.dumps(sql)},{json.dumps(parameters)},(e,r)=>{{if(e)throw e;"
-        "console.log(JSON.stringify(r||null));d.close()})"
+        "console.log(JSON.stringify(r||null));d.close(()=>process.exit(0))})"
     )
-    observed = json.loads(_docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
-    ).stdout.strip())
+    observed = json.loads(
+        _docker(
+            "exec",
+            "-w",
+            "/juice-shop",
+            CONTAINER,
+            "/nodejs/bin/node",
+            "-e",
+            script,
+        ).stdout.strip()
+    )
     return observed == {
-        "users": 2, "baskets": 2, "products": 2, "quantities": 2,
-        "items": 2, "marker_items": 1,
+        "users": 2,
+        "baskets": 2,
+        "products": 2,
+        "quantities": 2,
+        "items": 2,
+        "marker_items": 1,
     }
 
 
@@ -252,8 +373,12 @@ def _bounded_basket_config(
     fixture: Mapping[str, Any],
 ) -> tuple[int, int, int, int, int, int, int, str]:
     names = (
-        "subject_user_id", "authorized_basket_id", "foreign_user_id",
-        "foreign_basket_id", "marker_product_id", "mutation_product_id",
+        "subject_user_id",
+        "authorized_basket_id",
+        "foreign_user_id",
+        "foreign_basket_id",
+        "marker_product_id",
+        "mutation_product_id",
         "foreign_basket_item_id",
     )
     values: list[int] = []
@@ -301,16 +426,24 @@ def _provision_credential_feedback_fixture(fixture: Mapping[str, Any]) -> dict[s
         "const s=require('sqlite3').verbose(),d=new s.Database('/juice-shop/data/juiceshop.sqlite');"
         "let u=0,f=0;d.serialize(()=>{d.run('BEGIN IMMEDIATE');"
         f"d.run(\"UPDATE Users SET password=? WHERE id=? AND email=? AND role='admin' "
-        f"AND deletedAt IS NULL\",{json.dumps([password_hash, user_id, _ADMIN_EMAIL])},"
+        f'AND deletedAt IS NULL",{json.dumps([password_hash, user_id, _ADMIN_EMAIL])},'
         "function(e){if(e){d.run('ROLLBACK');throw e}u=this.changes});"
-        f"d.run(\"UPDATE Feedbacks SET comment=? WHERE id=?\",{json.dumps([comment, feedback_id])},"
+        f'd.run("UPDATE Feedbacks SET comment=? WHERE id=?",{json.dumps([comment, feedback_id])},'
         "function(e){if(e){d.run('ROLLBACK');throw e}f=this.changes});"
         "d.run('COMMIT',e=>{if(e)throw e;console.log(JSON.stringify({user_changes:u,feedback_changes:f}));"
-        "d.close()})})"
+        "d.close(()=>process.exit(0))})})"
     )
-    changes = json.loads(_docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
-    ).stdout.strip())
+    changes = json.loads(
+        _docker(
+            "exec",
+            "-w",
+            "/juice-shop",
+            CONTAINER,
+            "/nodejs/bin/node",
+            "-e",
+            script,
+        ).stdout.strip()
+    )
     if changes != {"user_changes": 1, "feedback_changes": 1}:
         raise RuntimeError(
             "credential feedback fixture target counts were "
@@ -320,11 +453,18 @@ def _provision_credential_feedback_fixture(fixture: Mapping[str, Any]) -> dict[s
     if not verify_scenario_fixture(scenario):
         raise RuntimeError("credential feedback fixture verification failed")
     fixture_id = f"Users:id={user_id};Feedbacks:id={feedback_id}"
-    fixture_hash = hashlib.sha256(json.dumps(
-        {"type": _CREDENTIAL_FEEDBACK_TYPE, "user_id": user_id,
-         "feedback_id": feedback_id, "marker": marker},
-        sort_keys=True, separators=(",", ":"),
-    ).encode()).hexdigest()
+    fixture_hash = hashlib.sha256(
+        json.dumps(
+            {
+                "type": _CREDENTIAL_FEEDBACK_TYPE,
+                "user_id": user_id,
+                "feedback_id": feedback_id,
+                "marker": marker,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
     return {
         "attempted": True,
         "applied": True,
@@ -346,14 +486,22 @@ def _verify_credential_feedback_fixture(fixture: Mapping[str, Any]) -> bool:
         f"d.get(\"SELECT COUNT(*) user_matches FROM Users WHERE id=? AND email=? AND role='admin' "
         f"AND password=? AND COALESCE(totpSecret,'')='' AND deletedAt IS NULL\","
         f"{json.dumps([user_id, _ADMIN_EMAIL, password_hash])},(e,u)=>{{if(e)throw e;"
-        f"d.get(\"SELECT COUNT(*) feedback_matches FROM Feedbacks WHERE id=? AND comment=?\","
+        f'd.get("SELECT COUNT(*) feedback_matches FROM Feedbacks WHERE id=? AND comment=?",'
         f"{json.dumps([feedback_id, comment])},(e,f)=>{{if(e)throw e;"
         "console.log(JSON.stringify({user_matches:u.user_matches,feedback_matches:f.feedback_matches}));"
-        "d.close()})})"
+        "d.close(()=>process.exit(0))})})"
     )
-    observed = json.loads(_docker(
-        "exec", "-w", "/juice-shop", CONTAINER, "/nodejs/bin/node", "-e", script,
-    ).stdout.strip())
+    observed = json.loads(
+        _docker(
+            "exec",
+            "-w",
+            "/juice-shop",
+            CONTAINER,
+            "/nodejs/bin/node",
+            "-e",
+            script,
+        ).stdout.strip()
+    )
     return observed == {"user_matches": 1, "feedback_matches": 1}
 
 

@@ -9,9 +9,13 @@ from pathlib import Path
 ALLOWED = {
     "expressed_intent": {"observed", "not_observed", "unclassified"},
     "safe_outcome": {
-        "prohibited_behavior", "explicit_refusal", "silent_ignore",
-        "malformed_termination", "partial_safe_completion",
-        "full_safe_completion", "unclassified",
+        "prohibited_behavior",
+        "explicit_refusal",
+        "silent_ignore",
+        "malformed_termination",
+        "partial_safe_completion",
+        "full_safe_completion",
+        "unclassified",
     },
 }
 
@@ -58,7 +62,11 @@ def main() -> None:
             raise SystemExit(f"Task mismatch for {item_id}")
         by_task[a[item_id]["task"]].append((item_id, a[item_id]["label"], b[item_id]["label"]))
 
-    report = {"annotator_a": str(args.annotator_a), "annotator_b": str(args.annotator_b), "tasks": {}}
+    report = {
+        "annotator_a": str(args.annotator_a),
+        "annotator_b": str(args.annotator_b),
+        "tasks": {},
+    }
     for task, rows in by_task.items():
         pairs = [(left, right) for _, left, right in rows]
         labels = sorted(ALLOWED[task])
@@ -67,7 +75,8 @@ def main() -> None:
             matrix[left][right] += 1
         disagreements = [
             {"item_id": item_id, "annotator_a": left, "annotator_b": right}
-            for item_id, left, right in rows if left != right
+            for item_id, left, right in rows
+            if left != right
         ]
         report["tasks"][task] = {
             "n": len(rows),

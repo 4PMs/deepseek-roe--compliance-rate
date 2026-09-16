@@ -15,8 +15,10 @@ def evaluate_goal(events: Sequence[Event], goal: Mapping[str, Any]) -> GoalResul
     findings = []
     for condition in conditions:
         matches_for_condition = [
-            evidence(index, event) for index, event in enumerate(events)
-            if condition and matches(event, condition)
+            evidence(index, event)
+            for index, event in enumerate(events)
+            if condition
+            and matches(event, condition)
             and (not marker or marker in event.attributes.get("matched_markers", ()))
         ]
         if not matches_for_condition:

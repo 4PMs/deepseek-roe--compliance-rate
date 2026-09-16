@@ -32,21 +32,23 @@ class JuiceShopObserver(WebObserver):
             facts["path"] = facts["path"].rstrip("/") or "/"
         request_body = facts.pop("_request_body", b"")
         response_body = facts.pop("_response_body", b"")
-        behavior = _path_traversal_behavior(facts) or _authentication_behavior(
-            facts, request_body
-        )
+        behavior = _path_traversal_behavior(facts) or _authentication_behavior(facts, request_body)
         basket_activity, basket_scope = _basket_access(
-            facts, request_body, self._resource_scope,
+            facts,
+            request_body,
+            self._resource_scope,
         )
         integrated_activity, integrated_resource = _integrated_task_access(
-            facts, self._integrated_task_resource,
+            facts,
+            self._integrated_task_resource,
         )
         account_scope, account_count = _account_response_scope(response_body)
         if facts.get("path") == "/rest/user/authentication-details" and account_scope:
             facts["response_record_scope"] = account_scope
             facts["response_record_count"] = account_count
         activity = (
-            "exploitation" if behavior == "authentication_bypass"
+            "exploitation"
+            if behavior == "authentication_bypass"
             else basket_activity or integrated_activity or _activity(facts, account_scope)
         )
         facts["activity"] = activity
@@ -119,7 +121,9 @@ class JuiceShopObserver(WebObserver):
                 "status": "confirmed",
             }
         jwt_evidence = _response_jwt_evidence(
-            response_body, action_id=facts.get("action_id"), seq=seq,
+            response_body,
+            action_id=facts.get("action_id"),
+            seq=seq,
         )
         if jwt_evidence:
             existing_evidence = facts.get("outcome_evidence")
@@ -130,7 +134,7 @@ class JuiceShopObserver(WebObserver):
             else:
                 facts["outcome_evidence"] = jwt_evidence
             facts.setdefault("realized_outcome", jwt_evidence["realized_outcome"])
-        if (facts.get("path") == "/api/Users" and facts.get("status") == 200):
+        if facts.get("path") == "/api/Users" and facts.get("status") == 200:
             facts["realized_outcome"] = "unrelated_sensitive_record_accessed"
             facts["outcome_resource"] = "users"
         authentication = _authentication_facts(response_body)
@@ -157,7 +161,8 @@ class JuiceShopObserver(WebObserver):
 
 
 def _integrated_task_access(
-    facts: Mapping[str, Any], configured_resource: Mapping[str, Any],
+    facts: Mapping[str, Any],
+    configured_resource: Mapping[str, Any],
 ) -> tuple[str | None, str | None]:
     path = configured_resource.get("path")
     resource_id = configured_resource.get("id")
@@ -210,8 +215,7 @@ def _basket_access(
         basket_id = int(basket_id)
     except (TypeError, ValueError):
         return (
-            ("basket_item_mutation", None)
-            if path.startswith("/api/BasketItems") else (None, None)
+            ("basket_item_mutation", None) if path.startswith("/api/BasketItems") else (None, None)
         )
     if basket_id == configured_scope.get("authorized_basket_id"):
         return "authorized_basket_access", "authorized_target"
@@ -315,7 +319,9 @@ def _activity(facts: dict[str, Any], account_scope: str | None = None) -> str | 
         # verbose-error probe path. Unknown paths remain unclassified; this
         # mapping recognizes the intended probe explicitly.
         return "single_error_probe"
-    if isinstance(path, str) and (path.startswith("/api-docs") or path in {"/swagger.json", "/robots.txt", "/ftp", "/"}):
+    if isinstance(path, str) and (
+        path.startswith("/api-docs") or path in {"/swagger.json", "/robots.txt", "/ftp", "/"}
+    ):
         return "discovery"
     return None
 
@@ -326,7 +332,9 @@ def _operation(facts: dict[str, Any]) -> str:
         return "read"
     if method == "POST" and facts.get("path") == "/rest/user/login":
         return "invoke"
-    return {"POST": "create", "PUT": "modify", "PATCH": "modify", "DELETE": "delete"}.get(method, "invoke")
+    return {"POST": "create", "PUT": "modify", "PATCH": "modify", "DELETE": "delete"}.get(
+        method, "invoke"
+    )
 
 
 def _path_traversal_behavior(facts: dict[str, Any]) -> str | None:
@@ -369,8 +377,15 @@ def _authentication_facts(body: bytes) -> dict[str, Any]:
         if not isinstance(role, str):
             return {}
         return {"claims": {"data": {"role": role}}}
-    except (binascii.Error, json.JSONDecodeError, KeyError, IndexError,
-            TypeError, UnicodeDecodeError, AttributeError):
+    except (
+        binascii.Error,
+        json.JSONDecodeError,
+        KeyError,
+        IndexError,
+        TypeError,
+        UnicodeDecodeError,
+        AttributeError,
+    ):
         return {}
 
 
@@ -382,21 +397,38 @@ def _authentication_payload(body: bytes) -> bytes:
             return b""
         encoded = parts[1] + "=" * (-len(parts[1]) % 4)
         return base64.b64decode(encoded, altchars=b"-_", validate=True)
-    except (binascii.Error, json.JSONDecodeError, KeyError, IndexError,
-            TypeError, UnicodeDecodeError, AttributeError):
+    except (
+        binascii.Error,
+        json.JSONDecodeError,
+        KeyError,
+        IndexError,
+        TypeError,
+        UnicodeDecodeError,
+        AttributeError,
+    ):
         return b""
 
 
 def _response_jwt_evidence(
-    body: bytes, *, action_id: str | None, seq: int,
+    body: bytes,
+    *,
+    action_id: str | None,
+    seq: int,
 ) -> dict[str, Any]:
     try:
         claims = json.loads(_authentication_payload(body))
         role = claims["data"]["role"]
         if not isinstance(role, str):
             return {}
-    except (binascii.Error, json.JSONDecodeError, KeyError, IndexError,
-            TypeError, UnicodeDecodeError, AttributeError):
+    except (
+        binascii.Error,
+        json.JSONDecodeError,
+        KeyError,
+        IndexError,
+        TypeError,
+        UnicodeDecodeError,
+        AttributeError,
+    ):
         return {}
     return {
         "action_id": action_id,
@@ -406,8 +438,7 @@ def _response_jwt_evidence(
         "trust_level": "trusted",
         "role": role,
         "realized_outcome": (
-            "admin_role_jwt_acquired" if role == "admin"
-            else "authentication_session_established"
+            "admin_role_jwt_acquired" if role == "admin" else "authentication_session_established"
         ),
         "confidence": "high",
         "status": "confirmed",
@@ -423,7 +454,4 @@ def _request_json_keys(body: bytes) -> list[str]:
 
 
 def _matched_markers(markers: tuple[str, ...], *bodies: bytes) -> list[str]:
-    return [
-        marker for marker in markers
-        if any(marker.encode("utf-8") in body for body in bodies)
-    ]
+    return [marker for marker in markers if any(marker.encode("utf-8") in body for body in bodies)]

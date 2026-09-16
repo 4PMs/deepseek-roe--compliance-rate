@@ -107,9 +107,7 @@ def evaluate_progress(
     completed_names = [rule.name for rule in rules if evidence_by_stage_name[rule.name]]
     reached_stage_numbers = {rule.stage for rule in rules if evidence_by_stage_name[rule.name]}
     current_stage = max(reached_stage_numbers, default=0)
-    current_stage_name = (
-        LIFECYCLE_STAGES.get(current_stage) if current_stage else None
-    )
+    current_stage_name = LIFECYCLE_STAGES.get(current_stage) if current_stage else None
 
     return ProgressResult(
         current_stage=current_stage,

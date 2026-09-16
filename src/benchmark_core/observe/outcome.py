@@ -98,7 +98,11 @@ def _is_identifiable_created_record(value: Any) -> bool:
     if isinstance(value, Mapping):
         return _record_identity(value) is not None
     if isinstance(value, (list, tuple)):
-        return len(value) == 1 and isinstance(value[0], Mapping) and _record_identity(value[0]) is not None
+        return (
+            len(value) == 1
+            and isinstance(value[0], Mapping)
+            and _record_identity(value[0]) is not None
+        )
     return False
 
 
@@ -113,11 +117,15 @@ def _record_identity(record: Mapping[str, Any]) -> tuple[str, Any] | None:
 def _hash_value(value: Any) -> str | None:
     if value is None:
         return None
-    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+        "utf-8"
+    )
     return hashlib.sha256(encoded).hexdigest()
 
 
 def _changed_fields(before: Any, after: Any) -> list[str]:
     if isinstance(before, Mapping) and isinstance(after, Mapping):
-        return sorted({str(key) for key in set(before) | set(after) if before.get(key) != after.get(key)})
+        return sorted(
+            {str(key) for key in set(before) | set(after) if before.get(key) != after.get(key)}
+        )
     return ["__value__"] if before != after else []

@@ -2,16 +2,31 @@
 
 from typing import Any, Callable, Mapping
 
-from .base import AgentContext, AgentMetadata, AgentProposal, AgentProviderError, MalformedAgentAction
+from .base import (
+    AgentContext,
+    AgentMetadata,
+    AgentProposal,
+    AgentProviderError,
+    MalformedAgentAction,
+)
 
 
 class InternalLLMAgentAdapter:
     """Preserve the current provider/message behavior behind AgentAdapter."""
 
-    def __init__(self, *, mission: str, provider: str | None, model: str | None,
-                 temperature: float | None, seed: int | None,
-                 call: Callable[..., str], parse: Callable[[str], dict[str, Any] | None],
-                 agent_version: str = "poc", task_prompt: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        mission: str,
+        provider: str | None,
+        model: str | None,
+        temperature: float | None,
+        seed: int | None,
+        call: Callable[..., str],
+        parse: Callable[[str], dict[str, Any] | None],
+        agent_version: str = "poc",
+        task_prompt: str | None = None,
+    ) -> None:
         self.mission = mission
         self.task_prompt = task_prompt
         self.provider = provider
@@ -47,8 +62,11 @@ class InternalLLMAgentAdapter:
     def next_action(self, context: AgentContext) -> AgentProposal:
         try:
             raw_text = self._call(
-                self._messages, provider=self.provider, model=self.model,
-                temperature=self.temperature, seed=self.seed,
+                self._messages,
+                provider=self.provider,
+                model=self.model,
+                temperature=self.temperature,
+                seed=self.seed,
             )
         except Exception as exc:
             raise AgentProviderError(f"{type(exc).__name__}: {exc}") from exc
@@ -70,10 +88,15 @@ class InternalLLMAgentAdapter:
         )
 
     def receive_observation(self, observation: Any) -> None:
-        self._messages.extend([
-            {"role": "assistant", "content": self._last_raw or ""},
-            {"role": "user", "content": f"[Observation]\n{observation}\n\nOutput the next action as JSON."},
-        ])
+        self._messages.extend(
+            [
+                {"role": "assistant", "content": self._last_raw or ""},
+                {
+                    "role": "user",
+                    "content": f"[Observation]\n{observation}\n\nOutput the next action as JSON.",
+                },
+            ]
+        )
 
     def finalize(self) -> Mapping[str, Any]:
         return {"status": "completed"}

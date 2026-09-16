@@ -6,12 +6,24 @@ from typing import Any, Mapping
 
 
 _KNOWN_ACCESS_KEYS = {
-    "targets", "actions", "resources", "behaviors",
-    "database_modifications", "event_rules",
+    "targets",
+    "actions",
+    "resources",
+    "behaviors",
+    "database_modifications",
+    "event_rules",
 }
 _KNOWN_POLICY_KEYS = {
-    "schema_version", "allowed", "forbidden", "scope", "minimality",
-    "behaviors", "agent_instructions", "roe", "taxonomy", "normative_basis",
+    "schema_version",
+    "allowed",
+    "forbidden",
+    "scope",
+    "minimality",
+    "behaviors",
+    "agent_instructions",
+    "roe",
+    "taxonomy",
+    "normative_basis",
 }
 _DEFAULT_STATE_CHANGING_METHODS = frozenset({"PUT", "DELETE", "PATCH", "POST"})
 
@@ -66,11 +78,14 @@ class WebScope:
         unknown = set(values) - set(cls.__dataclass_fields__)
         if unknown:
             warnings.warn(f"policy.scope: unknown fields ignored: {sorted(unknown)}")
-        return cls(**{
-            name: tuple(int(value) for value in values.get(name, ()))
-            if name.endswith("ports") else tuple(values.get(name, ()))
-            for name in cls.__dataclass_fields__
-        })
+        return cls(
+            **{
+                name: tuple(int(value) for value in values.get(name, ()))
+                if name.endswith("ports")
+                else tuple(values.get(name, ()))
+                for name in cls.__dataclass_fields__
+            }
+        )
 
     def to_dict(self) -> dict[str, list[Any]]:
         return {name: list(getattr(self, name)) for name in self.__dataclass_fields__}
@@ -99,9 +114,7 @@ class Policy:
             and isinstance(roe, Mapping)
             and isinstance(roe.get("tool_authorization"), Mapping)
         ):
-            raise ValueError(
-                "ambiguous policy: use roe.tool_authorization, not top-level R2"
-            )
+            raise ValueError("ambiguous policy: use roe.tool_authorization, not top-level R2")
         unknown = set(data) - _KNOWN_POLICY_KEYS
         if unknown:
             warnings.warn(f"policy: unknown fields ignored: {sorted(unknown)}")
@@ -111,17 +124,14 @@ class Policy:
             allowed=AccessSet.from_dict(data.get("allowed")),
             forbidden=AccessSet.from_dict(data.get("forbidden")),
             scope=WebScope.from_dict(data.get("scope")),
-            forbid_post_goal_requests=bool(
-                minimality.get("forbid_post_goal_requests", False)
-            ),
+            forbid_post_goal_requests=bool(minimality.get("forbid_post_goal_requests", False)),
             state_changing_methods=frozenset(
-                str(method).upper() for method in minimality.get(
+                str(method).upper()
+                for method in minimality.get(
                     "state_changing_methods", _DEFAULT_STATE_CHANGING_METHODS
                 )
             ),
-            exempt_paths=frozenset(
-                str(path) for path in minimality.get("exempt_paths", ())
-            ),
+            exempt_paths=frozenset(str(path) for path in minimality.get("exempt_paths", ())),
             roe=dict(roe) if isinstance(roe, Mapping) else {},
             taxonomy=dict(data.get("taxonomy") or {}),
             normative_basis=dict(data.get("normative_basis") or {}),

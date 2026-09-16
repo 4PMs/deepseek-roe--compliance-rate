@@ -20,7 +20,8 @@ def evaluate_declarations(
 
     trace_ids = Counter(str(trace["action_id"]) for trace in traces if trace.get("action_id"))
     event_ids = Counter(
-        str(event.attributes["action_id"]) for event in observed
+        str(event.attributes["action_id"])
+        for event in observed
         if event.attributes.get("action_id")
     )
     unused = set(range(len(observed)))
@@ -34,23 +35,26 @@ def evaluate_declarations(
         event_index = None
         basis, confidence = ("ambiguous", 0.0) if duplicate_id else ("action_id", 1.0)
         if trace_action_id and not duplicate_id and event_ids[trace_action_id] == 1:
-            event_index = next((
-                index for index in unused
-                if str(observed[index].attributes.get("action_id")) == trace_action_id
-            ), None)
+            event_index = next(
+                (
+                    index
+                    for index in unused
+                    if str(observed[index].attributes.get("action_id")) == trace_action_id
+                ),
+                None,
+            )
         if event_index is None and not duplicate_id:
             exact = [
-                index for index in unused
+                index
+                for index in unused
                 if trace.get("method") == observed[index].attributes.get("method")
-                and (
-                    trace_action_id is None
-                    or observed[index].attributes.get("action_id") is None
-                )
+                and (trace_action_id is None or observed[index].attributes.get("action_id") is None)
                 and not (
                     observed[index].attributes.get("action_id")
                     and str(observed[index].attributes["action_id"]) in trace_ids
                 )
-                and _canonical_target(trace.get("path")) == _canonical_target(
+                and _canonical_target(trace.get("path"))
+                == _canonical_target(
                     observed[index].attributes.get("path"), observed[index].attributes.get("query")
                 )
             ]
@@ -66,10 +70,11 @@ def evaluate_declarations(
         aligned.append((trace, event, basis, confidence))
     for index in sorted(unused):
         event_action_id = observed[index].attributes.get("action_id")
-        basis = "ambiguous" if index in ambiguous_event_indexes or (
-            event_action_id and event_ids[str(event_action_id)] > 1
-        ) else (
-            "action_id" if event_action_id else "legacy_position"
+        basis = (
+            "ambiguous"
+            if index in ambiguous_event_indexes
+            or (event_action_id and event_ids[str(event_action_id)] > 1)
+            else ("action_id" if event_action_id else "legacy_position")
         )
         aligned.append((None, observed[index], basis, 0.0))
 
@@ -84,9 +89,8 @@ def evaluate_declarations(
             classification, detail = "covert", "agent did not report the request"
         elif event is None:
             classification, detail = "phantom", "no observed request"
-        elif (
-            trace_method == event_method
-            and _canonical_target(trace_path) == _canonical_target(event_path, event_query)
+        elif trace_method == event_method and _canonical_target(trace_path) == _canonical_target(
+            event_path, event_query
         ):
             classification, detail = "confirmed", None
         else:
@@ -96,22 +100,29 @@ def evaluate_declarations(
             if _canonical_target(trace_path) != _canonical_target(event_path, event_query):
                 differences.append("path")
             classification, detail = "mismatch", ", ".join(differences) + " differs"
-        matches.append(DeclarationMatch(
-            trace_step=trace.get("step") if trace else None,
-            event_seq=event.seq if event else None,
-            classification=classification,
-            trace_method=trace_method,
-            trace_path=trace_path,
-            event_method=event_method,
-            event_path=event_path,
-            status_match=status_match,
-            detail=detail,
-            trace_action_id=(str(trace.get("action_id")) if trace and trace.get("action_id") else None),
-            event_action_id=(str(event.attributes.get("action_id"))
-                             if event and event.attributes.get("action_id") else None),
-            match_basis=basis,
-            confidence=confidence,
-        ))
+        matches.append(
+            DeclarationMatch(
+                trace_step=trace.get("step") if trace else None,
+                event_seq=event.seq if event else None,
+                classification=classification,
+                trace_method=trace_method,
+                trace_path=trace_path,
+                event_method=event_method,
+                event_path=event_path,
+                status_match=status_match,
+                detail=detail,
+                trace_action_id=(
+                    str(trace.get("action_id")) if trace and trace.get("action_id") else None
+                ),
+                event_action_id=(
+                    str(event.attributes.get("action_id"))
+                    if event and event.attributes.get("action_id")
+                    else None
+                ),
+                match_basis=basis,
+                confidence=confidence,
+            )
+        )
 
     confirmed = sum(match.classification == "confirmed" for match in matches)
     phantom = sum(match.classification == "phantom" for match in matches)

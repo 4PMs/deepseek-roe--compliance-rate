@@ -70,26 +70,32 @@ def _write_jsonl(path: Path, records: list[Mapping[str, Any]]) -> None:
             temporary.unlink()
 
 
-def _run_id(run_dir: Path, config: Mapping[str, Any] | None, result: Mapping[str, Any] | None) -> str:
+def _run_id(
+    run_dir: Path, config: Mapping[str, Any] | None, result: Mapping[str, Any] | None
+) -> str:
     value = (config or {}).get("run_id") or (result or {}).get("run_id") or run_dir.name
     return str(value)
 
 
 def _derive_enforcement(run_id: str, lifecycle: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [{
-        "schema_version": SCHEMA_VERSION,
-        "run_id": run_id,
-        "action_id": record.get("action_id"),
-        "seq": record.get("seq"),
-        "decision": record.get("decision"),
-        "policy_violation": record.get("decision") == "deny",
-        "classification_status": record.get("classification_status", "classified"),
-        "fail_closed_block": bool(record.get("fail_closed_block", False)),
-        "category": record.get("category", "R2"),
-        "subdimension": record.get("subdimension"),
-        "matched_rule": record.get("matched_rule", record.get("reason")),
-        "source": "lifecycle.jsonl",
-    } for record in lifecycle if record.get("stage") == "policy_decision"]
+    return [
+        {
+            "schema_version": SCHEMA_VERSION,
+            "run_id": run_id,
+            "action_id": record.get("action_id"),
+            "seq": record.get("seq"),
+            "decision": record.get("decision"),
+            "policy_violation": record.get("decision") == "deny",
+            "classification_status": record.get("classification_status", "classified"),
+            "fail_closed_block": bool(record.get("fail_closed_block", False)),
+            "category": record.get("category", "R2"),
+            "subdimension": record.get("subdimension"),
+            "matched_rule": record.get("matched_rule", record.get("reason")),
+            "source": "lifecycle.jsonl",
+        }
+        for record in lifecycle
+        if record.get("stage") == "policy_decision"
+    ]
 
 
 def _derive_outcomes(run_id: str, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -97,8 +103,11 @@ def _derive_outcomes(run_id: str, events: list[dict[str, Any]]) -> list[dict[str
     for event in events:
         attributes = event.get("attributes", {})
         evidence = attributes.get("outcome_evidence") if isinstance(attributes, Mapping) else None
-        if (evidence is None and event.get("kind") == "state_transition"
-                and isinstance(attributes, Mapping)):
+        if (
+            evidence is None
+            and event.get("kind") == "state_transition"
+            and isinstance(attributes, Mapping)
+        ):
             quality = attributes.get("observer_quality") or {}
             realized = attributes.get("realized_outcome")
             change = (attributes.get("state_diff") or {}).get("change")
@@ -107,8 +116,10 @@ def _derive_outcomes(run_id: str, events: list[dict[str, Any]]) -> list[dict[str
                 "evidence_type": "state_transition",
                 "trust_level": "trusted",
                 "status": (
-                    "confirmed" if realized is not None else
-                    "no_change" if quality.get("status") == "observed" and change == "no_change"
+                    "confirmed"
+                    if realized is not None
+                    else "no_change"
+                    if quality.get("status") == "observed" and change == "no_change"
                     else "unclassified"
                 ),
                 "realized_outcome": realized,
@@ -122,19 +133,23 @@ def _derive_outcomes(run_id: str, events: list[dict[str, Any]]) -> list[dict[str
         for index, item in enumerate(evidence):
             if not isinstance(item, Mapping):
                 continue
-            records.append({
-                "schema_version": SCHEMA_VERSION,
-                "evidence_id": f"outcome-{event.get('seq', event.get('event_index', 0))}-{index}",
-                "run_id": run_id,
-                "action_id": item.get("action_id", attributes.get("action_id")),
-                "seq": event.get("seq"),
-                **dict(item),
-                "source_of_truth": "events.jsonl",
-            })
+            records.append(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "evidence_id": f"outcome-{event.get('seq', event.get('event_index', 0))}-{index}",
+                    "run_id": run_id,
+                    "action_id": item.get("action_id", attributes.get("action_id")),
+                    "seq": event.get("seq"),
+                    **dict(item),
+                    "source_of_truth": "events.jsonl",
+                }
+            )
     return records
 
 
-def _derive_environment(config: Mapping[str, Any], result: Mapping[str, Any], lifecycle: list[dict[str, Any]]) -> dict[str, Any]:
+def _derive_environment(
+    config: Mapping[str, Any], result: Mapping[str, Any], lifecycle: list[dict[str, Any]]
+) -> dict[str, Any]:
     reset = config.get("environment_reset")
     provenance = result.get("provenance") or {}
     attempted = reset is not None or any(
@@ -144,14 +159,22 @@ def _derive_environment(config: Mapping[str, Any], result: Mapping[str, Any], li
         "schema_version": SCHEMA_VERSION,
         "reset": {
             "attempted": attempted,
-            "verified": bool((reset or {}).get("baseline_verified")) if isinstance(reset, Mapping) else False,
+            "verified": bool((reset or {}).get("baseline_verified"))
+            if isinstance(reset, Mapping)
+            else False,
             "checks": ((reset or {}).get("baseline") or {}).get("checks", {})
-            if isinstance(reset, Mapping) else {},
+            if isinstance(reset, Mapping)
+            else {},
         },
-        "provision": (reset or {}).get("provision", {}) if isinstance(reset, Mapping) else {
-            "attempted": False, "verified": False,
+        "provision": (reset or {}).get("provision", {})
+        if isinstance(reset, Mapping)
+        else {
+            "attempted": False,
+            "verified": False,
         },
-        "session_isolation": (reset or {}).get("session_isolation", {}) if isinstance(reset, Mapping) else {},
+        "session_isolation": (reset or {}).get("session_isolation", {})
+        if isinstance(reset, Mapping)
+        else {},
         "environment_sha256": provenance.get("environment_sha256", "unknown"),
         "target_image_digest": provenance.get("target_image_digest"),
         "source_of_truth": "config.json + result.json",
@@ -159,8 +182,12 @@ def _derive_environment(config: Mapping[str, Any], result: Mapping[str, Any], li
 
 
 def _derive_setup(run_id: str, progress: list[dict[str, Any]]) -> dict[str, Any]:
-    started = next((item for item in progress if item.get("type") == "scenario_provision_started"), None)
-    completed = next((item for item in progress if item.get("type") == "scenario_provision_completed"), None)
+    started = next(
+        (item for item in progress if item.get("type") == "scenario_provision_started"), None
+    )
+    completed = next(
+        (item for item in progress if item.get("type") == "scenario_provision_completed"), None
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "run_id": run_id,
@@ -173,9 +200,15 @@ def _derive_setup(run_id: str, progress: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
-def _write_derived(run_dir: Path, run_id: str, config: Mapping[str, Any], result: Mapping[str, Any],
-                   events: list[dict[str, Any]], lifecycle: list[dict[str, Any]],
-                   progress: list[dict[str, Any]]) -> None:
+def _write_derived(
+    run_dir: Path,
+    run_id: str,
+    config: Mapping[str, Any],
+    result: Mapping[str, Any],
+    events: list[dict[str, Any]],
+    lifecycle: list[dict[str, Any]],
+    progress: list[dict[str, Any]],
+) -> None:
     evidence_dir = run_dir / "evidence"
     evidence_dir.mkdir(exist_ok=True)
     _write_jsonl(evidence_dir / "enforcement.jsonl", _derive_enforcement(run_id, lifecycle))
@@ -183,12 +216,15 @@ def _write_derived(run_dir: Path, run_id: str, config: Mapping[str, Any], result
     _atomic_json(evidence_dir / "environment.json", _derive_environment(config, result, lifecycle))
     _atomic_json(evidence_dir / "setup.json", _derive_setup(run_id, progress))
     if result.get("provenance") is not None:
-        _atomic_json(run_dir / "provenance.json", {
-            "schema_version": SCHEMA_VERSION,
-            **result["provenance"],
-            "agent": result.get("agent_metadata", {}),
-            "source_of_truth": "result.json",
-        })
+        _atomic_json(
+            run_dir / "provenance.json",
+            {
+                "schema_version": SCHEMA_VERSION,
+                **result["provenance"],
+                "agent": result.get("agent_metadata", {}),
+                "source_of_truth": "result.json",
+            },
+        )
 
 
 def _entry(run_dir: Path, path: str, artifact_type: str, required: bool) -> dict[str, Any]:
@@ -211,9 +247,13 @@ def build_manifest(run_dir: Path, *, write: bool = True) -> dict[str, Any]:
     run_dir = Path(run_dir)
     config = _read_json(run_dir / "config.json") if (run_dir / "config.json").is_file() else {}
     result = _read_json(run_dir / "result.json") if (run_dir / "result.json").is_file() else {}
-    lifecycle = _read_jsonl(run_dir / "lifecycle.jsonl") if (run_dir / "lifecycle.jsonl").is_file() else []
+    lifecycle = (
+        _read_jsonl(run_dir / "lifecycle.jsonl") if (run_dir / "lifecycle.jsonl").is_file() else []
+    )
     events = _read_jsonl(run_dir / "events.jsonl") if (run_dir / "events.jsonl").is_file() else []
-    progress = _read_jsonl(run_dir / "progress.jsonl") if (run_dir / "progress.jsonl").is_file() else []
+    progress = (
+        _read_jsonl(run_dir / "progress.jsonl") if (run_dir / "progress.jsonl").is_file() else []
+    )
     run_id = _run_id(run_dir, config, result)
     if write:
         _write_derived(run_dir, run_id, config, result, events, lifecycle, progress)
@@ -254,7 +294,9 @@ def finalize_bundle(run_dir: Path) -> dict[str, Any]:
     return manifest
 
 
-def _validate_artifacts(run_dir: Path, manifest: Mapping[str, Any], errors: list[str], warnings: list[str]) -> dict[str, list[dict[str, Any]]]:
+def _validate_artifacts(
+    run_dir: Path, manifest: Mapping[str, Any], errors: list[str], warnings: list[str]
+) -> dict[str, list[dict[str, Any]]]:
     records: dict[str, list[dict[str, Any]]] = {}
     manifest_artifacts = manifest.get("artifacts", {})
     for name, (_, _, required) in _ARTIFACTS.items():
@@ -342,16 +384,22 @@ def validate_run(run_dir: Path) -> dict[str, Any]:
     return {"valid": not errors, "errors": errors, "warnings": warnings}
 
 
-def _validate_terminal_semantics(lifecycle: list[dict[str, Any]],
-                                 events: list[dict[str, Any]],
-                                 result: Mapping[str, Any], errors: list[str]) -> None:
+def _validate_terminal_semantics(
+    lifecycle: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+    result: Mapping[str, Any],
+    errors: list[str],
+) -> None:
     """Require observations only for lifecycle paths that execute a target."""
     grouped: dict[str, list[dict[str, Any]]] = {}
     for record in lifecycle:
         grouped.setdefault(str(record.get("action_id")), []).append(record)
     denied = 0
-    observed_actions = {str(event.get("attributes", {}).get("action_id"))
-                        for event in events if isinstance(event.get("attributes"), Mapping)}
+    observed_actions = {
+        str(event.get("attributes", {}).get("action_id"))
+        for event in events
+        if isinstance(event.get("attributes"), Mapping)
+    }
     for action_id, records in grouped.items():
         decision = next((item for item in records if item.get("stage") == "policy_decision"), None)
         proposed = next((item for item in records if item.get("stage") == "proposed"), None)
@@ -366,7 +414,9 @@ def _validate_terminal_semantics(lifecycle: list[dict[str, Any]],
             if proposed is None or not isinstance(proposed.get("normalized_action"), Mapping):
                 errors.append(f"policy_denied action {action_id}: normalized proposal missing")
             if stages & {"executed", "observed"} or has_observed:
-                errors.append(f"policy_denied action {action_id}: target execution evidence present")
+                errors.append(
+                    f"policy_denied action {action_id}: target execution evidence present"
+                )
         elif decision.get("decision") == "allow" and "executed" in stages and not has_observed:
             errors.append(f"allowed action {action_id}: observed evidence missing")
     if result.get("termination", {}).get("reason") == "policy_denied" and not denied:
@@ -383,23 +433,33 @@ def reconstruct_action_chain(run_dir: Path, action_id: str, seq: int) -> dict[st
     events = _read_jsonl(run_dir / "events.jsonl")
     outcomes = _read_jsonl(run_dir / "evidence" / "outcomes.jsonl")
     result = _read_json(run_dir / "result.json")
-    stages = {
-        item.get("stage"): item for item in lifecycle
-        if item.get("action_id") == action_id
-    }
-    observed = [item for item in events if item.get("seq") == seq and
-                item.get("attributes", {}).get("action_id") == action_id]
-    verdict = [item for item in result.get("roe", {}).get("violations", [])
-               if item.get("event_key") in ([result.get("run_id"), seq, action_id],
-                                             (result.get("run_id"), seq, action_id))]
+    stages = {item.get("stage"): item for item in lifecycle if item.get("action_id") == action_id}
+    observed = [
+        item
+        for item in events
+        if item.get("seq") == seq and item.get("attributes", {}).get("action_id") == action_id
+    ]
+    verdict = [
+        item
+        for item in result.get("roe", {}).get("violations", [])
+        if item.get("event_key")
+        in ([result.get("run_id"), seq, action_id], (result.get("run_id"), seq, action_id))
+    ]
     chain = {
         "proposed": stages.get("proposed"),
         "normalized": (stages.get("proposed") or {}).get("normalized_action"),
         "policy_decision": stages.get("policy_decision"),
         "executed": stages.get("executed"),
         "observed": observed or stages.get("observed"),
-        "outcomes": [item for item in outcomes if item.get("action_id") == action_id and item.get("seq") == seq],
+        "outcomes": [
+            item
+            for item in outcomes
+            if item.get("action_id") == action_id and item.get("seq") == seq
+        ],
         "verdict": verdict,
     }
-    chain["complete"] = all(chain[key] for key in ("proposed", "normalized", "policy_decision", "executed", "observed", "outcomes"))
+    chain["complete"] = all(
+        chain[key]
+        for key in ("proposed", "normalized", "policy_decision", "executed", "observed", "outcomes")
+    )
     return chain

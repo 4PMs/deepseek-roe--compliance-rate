@@ -15,7 +15,9 @@ RAW_BUNDLE = OUT / "roe-violation-artifacts-only.zip"
 SECRET_PATTERNS = {
     "bearer": re.compile(rb"Bearer\s+[A-Za-z0-9._-]{16,}", re.I),
     "jwt": re.compile(rb"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
-    "api_key_assignment": re.compile(rb"(?:api[_-]?key|authorization)\s*[:=]\s*[^\s,}\]]{8,}", re.I),
+    "api_key_assignment": re.compile(
+        rb"(?:api[_-]?key|authorization)\s*[:=]\s*[^\s,}\]]{8,}", re.I
+    ),
 }
 
 
@@ -43,16 +45,37 @@ def endpoint(result: dict, name: str) -> dict:
 
 def violating_actions(result: dict) -> list[dict]:
     return [
-        action for action in result["trajectory"]["actions"]
+        action
+        for action in result["trajectory"]["actions"]
         if (action.get("dispatch") or {}).get("classification") == "violation"
     ]
 
 
-def compact_result(result: dict) -> dict:
+def representative_violating_action(result: dict) -> dict | None:
     actions = violating_actions(result)
-    first = actions[0] if actions else None
+    return next(
+        (
+            action
+            for action in actions
+            if (action.get("server_acceptance") or {}).get("classification") == "violation"
+        ),
+        actions[0] if actions else None,
+    )
+
+
+def gateway_http_status(run_id: str, action_id: str | None) -> int | None:
+    if not action_id:
+        return None
+    for event in load_jsonl(ROOT / "runs" / run_id / "events.jsonl"):
+        attributes = event.get("attributes") or {}
+        if event.get("kind") == "web" and attributes.get("action_id") == action_id:
+            return attributes.get("status")
+    return None
+
+
+def compact_result(result: dict) -> dict:
+    first = representative_violating_action(result)
     proposal = (first or {}).get("proposal") or {}
-    acceptance = (first or {}).get("server_acceptance") or {}
     impact = (first or {}).get("impact") or {}
     dispatch_endpoint = result["trajectory"]["endpoints"]["prohibited_dispatch"]
     acceptance_endpoint = result["trajectory"]["endpoints"]["server_acceptance"]
@@ -68,7 +91,9 @@ def compact_result(result: dict) -> dict:
             "prohibited_proposal": endpoint(result, "prohibited_proposal"),
             "prohibited_dispatch": {
                 "status": dispatch_endpoint["status"],
-                "request": None if first is None else {
+                "request": None
+                if first is None
+                else {
                     "action_id": first.get("action_id"),
                     "path": proposal.get("path"),
                     "method": proposal.get("method"),
@@ -76,7 +101,10 @@ def compact_result(result: dict) -> dict:
             },
             "server_acceptance": {
                 "status": acceptance_endpoint["status"],
-                "http_status": (acceptance.get("evidence") or {}).get("http_status"),
+                "http_status": gateway_http_status(
+                    result["run_id"],
+                    (first or {}).get("action_id"),
+                ),
             },
             "trusted_realized_impact": {
                 "status": impact_endpoint["status"],
@@ -116,6 +144,12 @@ def scan_run(run_dir: Path) -> tuple[dict, dict[str, str]]:
 
 def violation_summary(result: dict) -> dict:
     violations = result["roe"]["violations"]
+    roe_categories = {
+        category
+        for item in violations
+        for category in ([item.get("roe_category")] + list(item.get("roe_categories") or []))
+        if category
+    }
     traces = load_jsonl(ROOT / "runs" / result["run_id"] / "trace.jsonl")
     events = load_jsonl(ROOT / "runs" / result["run_id"] / "events.jsonl")
     web_events = []
@@ -123,20 +157,22 @@ def violation_summary(result: dict) -> dict:
         if event.get("kind") != "web":
             continue
         attrs = event.get("attributes") or {}
-        web_events.append({
-            "seq": event.get("seq"),
-            "action_id": attrs.get("action_id"),
-            "method": attrs.get("method"),
-            "path": attrs.get("path"),
-            "status": attrs.get("status"),
-            "activity": attrs.get("activity"),
-            "operation": attrs.get("operation"),
-        })
+        web_events.append(
+            {
+                "seq": event.get("seq"),
+                "action_id": attrs.get("action_id"),
+                "method": attrs.get("method"),
+                "path": attrs.get("path"),
+                "status": attrs.get("status"),
+                "activity": attrs.get("activity"),
+                "operation": attrs.get("operation"),
+            }
+        )
     return {
         "scenario_id": result["scenario_id"],
         "condition_id": result["condition_id"],
         "run_id": result["run_id"],
-        "roe_categories": sorted({item["roe_category"] for item in violations}),
+        "roe_categories": sorted(roe_categories),
         "violation_count": len(violations),
         "violations": violations,
         "goal": result["goal"],
@@ -172,28 +208,37 @@ def markdown_report(summaries: list[dict]) -> str:
         lines.extend(["No valid ROE-violation trace was collected.", ""])
         return "\n".join(lines)
     for item in summaries:
-        lines.extend([
-            f"## {item['scenario_id']} / {item['condition_id']}",
-            "",
-            f"- Run ID: `{item['run_id']}`",
-            f"- ROE categories: `{', '.join(item['roe_categories'])}`",
-            f"- Violation records: {item['violation_count']}",
-            f"- Goal success: `{item['goal'].get('success')}`",
-            f"- Termination: `{item['termination'].get('reason')}`",
-            f"- Outcome: `{item['outcome']}`",
-            f"- Halt trigger: `{item['halt'].get('trigger')}` at `{item['halt'].get('trigger_seq')}`",
-            "",
-            "### Violations",
-            "",
-        ])
+        lines.extend(
+            [
+                f"## {item['scenario_id']} / {item['condition_id']}",
+                "",
+                f"- Run ID: `{item['run_id']}`",
+                f"- ROE categories: `{', '.join(item['roe_categories'])}`",
+                f"- Violation records: {item['violation_count']}",
+                f"- Goal success: `{item['goal'].get('success')}`",
+                f"- Termination: `{item['termination'].get('reason')}`",
+                f"- Outcome: `{item['outcome']}`",
+                f"- Halt trigger: `{item['halt'].get('trigger')}` at `{item['halt'].get('trigger_seq')}`",
+                "",
+                "### Violations",
+                "",
+            ]
+        )
         for violation in item["violations"]:
+            categories = violation.get("roe_categories") or [violation.get("roe_category")]
+            category_text = (
+                ",".join(category for category in categories if category) or "unspecified"
+            )
+            rule = violation.get("rule_id") or violation.get("rule") or "unspecified"
+            reason = violation.get("reason") or violation.get("value") or "unspecified"
             lines.append(
-                f"- `{violation.get('roe_category')}` / `{violation.get('rule_id')}`: "
-                f"{violation.get('reason')} (value: `{violation.get('value')}`)"
+                f"- `{category_text}` / `{rule}`: {reason} (value: `{violation.get('value')}`)"
             )
         lines.extend(["", "### Five-stage endpoints", ""])
         for name, value in item["trajectory_endpoints"].items():
-            lines.append(f"- `{name}`: `{value.get('status')}`; evidence `{value.get('evidence_ref')}`")
+            lines.append(
+                f"- `{name}`: `{value.get('status')}`; evidence `{value.get('evidence_ref')}`"
+            )
         lines.extend(["", "### Observed gateway requests", ""])
         for event in item["web_events"]:
             lines.append(
@@ -206,14 +251,18 @@ def markdown_report(summaries: list[dict]) -> str:
             if trace["thought"]:
                 lines.extend([f"Turn {trace['step']} thought:", "", f"> {trace['thought']}", ""])
             if trace["reason"]:
-                lines.extend([f"Turn {trace['step']} disposition reason:", "", f"> {trace['reason']}", ""])
+                lines.extend(
+                    [f"Turn {trace['step']} disposition reason:", "", f"> {trace['reason']}", ""]
+                )
         lines.extend(["Final disposition:", "", f"> {item['final_disposition_text']}", ""])
-    lines.extend([
-        "## Claim boundary",
-        "",
-        "These traces demonstrate that the measurement contract can capture live ROE violations. They are selected first-violation cases and must not be used to estimate violation rates or compare conditions.",
-        "",
-    ])
+    lines.extend(
+        [
+            "## Claim boundary",
+            "",
+            "These traces demonstrate that the measurement contract can capture live ROE violations. They are selected first-violation cases and must not be used to estimate violation rates or compare conditions.",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -280,11 +329,15 @@ def main() -> None:
         encoding="utf-8",
     )
     (OUT / "violation_report.md").write_text(markdown_report(summaries), encoding="utf-8")
-    print(json.dumps({
-        "violating_run_count": len(violating_ids),
-        "bundle_sha256": public_manifest["raw_bundle"]["sha256"],
-        "post_campaign_reset": public_manifest["post_campaign_reset"],
-    }))
+    print(
+        json.dumps(
+            {
+                "violating_run_count": len(violating_ids),
+                "bundle_sha256": public_manifest["raw_bundle"]["sha256"],
+                "post_campaign_reset": public_manifest["post_campaign_reset"],
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

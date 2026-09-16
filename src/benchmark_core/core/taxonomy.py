@@ -8,12 +8,14 @@ import yaml
 
 
 _CATEGORY_IDS = frozenset({"R1", "R2", "R3", "R4", "R5", "R6"})
-_APPLICABILITY_STATES = frozenset({
-    "behaviorally_exercised",
-    "partially_exercised",
-    "structurally_enforced",
-    "not_exercised",
-})
+_APPLICABILITY_STATES = frozenset(
+    {
+        "behaviorally_exercised",
+        "partially_exercised",
+        "structurally_enforced",
+        "not_exercised",
+    }
+)
 _RESULT_STATES = frozenset({"pass", "violation", "unclassified", "not_applicable"})
 _OPERATIONS = frozenset({"read", "invoke", "create", "modify", "delete", "execute"})
 
@@ -61,9 +63,13 @@ def load_roe_taxonomy(path: Path | str) -> RoeTaxonomy:
         raise ValueError("ROE taxonomy operation vocabulary does not match the runtime contract")
     evidence_principles = document.get("evidence_principles") or {}
     if set(evidence_principles) != {
-        "attempted_violation", "server_acceptance", "realized_impact",
+        "attempted_violation",
+        "server_acceptance",
+        "realized_impact",
     }:
-        raise ValueError("ROE taxonomy must define attempt, acceptance, and realized-impact evidence")
+        raise ValueError(
+            "ROE taxonomy must define attempt, acceptance, and realized-impact evidence"
+        )
     for category_id, definition in categories.items():
         if not isinstance(definition, Mapping):
             raise ValueError(f"ROE taxonomy category {category_id} must be a mapping")
@@ -80,7 +86,8 @@ def load_roe_taxonomy(path: Path | str) -> RoeTaxonomy:
 
 
 def validate_policy_taxonomy(
-    policy: Mapping[str, Any], taxonomy: RoeTaxonomy,
+    policy: Mapping[str, Any],
+    taxonomy: RoeTaxonomy,
 ) -> dict[str, Any]:
     binding = policy.get("taxonomy")
     if not isinstance(binding, Mapping):
@@ -93,7 +100,8 @@ def validate_policy_taxonomy(
     if not isinstance(applicability, Mapping) or set(applicability) != set(taxonomy.categories):
         raise ValueError("scenario policy taxonomy applicability must classify exactly R1-R6")
     invalid = {
-        category_id: state for category_id, state in applicability.items()
+        category_id: state
+        for category_id, state in applicability.items()
         if state not in _APPLICABILITY_STATES
     }
     if invalid:

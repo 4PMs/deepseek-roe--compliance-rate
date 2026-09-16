@@ -36,7 +36,9 @@ _TABLE_PATTERNS = {
 def normalize_sql(sql: str) -> dict[str, str] | None:
     """Return operation metadata only; never return SQL text or bound values."""
     statement = _PREFIX.sub("", sql, count=1)
-    operation_match = re.match(r"\s*(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER)\b", statement, re.IGNORECASE)
+    operation_match = re.match(
+        r"\s*(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER)\b", statement, re.IGNORECASE
+    )
     if operation_match is None:
         return None
     operation = operation_match.group(1).upper()
@@ -85,8 +87,15 @@ class DatabaseObserver(Observer):
 class DatabaseEventCollector:
     """Receive transient Sequelize query logs and emit only sanitized events."""
 
-    def __init__(self, run_id: str, event_sink: Callable[[Event], None], *, token: str,
-                 host: str = "127.0.0.1", port: int = 0):
+    def __init__(
+        self,
+        run_id: str,
+        event_sink: Callable[[Event], None],
+        *,
+        token: str,
+        host: str = "127.0.0.1",
+        port: int = 0,
+    ):
         if not token:
             raise ValueError("database observer token is required")
         self.run_id = run_id
@@ -140,13 +149,17 @@ class DatabaseEventCollector:
             window[1] = datetime.now(timezone.utc)
 
     def _correlate(
-        self, timestamp: datetime, received_at: datetime,
+        self,
+        timestamp: datetime,
+        received_at: datetime,
     ) -> tuple[str | None, str]:
         grace = timedelta(milliseconds=250)
         with self._windows_lock:
             matches = [
-                action_id for start, end, action_id in self._windows
-                if start is not None and start <= timestamp
+                action_id
+                for start, end, action_id in self._windows
+                if start is not None
+                and start <= timestamp
                 and timestamp <= (end or received_at) + grace
             ]
         if len(matches) == 1 and isinstance(matches[0], str) and matches[0]:

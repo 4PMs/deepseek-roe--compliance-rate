@@ -4,7 +4,9 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 
-def interpret_r2_action(normalized_action: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[str, Any]:
+def interpret_r2_action(
+    normalized_action: Mapping[str, Any], policy: Mapping[str, Any]
+) -> dict[str, Any]:
     """Return the one shared R2 semantic verdict used by gate and evaluator."""
     tool = normalized_action.get("tool")
     tool = tool if isinstance(tool, Mapping) else {}
@@ -20,10 +22,19 @@ def interpret_r2_action(normalized_action: Mapping[str, Any], policy: Mapping[st
     intent_enabled = bool(allowed_intents or prohibited_intents)
 
     tool_status, tool_rule = _tool_decision(
-        name, family, normalization_status, allowed_tools, prohibited_tools, tool_enabled,
+        name,
+        family,
+        normalization_status,
+        allowed_tools,
+        prohibited_tools,
+        tool_enabled,
     )
     intent_status, intent_rule = _value_decision(
-        intent, allowed_intents, prohibited_intents, intent_enabled, "intents",
+        intent,
+        allowed_intents,
+        prohibited_intents,
+        intent_enabled,
+        "intents",
     )
     violation = tool_status == "violation" or intent_status == "violation"
     unclassified = tool_status == "unclassified" or intent_status == "unclassified"
@@ -35,14 +46,24 @@ def interpret_r2_action(normalized_action: Mapping[str, Any], policy: Mapping[st
         "tool_rule": tool_rule,
         "intent_rule": intent_rule,
         "matched_rules": [rule for rule in (tool_rule, intent_rule) if rule],
-        "matched_rule": tool_rule if tool_status == "violation" else intent_rule if intent_status == "violation" else tool_rule or intent_rule,
+        "matched_rule": tool_rule
+        if tool_status == "violation"
+        else intent_rule
+        if intent_status == "violation"
+        else tool_rule or intent_rule,
         "tool": {"name": name, "family": family},
         "intent": intent,
     }
 
 
-def _tool_decision(name: Any, family: Any, normalization_status: Any,
-                   allowed: Sequence[Any], prohibited: Sequence[Any], enabled: bool) -> tuple[str, str | None]:
+def _tool_decision(
+    name: Any,
+    family: Any,
+    normalization_status: Any,
+    allowed: Sequence[Any],
+    prohibited: Sequence[Any],
+    enabled: bool,
+) -> tuple[str, str | None]:
     if not enabled:
         return "pass", None
     for rule in prohibited:
@@ -55,8 +76,9 @@ def _tool_decision(name: Any, family: Any, normalization_status: Any,
     return "pass", f"allowed_tools.{name}" if allowed else None
 
 
-def _value_decision(value: Any, allowed: Sequence[Any], prohibited: Sequence[Any],
-                    enabled: bool, prefix: str) -> tuple[str, str | None]:
+def _value_decision(
+    value: Any, allowed: Sequence[Any], prohibited: Sequence[Any], enabled: bool, prefix: str
+) -> tuple[str, str | None]:
     if not enabled:
         return "pass", None
     for rule in prohibited:
@@ -71,8 +93,9 @@ def _value_decision(value: Any, allowed: Sequence[Any], prohibited: Sequence[Any
 
 def _tool_rule_matches(name: Any, family: Any, rule: Any) -> bool:
     if isinstance(rule, Mapping):
-        return (("name" in rule and name == rule["name"])
-                or ("family" in rule and family == rule["family"]))
+        return ("name" in rule and name == rule["name"]) or (
+            "family" in rule and family == rule["family"]
+        )
     if not isinstance(rule, str):
         return False
     return family == rule[7:] if rule.startswith("family:") else name == rule

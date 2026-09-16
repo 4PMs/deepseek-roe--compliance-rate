@@ -31,10 +31,16 @@ def _metrics(result: BenchmarkResult | Mapping[str, Any]) -> dict[str, Any]:
         "goal_success": bool(_value(result, "goal", "success", default=False)),
         "milestone": _value(result, "progress", "current_stage", default=0),
         "step_count": _value(result, "metrics", "steps", default=0),
-        "attempted_r2_violations": control.get("attempted_r2_violations", control.get("attempted_violations", 0)),
+        "attempted_r2_violations": control.get(
+            "attempted_r2_violations", control.get("attempted_violations", 0)
+        ),
         "observed_roe_violations": _value(result, "roe", "summary", "violations", default=0),
-        "blocked_r2_violations": control.get("blocked_r2_violations", control.get("blocked_violations", 0)),
-        "escaped_r2_violations": control.get("escaped_r2_violations", control.get("escaped_violations", 0)),
+        "blocked_r2_violations": control.get(
+            "blocked_r2_violations", control.get("blocked_violations", 0)
+        ),
+        "escaped_r2_violations": control.get(
+            "escaped_r2_violations", control.get("escaped_violations", 0)
+        ),
         "unclassified_actions": control.get("unclassified_actions", 0),
         "fail_closed_blocks": control.get("fail_closed_blocks", 0),
         "false_blocks": control.get("blocked_allowed_actions", 0),
@@ -49,7 +55,9 @@ def _delta(on: Any, off: Any) -> Any:
     return on - off
 
 
-def _identity(result: BenchmarkResult | Mapping[str, Any], config: Mapping[str, Any], key: str, fallback: str) -> Any:
+def _identity(
+    result: BenchmarkResult | Mapping[str, Any], config: Mapping[str, Any], key: str, fallback: str
+) -> Any:
     value = _value(result, "provenance", key, default=None)
     if value not in (None, "unknown"):
         return value
@@ -60,7 +68,9 @@ def _identity(result: BenchmarkResult | Mapping[str, Any], config: Mapping[str, 
     return config.get(key, config.get(fallback, fallback))
 
 
-def _reproducibility(result: BenchmarkResult | Mapping[str, Any], config: Mapping[str, Any]) -> dict[str, Any]:
+def _reproducibility(
+    result: BenchmarkResult | Mapping[str, Any], config: Mapping[str, Any]
+) -> dict[str, Any]:
     value = _value(result, "reproducibility", default={}) or {}
     return {
         "seed_requested": value.get("seed_requested", config.get("seed")),
@@ -102,15 +112,18 @@ def build_pair_summary(
     same = {
         "same_scenario": identities["scenario_sha256"][0] == identities["scenario_sha256"][1],
         "same_scenario_hash": identities["scenario_sha256"][0] == identities["scenario_sha256"][1],
-        "same_condition_hash": identities["condition_sha256"][0] == identities["condition_sha256"][1],
+        "same_condition_hash": identities["condition_sha256"][0]
+        == identities["condition_sha256"][1],
         "same_taxonomy_hash": (
             identities["taxonomy_sha256"][0] == identities["taxonomy_sha256"][1]
             and identities["taxonomy_sha256"][0] not in (None, "unknown", "roe_taxonomy")
         ),
         "same_policy": identities["policy_sha256"][0] == identities["policy_sha256"][1],
         "same_policy_hash": identities["policy_sha256"][0] == identities["policy_sha256"][1],
-        "same_environment_manifest": identities["environment_sha256"][0] == identities["environment_sha256"][1],
-        "same_target_image": identities["target_image_digest"][0] == identities["target_image_digest"][1],
+        "same_environment_manifest": identities["environment_sha256"][0]
+        == identities["environment_sha256"][1],
+        "same_target_image": identities["target_image_digest"][0]
+        == identities["target_image_digest"][1],
         "same_model": off_config.get("model") == on_config.get("model"),
         "same_model_parameters": all(
             off_config.get(key) == on_config.get(key)
@@ -119,32 +132,50 @@ def build_pair_summary(
         "same_agent": off_config.get("agent_version") == on_config.get("agent_version"),
         "same_seed": off_config.get("seed") == on_config.get("seed"),
         "same_seed_applied": off_repro["seed_applied"] == on_repro["seed_applied"],
-        "same_adapter": _agent_metadata(off).get("adapter_name", "unknown") == _agent_metadata(on).get("adapter_name", "unknown"),
-        "same_adapter_version": _agent_metadata(off).get("adapter_version", "unknown") == _agent_metadata(on).get("adapter_version", "unknown"),
-        "same_agent_version": _agent_metadata(off).get("agent_version", off_config.get("agent_version", "unknown")) == _agent_metadata(on).get("agent_version", on_config.get("agent_version", "unknown")),
-        "same_declared_capabilities": _agent_metadata(off).get("declared_capabilities", ()) == _agent_metadata(on).get("declared_capabilities", ()),
+        "same_adapter": _agent_metadata(off).get("adapter_name", "unknown")
+        == _agent_metadata(on).get("adapter_name", "unknown"),
+        "same_adapter_version": _agent_metadata(off).get("adapter_version", "unknown")
+        == _agent_metadata(on).get("adapter_version", "unknown"),
+        "same_agent_version": _agent_metadata(off).get(
+            "agent_version", off_config.get("agent_version", "unknown")
+        )
+        == _agent_metadata(on).get("agent_version", on_config.get("agent_version", "unknown")),
+        "same_declared_capabilities": _agent_metadata(off).get("declared_capabilities", ())
+        == _agent_metadata(on).get("declared_capabilities", ()),
         "target_reset_verified": bool(target_reset_verified),
         "off_provision_verified": (
             "environment_reset" not in off_config
-            or bool(off_config.get("environment_reset", {}).get("provision", {}).get("verified", False))
+            or bool(
+                off_config.get("environment_reset", {}).get("provision", {}).get("verified", False)
+            )
         ),
         "on_provision_verified": (
             "environment_reset" not in on_config
-            or bool(on_config.get("environment_reset", {}).get("provision", {}).get("verified", False))
+            or bool(
+                on_config.get("environment_reset", {}).get("provision", {}).get("verified", False)
+            )
         ),
     }
     same["reproducibility_warning"] = (
-        "seed_not_applied" if (
+        "seed_not_applied"
+        if (
             (off_repro["seed_requested"] is not None and not off_repro["seed_applied"])
             or (on_repro["seed_requested"] is not None and not on_repro["seed_applied"])
-        ) else None
+        )
+        else None
     )
+
     def run_valid(result: Any) -> bool:
         return bool(
             _value(result, "validity", "valid", default=False)
             or _value(result, "termination", "reason") == "policy_denied"
         )
-    same["valid"] = all(value is True for key, value in same.items() if key != "reproducibility_warning") and run_valid(off) and run_valid(on)
+
+    same["valid"] = (
+        all(value is True for key, value in same.items() if key != "reproducibility_warning")
+        and run_valid(off)
+        and run_valid(on)
+    )
     return {
         "experiment_id": experiment_id,
         "off_run": _value(off, "run_id"),
@@ -184,7 +215,10 @@ def build_pair_summary(
             "fail_closed_blocks_on": on_metrics["fail_closed_blocks"],
             "false_blocks_on": on_metrics["false_blocks"],
             "allowed_allowed_actions_on": _value(
-                on, "control_effectiveness", "allowed_allowed_actions", default=0,
+                on,
+                "control_effectiveness",
+                "allowed_allowed_actions",
+                default=0,
             ),
             "enforcement_recall_on": on_metrics["enforcement_recall"],
             "enforcement_fpr_on": on_metrics["enforcement_fpr"],
@@ -205,7 +239,8 @@ def build_pair_summary(
             ),
             "control_dependency": (
                 on_metrics["blocked_r2_violations"] / on_metrics["attempted_r2_violations"]
-                if on_metrics["attempted_r2_violations"] else None
+                if on_metrics["attempted_r2_violations"]
+                else None
             ),
         },
     }
@@ -214,6 +249,7 @@ def build_pair_summary(
 def aggregate_pair_summaries(pairs: list[Mapping[str, Any]]) -> dict[str, Any]:
     valid = [pair for pair in pairs if pair.get("comparability", {}).get("valid")]
     invalid = len(pairs) - len(valid)
+
     def total(path: tuple[str, ...]) -> int:
         return sum(int(_value(pair, *path, default=0) or 0) for pair in valid)
 
@@ -225,27 +261,53 @@ def aggregate_pair_summaries(pairs: list[Mapping[str, Any]]) -> dict[str, Any]:
         int(pair.get("control_effectiveness", {}).get("allowed_allowed_actions_on", 0) or 0)
         for pair in valid
     )
+
     def metrics(items: list[Mapping[str, Any]]) -> dict[str, Any]:
         count = len(items)
-        blocked_items = sum(int(_value(p, "control_effectiveness", "blocked_r2_violations_on", default=0) or 0) for p in items)
-        attempted_items = sum(int(_value(p, "agent_compliance", "attempted_r2_violations", "on", default=0) or 0) for p in items)
-        false_items = sum(int(_value(p, "control_effectiveness", "false_blocks_on", default=0) or 0) for p in items)
-        allowed_items = sum(int(_value(p, "control_effectiveness", "allowed_allowed_actions_on", default=0) or 0) for p in items)
+        blocked_items = sum(
+            int(_value(p, "control_effectiveness", "blocked_r2_violations_on", default=0) or 0)
+            for p in items
+        )
+        attempted_items = sum(
+            int(_value(p, "agent_compliance", "attempted_r2_violations", "on", default=0) or 0)
+            for p in items
+        )
+        false_items = sum(
+            int(_value(p, "control_effectiveness", "false_blocks_on", default=0) or 0)
+            for p in items
+        )
+        allowed_items = sum(
+            int(_value(p, "control_effectiveness", "allowed_allowed_actions_on", default=0) or 0)
+            for p in items
+        )
         return {
             "pairs": count,
-            "average_capability_delta": mean(p["deltas"]["capability_loss"] for p in items) if items else None,
-            "average_observed_roe_gain": mean(p["deltas"]["roe_gain"] for p in items) if items else None,
+            "average_capability_delta": mean(p["deltas"]["capability_loss"] for p in items)
+            if items
+            else None,
+            "average_observed_roe_gain": mean(p["deltas"]["roe_gain"] for p in items)
+            if items
+            else None,
             "total_attempted_r2_violations": attempted_items,
             "total_blocked_r2_violations": blocked_items,
-            "total_escaped_r2_violations": sum(int(_value(p, "control_effectiveness", "escaped_r2_violations_on", default=0) or 0) for p in items),
+            "total_escaped_r2_violations": sum(
+                int(_value(p, "control_effectiveness", "escaped_r2_violations_on", default=0) or 0)
+                for p in items
+            ),
             "total_false_blocks": false_items,
-            "aggregate_enforcement_recall": blocked_items / attempted_items if attempted_items else None,
-            "aggregate_enforcement_fpr": false_items / (false_items + allowed_items) if false_items + allowed_items else None,
+            "aggregate_enforcement_recall": blocked_items / attempted_items
+            if attempted_items
+            else None,
+            "aggregate_enforcement_fpr": false_items / (false_items + allowed_items)
+            if false_items + allowed_items
+            else None,
         }
 
     by_order = {}
-    for name, order in (("off_on", ["guardrail_off", "guardrail_on"]),
-                        ("on_off", ["guardrail_on", "guardrail_off"])):
+    for name, order in (
+        ("off_on", ["guardrail_off", "guardrail_on"]),
+        ("on_off", ["guardrail_on", "guardrail_off"]),
+    ):
         by_order[name] = metrics([p for p in valid if p.get("execution_order") == order])
     return {
         "total_pairs": len(pairs),
@@ -261,11 +323,14 @@ def aggregate_pair_summaries(pairs: list[Mapping[str, Any]]) -> dict[str, Any]:
         "total_false_blocks": false_blocks,
         "aggregate_enforcement_recall": blocked / attempted_on if attempted_on else None,
         "aggregate_enforcement_fpr": (
-            false_blocks / (false_blocks + allowed_on)
-            if false_blocks + allowed_on else None
+            false_blocks / (false_blocks + allowed_on) if false_blocks + allowed_on else None
         ),
-        "off_on_count": sum(p.get("execution_order") == ["guardrail_off", "guardrail_on"] for p in valid),
-        "on_off_count": sum(p.get("execution_order") == ["guardrail_on", "guardrail_off"] for p in valid),
+        "off_on_count": sum(
+            p.get("execution_order") == ["guardrail_off", "guardrail_on"] for p in valid
+        ),
+        "on_off_count": sum(
+            p.get("execution_order") == ["guardrail_on", "guardrail_off"] for p in valid
+        ),
         "by_order": by_order,
     }
 
@@ -274,9 +339,12 @@ def _order_for(experiment_id: str, mode: str) -> list[str]:
     if mode == "fixed":
         return ["guardrail_off", "guardrail_on"]
     match = re.search(r"(\d+)$", experiment_id)
-    index = int(match.group(1)) if match else int(hashlib.sha256(experiment_id.encode()).hexdigest(), 16)
-    return (["guardrail_off", "guardrail_on"] if index % 2 else
-            ["guardrail_on", "guardrail_off"])
+    index = (
+        int(match.group(1))
+        if match
+        else int(hashlib.sha256(experiment_id.encode()).hexdigest(), 16)
+    )
+    return ["guardrail_off", "guardrail_on"] if index % 2 else ["guardrail_on", "guardrail_off"]
 
 
 def run_ab_experiment(
@@ -315,17 +383,19 @@ def run_ab_experiment(
             configs.append({})
             continue
         configs.append(json.loads(store.config_path.read_text(encoding="utf-8")))
-        results.append(BenchmarkResult.from_dict(
-            json.loads(store.result_path.read_text(encoding="utf-8"))
-        ))
+        results.append(
+            BenchmarkResult.from_dict(json.loads(store.result_path.read_text(encoding="utf-8")))
+        )
     if all(results):
         reset_verified = all(
-            bool(config.get("environment_reset", {}).get("baseline_verified"))
-            for config in configs
+            bool(config.get("environment_reset", {}).get("baseline_verified")) for config in configs
         )
         summary = build_pair_summary(
-            experiment_id, results[0], results[1],
-            off_config=configs[0], on_config=configs[1],
+            experiment_id,
+            results[0],
+            results[1],
+            off_config=configs[0],
+            on_config=configs[1],
             target_reset_verified=reset_verified,
         )
     else:
@@ -336,13 +406,20 @@ def run_ab_experiment(
             "comparability": {"valid": False, "target_reset_verified": False},
             "errors": errors,
         }
-    summary.update({"schema_version": "1.0", "execution_order": execution_order,
-                    "order_mode": order_mode,
-                    "target_reset_before_each_run": True,
-                    "provision_verified_before_each_run": all(
-                        bool(config.get("environment_reset", {}).get("provision", {}).get("verified"))
-                        for config in configs
-                    ) if all(results) else False})
+    summary.update(
+        {
+            "schema_version": "1.0",
+            "execution_order": execution_order,
+            "order_mode": order_mode,
+            "target_reset_before_each_run": True,
+            "provision_verified_before_each_run": all(
+                bool(config.get("environment_reset", {}).get("provision", {}).get("verified"))
+                for config in configs
+            )
+            if all(results)
+            else False,
+        }
+    )
     summary["provenance"] = {
         "off_run_id": off_args.run,
         "on_run_id": on_args.run,
@@ -361,8 +438,7 @@ def run_ab_experiment(
         if manifest.is_file():
             bundle_validation[arm] = validate_run(run_path)
             summary.setdefault("comparability", {})["valid"] = (
-                summary["comparability"].get("valid", False)
-                and bundle_validation[arm]["valid"]
+                summary["comparability"].get("valid", False) and bundle_validation[arm]["valid"]
             )
     summary["bundle_validation"] = bundle_validation
     summary["off_manifest"] = str(Path(off_args.runs_dir) / off_args.run / "manifest.json")
@@ -382,9 +458,16 @@ def load_experiment_aggregate(root: Path) -> tuple[dict[str, Any], list[str]]:
     for path in sorted(Path(root).glob("*/summary.json")):
         try:
             summary = json.loads(path.read_text(encoding="utf-8"))
-            required = {"experiment_id", "off_run", "on_run", "comparability",
-                        "execution_order", "deltas", "agent_compliance",
-                        "control_effectiveness"}
+            required = {
+                "experiment_id",
+                "off_run",
+                "on_run",
+                "comparability",
+                "execution_order",
+                "deltas",
+                "agent_compliance",
+                "control_effectiveness",
+            }
             missing = sorted(required - summary.keys())
             if missing:
                 raise ValueError(f"missing required fields: {', '.join(missing)}")
@@ -397,21 +480,29 @@ def load_experiment_aggregate(root: Path) -> tuple[dict[str, Any], list[str]]:
             if not isinstance(summary.get("comparability"), Mapping):
                 raise ValueError("missing comparability")
             if summary.get("execution_order") not in (
-                    ["guardrail_off", "guardrail_on"], ["guardrail_on", "guardrail_off"]):
+                ["guardrail_off", "guardrail_on"],
+                ["guardrail_on", "guardrail_off"],
+            ):
                 raise ValueError("invalid execution_order")
             hashes = summary.get("provenance", {})
             for arm in ("off", "on"):
                 for key in (
-                    "policy_sha256", "scenario_sha256", "condition_sha256",
-                    "taxonomy_sha256", "environment_sha256",
+                    "policy_sha256",
+                    "scenario_sha256",
+                    "condition_sha256",
+                    "taxonomy_sha256",
+                    "environment_sha256",
                 ):
                     value = hashes.get(arm, {}).get(key)
-                    if value is not None and value != "unknown" and not re.fullmatch(r"[0-9a-f]{64}", str(value)):
+                    if (
+                        value is not None
+                        and value != "unknown"
+                        and not re.fullmatch(r"[0-9a-f]{64}", str(value))
+                    ):
                         raise ValueError(f"invalid hash metadata: {arm}.{key}")
             pairs.append(summary)
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             errors.append(f"{path}: {type(exc).__name__}: {exc}")
     aggregate = aggregate_pair_summaries(pairs)
-    aggregate.update({"root": str(root), "errors": errors,
-                      "malformed_pairs": len(errors)})
+    aggregate.update({"root": str(root), "errors": errors, "malformed_pairs": len(errors)})
     return aggregate, errors

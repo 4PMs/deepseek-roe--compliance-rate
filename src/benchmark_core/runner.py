@@ -35,8 +35,15 @@ from .core.bundle import finalize_bundle, validate_run
 from .core.lifecycle import LifecycleEvent
 from .core.policy import Policy
 from .core.result import (
-    BenchmarkResult, GoalResult, Metrics, ObserverHealth, ProgressResult,
-    Provenance, RoeResult, Termination, Validity,
+    BenchmarkResult,
+    GoalResult,
+    Metrics,
+    ObserverHealth,
+    ProgressResult,
+    Provenance,
+    RoeResult,
+    Termination,
+    Validity,
 )
 from .core.run import RunConfig, RunStore
 from .core.sequence import SequenceService
@@ -52,7 +59,11 @@ SCENARIOS_DIR = Path("scenarios")
 ENVIRONMENTS_DIR = Path("environments")
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 _VALID_TERMINATIONS = {
-    "agent_done", "max_steps", "action_parse_failed", "model_refusal", "unknown_action",
+    "agent_done",
+    "max_steps",
+    "action_parse_failed",
+    "model_refusal",
+    "unknown_action",
 }
 _INVALID_REASONS = {
     "provider_error": "experiment_infrastructure_failure",
@@ -77,13 +88,21 @@ def _git_state() -> tuple[str, bool]:
     repo_root = Path(__file__).resolve().parents[2]
     try:
         commit = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=repo_root,
-            check=True, capture_output=True, text=True,
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
-        dirty = bool(subprocess.run(
-            ["git", "status", "--porcelain"], cwd=repo_root,
-            check=True, capture_output=True, text=True,
-        ).stdout.strip())
+        dirty = bool(
+            subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=repo_root,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        )
         return commit or "unknown", dirty
     except (OSError, subprocess.SubprocessError):
         return "unknown", False
@@ -92,7 +111,10 @@ def _git_state() -> tuple[str, bool]:
 def _image_digests() -> dict[str, str]:
     try:
         listed = subprocess.run(
-            ["docker", "ps", "-q"], check=True, capture_output=True, text=True,
+            ["docker", "ps", "-q"],
+            check=True,
+            capture_output=True,
+            text=True,
         ).stdout.splitlines()
         digests: dict[str, str] = {}
         for container in listed:
@@ -101,11 +123,15 @@ def _image_digests() -> dict[str, str]:
                 continue
             image = subprocess.run(
                 ["docker", "inspect", "--format", "{{.Image}}", container],
-                check=True, capture_output=True, text=True,
+                check=True,
+                capture_output=True,
+                text=True,
             ).stdout.strip()
             inspected = subprocess.run(
                 ["docker", "image", "inspect", "--format", "{{json .RepoDigests}}", image],
-                check=True, capture_output=True, text=True,
+                check=True,
+                capture_output=True,
+                text=True,
             ).stdout.strip()
             values = json.loads(inspected or "[]")
             if values:
@@ -116,13 +142,20 @@ def _image_digests() -> dict[str, str]:
         return {}
 
 
-def collect_provenance(policy_path: Path, scenario_path: Path, agent_model: str,
-                       agent_version: str | None, seed: int | None,
-                       started_at: datetime, *, environment_sha256: str = "unknown",
-                       environment_version: str | None = None,
-                       target_image_digest: str | None = None,
-                       condition_path: Path | None = None,
-                       taxonomy_path: Path | None = None) -> Provenance:
+def collect_provenance(
+    policy_path: Path,
+    scenario_path: Path,
+    agent_model: str,
+    agent_version: str | None,
+    seed: int | None,
+    started_at: datetime,
+    *,
+    environment_sha256: str = "unknown",
+    environment_version: str | None = None,
+    target_image_digest: str | None = None,
+    condition_path: Path | None = None,
+    taxonomy_path: Path | None = None,
+) -> Provenance:
     try:
         policy_sha256 = sha256_file(policy_path)
     except OSError:
@@ -161,14 +194,16 @@ def collect_provenance(policy_path: Path, scenario_path: Path, agent_model: str,
     )
 
 
-def _use_verified_reset_image(provenance: Provenance,
-                              environment_reset: dict | None) -> Provenance:
+def _use_verified_reset_image(provenance: Provenance, environment_reset: dict | None) -> Provenance:
     """Reuse a verified reset image when the early Docker probe missed it."""
     if provenance.image_digests or not environment_reset:
         return provenance
     image_id = environment_reset.get("image_id")
-    if not (environment_reset.get("baseline_verified") and
-            isinstance(image_id, str) and image_id.startswith("sha256:")):
+    if not (
+        environment_reset.get("baseline_verified")
+        and isinstance(image_id, str)
+        and image_id.startswith("sha256:")
+    ):
         return provenance
     image = environment_reset.get("image") or "reset_image"
     return replace(
@@ -198,36 +233,55 @@ def add_run_parser(subparsers: argparse._SubParsersAction) -> None:
     )
     run.add_argument("--scenario", required=True, help="Scenario id, e.g. scenarioA")
     run.add_argument(
-        "--condition", default=None,
+        "--condition",
+        default=None,
         help="Instruction condition ID; defaults to neutral",
     )
     run.add_argument(
-        "--taxonomy", type=Path, default=Path("roe/taxonomy.yaml"),
+        "--taxonomy",
+        type=Path,
+        default=Path("roe/taxonomy.yaml"),
         help="Global ROE taxonomy document",
     )
-    run.add_argument("--policy", default=None, help="Path to policy YAML file; defaults to scenarios/<scenario>/policy.yaml")
+    run.add_argument(
+        "--policy",
+        default=None,
+        help="Path to policy YAML file; defaults to scenarios/<scenario>/policy.yaml",
+    )
     run.add_argument("--model", required=True, help="Model name passed to the LLM provider")
     run.add_argument("--run", help="Run id; defaults to run-<scenario>-<timestamp>")
     run.add_argument("--model-version", default="unknown")
     run.add_argument("--agent-version", default="poc")
-    run.add_argument("--provider", default=None, help="ollama|deepseek; defaults to MODEL_PROVIDER env")
+    run.add_argument(
+        "--provider", default=None, help="ollama|deepseek; defaults to MODEL_PROVIDER env"
+    )
     run.add_argument("--temperature", type=float, default=None)
     run.add_argument("--seed", type=int, default=None)
     run.add_argument("--repetition", type=int, default=None, help="pass@k 반복 인덱스")
-    run.add_argument("--upstream", default=None, help="Target base URL; defaults to the environment manifest")
+    run.add_argument(
+        "--upstream", default=None, help="Target base URL; defaults to the environment manifest"
+    )
     run.add_argument("--gateway-host", default="127.0.0.1")
     run.add_argument("--gateway-port", type=int, default=0, help="0 picks a free port")
-    run.add_argument("--max-steps", type=int, default=None, help="Overrides scenario limits.max_steps")
+    run.add_argument(
+        "--max-steps", type=int, default=None, help="Overrides scenario limits.max_steps"
+    )
     run.add_argument("--timeout", type=int, default=None, help="Overrides scenario limits.timeout")
     run.add_argument("--runs-dir", type=Path, default=Path("runs"))
     run.add_argument("--scenarios-dir", type=Path, default=SCENARIOS_DIR)
     run.add_argument("--environments-dir", type=Path, default=ENVIRONMENTS_DIR)
-    run.add_argument("--reset-target", action="store_true",
-                     help="Recreate and verify the Juice Shop target before this run")
-    run.add_argument("--enforce-policy", action="store_true",
-                     help="Enable deterministic R2 policy enforcement")
     run.add_argument(
-        "--progress", choices=("human", "json", "quiet"), default="human",
+        "--reset-target",
+        action="store_true",
+        help="Recreate and verify the Juice Shop target before this run",
+    )
+    run.add_argument(
+        "--enforce-policy", action="store_true", help="Enable deterministic R2 policy enforcement"
+    )
+    run.add_argument(
+        "--progress",
+        choices=("human", "json", "quiet"),
+        default="human",
         help="Progress console rendering; artifacts are always written",
     )
 
@@ -235,13 +289,17 @@ def add_run_parser(subparsers: argparse._SubParsersAction) -> None:
 def add_ab_parser(subparsers: argparse._SubParsersAction) -> None:
     experiment = subparsers.add_parser("ab", help="Compare guardrail OFF and ON")
     for option, kwargs in (
-        (("--scenario",), {"required": True}), (("--policy",), {"default": None}),
-        (("--model",), {"required": True}), (("--model-version",), {"default": "unknown"}),
-        (("--agent-version",), {"default": "poc"}), (("--provider",), {"default": None}),
+        (("--scenario",), {"required": True}),
+        (("--policy",), {"default": None}),
+        (("--model",), {"required": True}),
+        (("--model-version",), {"default": "unknown"}),
+        (("--agent-version",), {"default": "poc"}),
+        (("--provider",), {"default": None}),
         (("--temperature",), {"type": float, "default": None}),
         (("--seed",), {"type": int, "default": None}),
         (("--repetition",), {"type": int, "default": None}),
-        (("--upstream",), {"default": None}), (("--gateway-host",), {"default": "127.0.0.1"}),
+        (("--upstream",), {"default": None}),
+        (("--gateway-host",), {"default": "127.0.0.1"}),
         (("--gateway-port",), {"type": int, "default": 0}),
         (("--max-steps",), {"type": int, "default": None}),
         (("--timeout",), {"type": int, "default": None}),
@@ -260,7 +318,9 @@ def add_ab_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def add_aggregate_parser(subparsers: argparse._SubParsersAction) -> None:
-    aggregate = subparsers.add_parser("aggregate-experiments", help="Aggregate experiment summary artifacts")
+    aggregate = subparsers.add_parser(
+        "aggregate-experiments", help="Aggregate experiment summary artifacts"
+    )
     aggregate.add_argument("--root", type=Path, required=True)
     aggregate.add_argument("--output", type=Path)
 
@@ -290,10 +350,16 @@ def _default_run_id(scenario: str) -> str:
 
 def cmd_init(args: argparse.Namespace) -> None:
     config = RunConfig(
-        run_id=args.run, model=args.model, model_version=args.model_version,
-        agent_version=args.agent_version, environment=args.environment,
-        scenario=args.scenario, policy=args.policy, max_steps=args.max_steps,
-        timeout=args.timeout, started_at=datetime.now(timezone.utc),
+        run_id=args.run,
+        model=args.model,
+        model_version=args.model_version,
+        agent_version=args.agent_version,
+        environment=args.environment,
+        scenario=args.scenario,
+        policy=args.policy,
+        max_steps=args.max_steps,
+        timeout=args.timeout,
+        started_at=datetime.now(timezone.utc),
     )
     store = RunStore(args.runs_dir, config)
     store.initialize()
@@ -315,8 +381,12 @@ def _load_adapter(environment_name: str, environments_dir: Path) -> EnvironmentA
         raise
     for attr_name in dir(module):
         obj = getattr(module, attr_name)
-        if (isinstance(obj, type) and attr_name.endswith("Adapter")
-                and hasattr(obj, "reset") and hasattr(obj, "provision")):
+        if (
+            isinstance(obj, type)
+            and attr_name.endswith("Adapter")
+            and hasattr(obj, "reset")
+            and hasattr(obj, "provision")
+        ):
             return obj()
     raise SystemExit(f"no adapter found in {adapter_ref}")
 
@@ -336,7 +406,9 @@ def _with_execution_status(result: BenchmarkResult, outcome: dict) -> BenchmarkR
             status="invalid",
             termination=Termination(reason, outcome.get("step"), outcome.get("detail")),
         )
-    if result.validity.reason == "no_observed_events" and reason in _VALID_TERMINATIONS | {"policy_denied"}:
+    if result.validity.reason == "no_observed_events" and reason in _VALID_TERMINATIONS | {
+        "policy_denied"
+    }:
         return replace(
             result,
             status="completed",
@@ -350,13 +422,17 @@ def _with_execution_status(result: BenchmarkResult, outcome: dict) -> BenchmarkR
         )
     valid = reason in _VALID_TERMINATIONS
     invalid_reason = (
-        reason if reason.startswith("observer_failed:")
-        else None if valid else outcome.get("validity_reason", _INVALID_REASONS[reason])
+        reason
+        if reason.startswith("observer_failed:")
+        else None
+        if valid
+        else outcome.get("validity_reason", _INVALID_REASONS[reason])
     )
     return replace(
         result,
         status=(
-            "completed" if valid
+            "completed"
+            if valid
             else ("partial" if reason in {"evaluator_error", "user_interrupt"} else "failed")
         ),
         termination=Termination(reason, outcome.get("step"), outcome.get("detail")),
@@ -382,7 +458,9 @@ def _with_execution(result: BenchmarkResult, outcome: dict) -> BenchmarkResult:
             record.update(status="unclassified", confidence=0.0)
             safe_evidence["prohibited_part_not_dispatched"] = record
         result = replace(
-            result, outcome="unclassified", safe_response_chain=safe_chain,
+            result,
+            outcome="unclassified",
+            safe_response_chain=safe_chain,
             safe_response_evidence=safe_evidence,
         )
     if "control_effectiveness" in outcome:
@@ -392,26 +470,38 @@ def _with_execution(result: BenchmarkResult, outcome: dict) -> BenchmarkResult:
     if "agent_metadata" in outcome:
         result = replace(result, agent_metadata=outcome["agent_metadata"])
     if result.trajectory:
-        result = replace(result, trajectory=with_termination(result.trajectory, {
-            "reason": result.termination.reason,
-            "step": result.termination.step,
-            "detail": result.termination.detail,
-        }))
+        result = replace(
+            result,
+            trajectory=with_termination(
+                result.trajectory,
+                {
+                    "reason": result.termination.reason,
+                    "step": result.termination.step,
+                    "detail": result.termination.detail,
+                },
+            ),
+        )
     return result
 
 
-def _empty_result(config: RunConfig, outcome: dict,
-                  observers: ObserverHealth | None = None,
-                  provenance: Provenance | None = None) -> BenchmarkResult:
-    return _with_execution(BenchmarkResult(
-        run_id=config.run_id,
-        goal=GoalResult(False),
-        progress=ProgressResult(0),
-        roe=RoeResult(False),
-        metrics=Metrics(0, 0.0),
-        observers=observers or ObserverHealth(),
-        provenance=provenance,
-    ), outcome)
+def _empty_result(
+    config: RunConfig,
+    outcome: dict,
+    observers: ObserverHealth | None = None,
+    provenance: Provenance | None = None,
+) -> BenchmarkResult:
+    return _with_execution(
+        BenchmarkResult(
+            run_id=config.run_id,
+            goal=GoalResult(False),
+            progress=ProgressResult(0),
+            roe=RoeResult(False),
+            metrics=Metrics(0, 0.0),
+            observers=observers or ObserverHealth(),
+            provenance=provenance,
+        ),
+        outcome,
+    )
 
 
 def _error_outcome(reason: str, error: Exception, step: int | None = None) -> dict:
@@ -441,55 +531,77 @@ def _result_summary(result: BenchmarkResult) -> dict:
     }
 
 
-def _save_result(store: RunStore, result: BenchmarkResult,
-                 reporter: ProgressReporter) -> None:
+def _save_result(store: RunStore, result: BenchmarkResult, reporter: ProgressReporter) -> None:
     if store.persistence_failure and result.validity.valid:
         result = replace(
-            result, status="invalid",
-            termination=Termination("evidence_persistence_failure", result.termination.step,
-                                    store.persistence_failure),
+            result,
+            status="invalid",
+            termination=Termination(
+                "evidence_persistence_failure", result.termination.step, store.persistence_failure
+            ),
             validity=Validity(False, store.persistence_failure),
         )
     reporter.change_state("saving_result", step=result.termination.step)
     reporter.emit(
-        "result_save_started", state="saving_result", step=result.termination.step,
+        "result_save_started",
+        state="saving_result",
+        step=result.termination.step,
     )
     if result.provenance is not None:
-        result = replace(result, provenance=replace(
-            result.provenance, finished_at=datetime.now(timezone.utc),
-        ))
+        result = replace(
+            result,
+            provenance=replace(
+                result.provenance,
+                finished_at=datetime.now(timezone.utc),
+            ),
+        )
     try:
         store.write_result(result)
     except Exception as exc:
         reporter.emit(
-            "run_failed", state="failed", step=result.termination.step,
+            "run_failed",
+            state="failed",
+            step=result.termination.step,
             detail={
-                "status": "failed", "termination_reason": "runner_error",
-                "valid": False, "error_type": type(exc).__name__,
+                "status": "failed",
+                "termination_reason": "runner_error",
+                "valid": False,
+                "error_type": type(exc).__name__,
             },
         )
         raise
     reporter.emit(
-        "result_saved", state="saving_result", step=result.termination.step,
+        "result_saved",
+        state="saving_result",
+        step=result.termination.step,
         detail={"filename": store.result_path.name},
     )
     final_type, final_state = (
-        ("run_completed", "completed") if result.validity.valid
-        else (("run_interrupted", "interrupted")
-              if result.termination.reason == "user_interrupt"
-              else ("run_failed", "failed"))
+        ("run_completed", "completed")
+        if result.validity.valid
+        else (
+            ("run_interrupted", "interrupted")
+            if result.termination.reason == "user_interrupt"
+            else ("run_failed", "failed")
+        )
     )
     reporter.change_state(final_state, step=result.termination.step)
     reporter.emit(
-        final_type, state=final_state, step=result.termination.step,
+        final_type,
+        state=final_state,
+        step=result.termination.step,
         detail=_result_summary(result),
     )
     finalize_bundle(store.run_dir)
 
 
-def _save_early_result(runs_dir: Path, config_values: dict, outcome: dict,
-                       reporter: ProgressReporter,
-                       provenance: Provenance | None = None) -> None:
+def _save_early_result(
+    runs_dir: Path,
+    config_values: dict,
+    outcome: dict,
+    reporter: ProgressReporter,
+    provenance: Provenance | None = None,
+) -> None:
     config = RunConfig(**config_values, started_at=datetime.now(timezone.utc))
     store = RunStore(runs_dir, config)
     store.initialize()
@@ -507,6 +619,7 @@ def _target_lock():
     lock.seek(0)
     if os.name == "nt":
         import msvcrt
+
         while True:
             try:
                 msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
@@ -515,6 +628,7 @@ def _target_lock():
                 time.sleep(0.1)
     else:
         import fcntl
+
         fcntl.flock(lock, fcntl.LOCK_EX)
     try:
         yield
@@ -579,7 +693,8 @@ class InstructionCondition:
 
 
 def _integrate_condition_goal(
-    scenario: Mapping[str, Any], condition: InstructionCondition,
+    scenario: Mapping[str, Any],
+    condition: InstructionCondition,
 ) -> dict[str, Any]:
     integrated = deepcopy(dict(scenario))
     integrated["condition"] = {
@@ -596,15 +711,17 @@ def _integrate_condition_goal(
     base = goal.get("success_when")
     if not isinstance(base, Mapping):
         raise ValueError("integrated scenario goal must declare success_when")
-    goal["success_when_all"] = [deepcopy(dict(base)), *(
-        deepcopy(dict(rule)) for rule in condition.success_when_all
-    )]
+    goal["success_when_all"] = [
+        deepcopy(dict(base)),
+        *(deepcopy(dict(rule)) for rule in condition.success_when_all),
+    ]
     integrated["goal"] = goal
     return integrated
 
 
 def _load_instruction_condition(
-    scenario_dir: Path, requested: str | None,
+    scenario_dir: Path,
+    requested: str | None,
 ) -> InstructionCondition:
     condition_id = requested or "neutral"
     if not condition_id or any(
@@ -629,9 +746,14 @@ def _load_instruction_condition(
         raise ValueError(f"instruction condition must declare group: {condition_path}")
     if not isinstance(instruction, str) or not instruction.strip():
         raise ValueError(f"instruction condition must contain instruction text: {condition_path}")
-    if not isinstance(success_when_all, Sequence) or isinstance(success_when_all, (str, bytes)) \
-            or any(not isinstance(rule, Mapping) for rule in success_when_all):
-        raise ValueError(f"instruction condition success_when_all must contain mappings: {condition_path}")
+    if (
+        not isinstance(success_when_all, Sequence)
+        or isinstance(success_when_all, (str, bytes))
+        or any(not isinstance(rule, Mapping) for rule in success_when_all)
+    ):
+        raise ValueError(
+            f"instruction condition success_when_all must contain mappings: {condition_path}"
+        )
     return InstructionCondition(
         condition_id=condition_id,
         group=group.strip(),
@@ -640,8 +762,11 @@ def _load_instruction_condition(
         sha256=sha256_file(condition_path),
         success_when_all=tuple(dict(rule) for rule in success_when_all),
         requested_operation=str(document.get("requested_operation", "none")),
-        target_resource=(str(document["target_resource"])
-                         if document.get("target_resource") is not None else None),
+        target_resource=(
+            str(document["target_resource"])
+            if document.get("target_resource") is not None
+            else None
+        ),
     )
 
 
@@ -660,15 +785,23 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     policy_doc = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
     validate_policy_taxonomy(policy_doc, taxonomy)
     condition = _load_instruction_condition(
-        scenario_dir, getattr(args, "condition", None),
+        scenario_dir,
+        getattr(args, "condition", None),
     )
     started_at = datetime.now(timezone.utc)
     provenance = collect_provenance(
-        policy_path, scenario_path, args.model, args.agent_version, args.seed, started_at,
-        condition_path=condition.path, taxonomy_path=taxonomy.path,
+        policy_path,
+        scenario_path,
+        args.model,
+        args.agent_version,
+        args.seed,
+        started_at,
+        condition_path=condition.path,
+        taxonomy_path=taxonomy.path,
     )
     scenario_doc = _integrate_condition_goal(
-        yaml.safe_load(scenario_path.read_text(encoding="utf-8")), condition,
+        yaml.safe_load(scenario_path.read_text(encoding="utf-8")),
+        condition,
     )
     start_state = scenario_doc.get("start_state") or {}
     authentication = start_state.get("authentication") if isinstance(start_state, Mapping) else {}
@@ -686,7 +819,8 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     environment_path = args.environments_dir / environment_name / "environment.yaml"
     environment_doc = (
         yaml.safe_load(environment_path.read_text(encoding="utf-8"))
-        if environment_path.exists() else {}
+        if environment_path.exists()
+        else {}
     )
     try:
         environment_sha256 = sha256_file(environment_path)
@@ -713,15 +847,23 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     max_steps = args.max_steps or limits.get("max_steps", 8)
     timeout = args.timeout or limits.get("timeout", 20)
     run_id = args.run or (
-        _default_run_id(args.scenario) if args.repetition is None
+        _default_run_id(args.scenario)
+        if args.repetition is None
         else f"run-{args.scenario}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-r{args.repetition}"
     )
     config_values = dict(
-        run_id=run_id, model=args.model, model_version=args.model_version,
-        agent_version=args.agent_version, environment=environment_name,
-        scenario=args.scenario, policy=policy_path.stem, max_steps=max_steps,
+        run_id=run_id,
+        model=args.model,
+        model_version=args.model_version,
+        agent_version=args.agent_version,
+        environment=environment_name,
+        scenario=args.scenario,
+        policy=policy_path.stem,
+        max_steps=max_steps,
         timeout=timeout,
-        temperature=args.temperature, seed=args.seed, repetition=args.repetition,
+        temperature=args.temperature,
+        seed=args.seed,
+        repetition=args.repetition,
         provider=args.provider,
         instruction_condition=condition.condition_id,
         instruction_condition_group=condition.group,
@@ -742,8 +884,12 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     os.environ["RUN_SEQUENCE_TOKEN"] = sequence_service.token
     os.environ["RUN_SEQUENCE_OBSERVER"] = f"host.docker.internal:{sequence_service.port}"
     reporter = ProgressReporter(
-        Path(args.runs_dir) / run_id, run_id, args.scenario, policy_path.stem,
-        max_steps, console_mode=getattr(args, "progress", "human"),
+        Path(args.runs_dir) / run_id,
+        run_id,
+        args.scenario,
+        policy_path.stem,
+        max_steps,
+        console_mode=getattr(args, "progress", "human"),
     )
     reporter.emit("run_created", state="initializing")
     reporter.emit("run_started", state="initializing")
@@ -758,27 +904,43 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             environment_reset = adapter.reset()
         except Exception as exc:
             reporter.emit(
-                "target_reset_failed", state="failed",
+                "target_reset_failed",
+                state="failed",
                 detail={"error_type": type(exc).__name__},
             )
             reporter.emit(
-                "target_error", state="failed",
+                "target_error",
+                state="failed",
                 detail={"error_type": type(exc).__name__},
             )
             _save_early_result(
-                args.runs_dir, config_values,
-                {**_error_outcome("target_error", exc), "validity_reason": "environment_reset_invalid"},
-                reporter, provenance,
+                args.runs_dir,
+                config_values,
+                {
+                    **_error_outcome("target_error", exc),
+                    "validity_reason": "environment_reset_invalid",
+                },
+                reporter,
+                provenance,
             )
             raise
         except KeyboardInterrupt:
-            _save_early_result(args.runs_dir, config_values, {
-                "reason": "user_interrupt", "step": None, "detail": None,
-            }, reporter, provenance)
+            _save_early_result(
+                args.runs_dir,
+                config_values,
+                {
+                    "reason": "user_interrupt",
+                    "step": None,
+                    "detail": None,
+                },
+                reporter,
+                provenance,
+            )
             raise
         provenance = _use_verified_reset_image(provenance, environment_reset)
         reporter.emit(
-            "target_reset_completed", state="resetting_target",
+            "target_reset_completed",
+            state="resetting_target",
             detail={"performed": bool(environment_reset.get("performed", True))},
         )
         reporter.change_state("verifying_target")
@@ -788,32 +950,50 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             if callable(verifier):
                 baseline = verifier()
                 environment_reset = {
-                    **environment_reset, "baseline_verified": True, "baseline": baseline,
+                    **environment_reset,
+                    "baseline_verified": True,
+                    "baseline": baseline,
                 }
             elif environment_reset.get("baseline_verified") is False:
                 raise RuntimeError("target baseline verification failed")
         except Exception as exc:
             reporter.emit(
-                "target_verify_failed", state="failed",
+                "target_verify_failed",
+                state="failed",
                 detail={"error_type": type(exc).__name__},
             )
             reporter.emit(
-                "target_error", state="failed",
+                "target_error",
+                state="failed",
                 detail={"error_type": type(exc).__name__},
             )
             _save_early_result(
-                args.runs_dir, config_values,
-                {**_error_outcome("target_error", exc), "validity_reason": "environment_reset_invalid"},
-                reporter, provenance,
+                args.runs_dir,
+                config_values,
+                {
+                    **_error_outcome("target_error", exc),
+                    "validity_reason": "environment_reset_invalid",
+                },
+                reporter,
+                provenance,
             )
             raise
         except KeyboardInterrupt:
-            _save_early_result(args.runs_dir, config_values, {
-                "reason": "user_interrupt", "step": None, "detail": None,
-            }, reporter, provenance)
+            _save_early_result(
+                args.runs_dir,
+                config_values,
+                {
+                    "reason": "user_interrupt",
+                    "step": None,
+                    "detail": None,
+                },
+                reporter,
+                provenance,
+            )
             raise
         reporter.emit(
-            "target_verify_completed", state="verifying_target",
+            "target_verify_completed",
+            state="verifying_target",
             detail={"verified": bool(environment_reset.get("baseline_verified", True))},
         )
         reporter.change_state("provisioning")
@@ -833,23 +1013,35 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                 runtime_context = dict(provided_context)
         except Exception as exc:
             reporter.emit(
-                "scenario_provision_failed", state="failed",
+                "scenario_provision_failed",
+                state="failed",
                 detail={"error_type": type(exc).__name__},
             )
             reporter.emit(
-                "target_error", state="failed",
+                "target_error",
+                state="failed",
                 detail={"error_type": type(exc).__name__},
             )
             _save_early_result(
-                args.runs_dir, config_values,
+                args.runs_dir,
+                config_values,
                 {**_error_outcome("target_error", exc), "validity_reason": "provision_invalid"},
-                reporter, provenance,
+                reporter,
+                provenance,
             )
             raise
         except KeyboardInterrupt:
-            _save_early_result(args.runs_dir, config_values, {
-                "reason": "user_interrupt", "step": None, "detail": None,
-            }, reporter, provenance)
+            _save_early_result(
+                args.runs_dir,
+                config_values,
+                {
+                    "reason": "user_interrupt",
+                    "step": None,
+                    "detail": None,
+                },
+                reporter,
+                provenance,
+            )
             raise
         reporter.emit("scenario_provision_completed", state="provisioning")
 
@@ -858,7 +1050,8 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     )
 
     config = RunConfig(
-        **config_values, started_at=started_at,
+        **config_values,
+        started_at=started_at,
         environment_reset=environment_reset,
     )
     store = RunStore(args.runs_dir, config)
@@ -878,7 +1071,9 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             if not database_token:
                 raise ValueError("database observer token is missing")
             database_collector = DatabaseEventCollector(
-                run_id, store.append_event, token=database_token,
+                run_id,
+                store.append_event,
+                token=database_token,
                 host=str(database_observation.get("bind_host", "127.0.0.1")),
                 port=int(database_observation.get("port", 8765)),
             )
@@ -890,18 +1085,24 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                 database_collector.close()
                 database_collector = None
             observer_health = ObserverHealth(
-                gateway="not_started", database="failed",
+                gateway="not_started",
+                database="failed",
                 detail={"database": type(exc).__name__},
             )
             reporter.emit(
-                "database_observer_failed", state="failed",
+                "database_observer_failed",
+                state="failed",
                 detail={"error_type": type(exc).__name__},
             )
         else:
             observer_health = replace(observer_health, database="ok")
             reporter.emit(
-                "database_observer_started", state="starting_observers",
-                detail={"host": database_collector.address[0], "port": database_collector.address[1]},
+                "database_observer_started",
+                state="starting_observers",
+                detail={
+                    "host": database_collector.address[0],
+                    "port": database_collector.address[1],
+                },
             )
     else:
         database_collector = None
@@ -921,8 +1122,13 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
     reporter.change_state("starting_gateway")
     try:
         app = create_app(
-            upstream, run_id, actor="agent", event_sink=store.append_event,
-            observer=observer, timeout=timeout, tls=environment_doc.get("tls"),
+            upstream,
+            run_id,
+            actor="agent",
+            event_sink=store.append_event,
+            observer=observer,
+            timeout=timeout,
+            tls=environment_doc.get("tls"),
             request_scope=(database_collector.request_scope if database_collector else None),
             sequence_allocator=sequence_service.allocator,
             lifecycle_sink=store.append_lifecycle,
@@ -935,30 +1141,40 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
         if database_collector is not None:
             database_collector.close()
         reporter.emit(
-            "gateway_failed", state="failed", detail={"error_type": type(exc).__name__},
+            "gateway_failed",
+            state="failed",
+            detail={"error_type": type(exc).__name__},
         )
         reporter.emit(
-            "gateway_error", state="failed", detail={"error_type": type(exc).__name__},
+            "gateway_error",
+            state="failed",
+            detail={"error_type": type(exc).__name__},
         )
-        result = _empty_result(config, _error_outcome("gateway_error", exc), observer_health, provenance)
+        result = _empty_result(
+            config, _error_outcome("gateway_error", exc), observer_health, provenance
+        )
         _save_result(store, result, reporter)
         raise
     actual_port = server.server_address[1]
     observer_health = replace(observer_health, gateway="ok")
     gateway_url = f"http://{args.gateway_host}:{actual_port}"
     reporter.emit(
-        "gateway_started", state="starting_gateway",
+        "gateway_started",
+        state="starting_gateway",
         detail={"host": args.gateway_host, "port": actual_port},
     )
 
     import threading
+
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     interrupted = False
     with database_collector if database_collector is not None else nullcontext():
         server_thread.start()
         try:
             prompts = load_agent_prompts(
-                scenario_path, gateway=gateway_url, policy_path=policy_path,
+                scenario_path,
+                gateway=gateway_url,
+                policy_path=policy_path,
                 condition_instruction=condition.instruction,
                 runtime_context=runtime_context,
             )
@@ -966,18 +1182,30 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             def report(record: dict) -> None:
                 store.append_trace({"run_id": run_id, **record})
 
-            def lifecycle(stage: str, action_id: str, step: int,
-                          raw_action: dict, details: dict | None,
-                          normalized_action: dict) -> None:
+            def lifecycle(
+                stage: str,
+                action_id: str,
+                step: int,
+                raw_action: dict,
+                details: dict | None,
+                normalized_action: dict,
+            ) -> None:
                 details = details or {}
-                store.append_lifecycle(LifecycleEvent.now(
-                    run_id=run_id, seq=step - 1, action_id=action_id,
-                    actor="agent", source="runner", stage=stage,
-                    raw_action=raw_action if stage == "proposed" else None,
-                    reference=None if stage == "proposed" else {"action_step": step},
-                    normalized_action=normalized_action,
-                    decision=details.get("decision"), reason=details.get("reason"),
-                ))
+                store.append_lifecycle(
+                    LifecycleEvent.now(
+                        run_id=run_id,
+                        seq=step - 1,
+                        action_id=action_id,
+                        actor="agent",
+                        source="runner",
+                        stage=stage,
+                        raw_action=raw_action if stage == "proposed" else None,
+                        reference=None if stage == "proposed" else {"action_step": step},
+                        normalized_action=normalized_action,
+                        decision=details.get("decision"),
+                        reason=details.get("reason"),
+                    )
+                )
 
             def progress(event_type: str, step: int, detail: dict) -> None:
                 reporter.emit(event_type, state="running_agent", step=step, detail=detail)
@@ -988,10 +1216,15 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                 reporter.emit("agent_started", state="running_agent")
                 with _hide_sequence_environment():
                     outcome = run_episode(
-                        prompts.system, gateway_url, max_steps,
-                        provider=args.provider, model=args.model,
-                        temperature=args.temperature, on_step=report,
-                        on_progress=progress, on_lifecycle=lifecycle,
+                        prompts.system,
+                        gateway_url,
+                        max_steps,
+                        provider=args.provider,
+                        model=args.model,
+                        temperature=args.temperature,
+                        on_step=report,
+                        on_progress=progress,
+                        on_lifecycle=lifecycle,
                         policy=policy,
                         enforce_policy=config.enforcement_enabled,
                         seed=config.seed,
@@ -1018,13 +1251,18 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
 
     reporter.change_state("evaluating", step=outcome.get("step"))
     reporter.emit(
-        "evaluation_started", state="evaluating", step=outcome.get("step"),
+        "evaluation_started",
+        state="evaluating",
+        step=outcome.get("step"),
     )
     try:
         store.sort_events()
         result = _with_execution(
             evaluate_run(
-                store.events_path, scenario_doc, policy, config,
+                store.events_path,
+                scenario_doc,
+                policy,
+                config,
                 environment=environment_doc,
                 observers=observer_health,
                 lifecycle_path=store.lifecycle_path,
@@ -1033,7 +1271,9 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
         )
         result = replace(result, provenance=provenance)
         reporter.emit(
-            "evaluation_completed", state="evaluating", step=outcome.get("step"),
+            "evaluation_completed",
+            state="evaluating",
+            step=outcome.get("step"),
             detail={
                 "current_stage": result.progress.current_stage,
                 "goal_success": result.goal.success,
@@ -1041,17 +1281,27 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
             },
         )
     except KeyboardInterrupt:
-        result = _empty_result(config, {
-            "reason": "user_interrupt", "step": outcome.get("step"), "detail": None,
-        }, provenance=provenance)
+        result = _empty_result(
+            config,
+            {
+                "reason": "user_interrupt",
+                "step": outcome.get("step"),
+                "detail": None,
+            },
+            provenance=provenance,
+        )
         _save_result(store, result, reporter)
         raise
     except Exception as exc:
         reporter.emit(
-            "evaluation_failed", state="failed", step=outcome.get("step"),
+            "evaluation_failed",
+            state="failed",
+            step=outcome.get("step"),
             detail={"error_type": type(exc).__name__},
         )
-        result = _empty_result(config, _error_outcome("evaluator_error", exc), provenance=provenance)
+        result = _empty_result(
+            config, _error_outcome("evaluator_error", exc), provenance=provenance
+        )
         _save_result(store, result, reporter)
         raise
     _save_result(store, result, reporter)
@@ -1075,6 +1325,7 @@ def cmd_aggregate(args: argparse.Namespace) -> None:
     output = args.output or args.root / "aggregate-summary.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     from .core.run import _atomic_json
+
     _atomic_json(output, summary)
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     if errors:

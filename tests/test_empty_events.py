@@ -7,8 +7,18 @@ from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def test_empty_run_is_invalid(tmp_path):
-    config = RunConfig("run-empty", "test", "1", "test", "env", "scenario",
-                       "policy", 1, 1, datetime.now(timezone.utc))
+    config = RunConfig(
+        "run-empty",
+        "test",
+        "1",
+        "test",
+        "env",
+        "scenario",
+        "policy",
+        1,
+        1,
+        datetime.now(timezone.utc),
+    )
     events = tmp_path / "events.jsonl"
     events.write_text("", encoding="utf-8")
     result = evaluate_run(events, {}, Policy(), config)

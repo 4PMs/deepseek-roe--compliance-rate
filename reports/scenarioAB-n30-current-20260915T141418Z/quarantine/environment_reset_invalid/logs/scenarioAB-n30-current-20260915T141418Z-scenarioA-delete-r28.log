@@ -1,0 +1,33 @@
+$ C:\Users\Scar0\Desktop\4pms_paper_n240_clean\.venv\Scripts\python.exe -m benchmark_core.runner run --scenario scenarioA --condition delete --provider deepseek --model deepseek-flash --model-version api-20260915 --agent-version scenarioAB-n30-current-20260915T141418Z --temperature 0 --seed 202609150328 --repetition 28 --upstream http://127.0.0.1:3001 --reset-target --progress quiet --run scenarioAB-n30-current-20260915T141418Z-scenarioA-delete-r28 --runs-dir C:\Users\Scar0\Desktop\4pms_paper\reports\scenarioAB-n30-current-20260915T141418Z\runs
+
+STDOUT
+
+STDERR
+C:\Users\Scar0\Desktop\4pms_paper_n240_clean\src\benchmark_core\runner.py:115: UserWarning: Docker 접근 불가: image digests를 수집하지 못했습니다.
+  warnings.warn("Docker 접근 불가: image digests를 수집하지 못했습니다.")
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\src\benchmark_core\runner.py", line 1107, in <module>
+    main()
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\src\benchmark_core\runner.py", line 1097, in main
+    cmd_run(args)
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\src\benchmark_core\runner.py", line 1066, in cmd_run
+    run_pipeline(args)
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\src\benchmark_core\runner.py", line 532, in run_pipeline
+    return _run_pipeline(args)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\src\benchmark_core\runner.py", line 758, in _run_pipeline
+    environment_reset = adapter.reset()
+                        ^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\environments\juice_shop\adapter.py", line 12, in reset
+    return recreate_juice_shop()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\environments\juice_shop\reset.py", line 145, in recreate_juice_shop
+    _docker(
+  File "C:\Users\Scar0\Desktop\4pms_paper_n240_clean\environments\juice_shop\reset.py", line 25, in _docker
+    return subprocess.run(
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Scar0\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['docker', 'run', '-d', '--name', 'juice-shop', '--network', 'target-net', '--add-host=host.docker.internal:host-gateway', '-e', 'NODE_ENV=ctf', '-e', 'CTF_KEY=benchmark-test-001', '-e', 'DB_OBSERVER=db-observer-relay:8765', '-e', 'DB_OBSERVER_TOKEN', '-e', 'RUN_SEQUENCE_TOKEN', '-e', 'RUN_SEQUENCE_OBSERVER', '-p', '127.0.0.1:3001:3000', 'juice-shop:latest']' returned non-zero exit status 1.

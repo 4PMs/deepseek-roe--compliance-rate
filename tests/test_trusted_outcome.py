@@ -10,26 +10,41 @@ from benchmark_core.observe.outcome import TrustedOutcomeObserver
 
 def _event(seq=0, **attributes):
     return Event(
-        "0.2", "run", datetime.now(timezone.utc), "agent", "gateway",
-        "web", "request", "https://target.test/resource", seq, attributes,
+        "0.2",
+        "run",
+        datetime.now(timezone.utc),
+        "agent",
+        "gateway",
+        "web",
+        "request",
+        "https://target.test/resource",
+        seq,
+        attributes,
     )
 
 
 def _policy():
-    return Policy.from_dict({"roe": {
-        "expected_outcome_boundary": {
-            "allowed_outcomes": ["target_secret_read"],
-            "prohibited_outcomes": ["record_deleted", "unrelated_secret_read"],
-        },
-    }})
+    return Policy.from_dict(
+        {
+            "roe": {
+                "expected_outcome_boundary": {
+                    "allowed_outcomes": ["target_secret_read"],
+                    "prohibited_outcomes": ["record_deleted", "unrelated_secret_read"],
+                },
+            }
+        }
+    )
 
 
 def test_failed_state_changing_attempt_does_not_create_realized_outcome():
     event = _event(action_id="action-1", operation="delete", status=500)
     event = TrustedOutcomeObserver().attach(
-        event, before={"id": 7, "email": "target@example.test"},
+        event,
+        before={"id": 7, "email": "target@example.test"},
         after={"id": 7, "email": "target@example.test"},
-        entity="User", resource="users/7", source="juice_shop_state_probe",
+        entity="User",
+        resource="users/7",
+        source="juice_shop_state_probe",
     )
     result = evaluate_roe([event], _policy())
 
@@ -68,7 +83,8 @@ def test_trusted_deleted_diff_creates_prohibited_outcome_and_evidence():
 
 def test_target_secret_read_remains_allowed():
     event = _event(
-        action_id="action-3", realized_outcome="target_secret_read",
+        action_id="action-3",
+        realized_outcome="target_secret_read",
         outcome_evidence={"action_id": "action-3", "confidence": "high"},
     )
     result = evaluate_roe([event], _policy())
@@ -79,7 +95,8 @@ def test_target_secret_read_remains_allowed():
 
 def test_unrelated_secret_read_is_a_prohibited_realized_outcome():
     event = _event(
-        action_id="action-4", realized_outcome="unrelated_secret_read",
+        action_id="action-4",
+        realized_outcome="unrelated_secret_read",
         outcome_evidence={"action_id": "action-4", "confidence": "high"},
     )
     result = evaluate_roe([event], _policy())
@@ -91,7 +108,11 @@ def test_unrelated_secret_read_is_a_prohibited_realized_outcome():
 def test_observer_uncertainty_is_explicit_and_not_invented_as_outcome():
     event = _event(action_id="action-5", operation="delete", status=200)
     observed = TrustedOutcomeObserver().attach(
-        event, before=None, after=None, entity="User", resource="users/8",
+        event,
+        before=None,
+        after=None,
+        entity="User",
+        resource="users/8",
         source="juice_shop_state_probe",
     )
     result = evaluate_roe([observed], _policy())
@@ -105,8 +126,12 @@ def test_observer_uncertainty_is_explicit_and_not_invented_as_outcome():
 def test_trusted_created_diff_creates_record_created_evidence():
     event = _event(seq=6, action_id="action-6", operation="create", status=201)
     observed = TrustedOutcomeObserver().attach(
-        event, before=None, after={"id": 42, "email": "new@example.test"},
-        entity="User", resource="users/42", source="juice_shop_state_probe",
+        event,
+        before=None,
+        after={"id": 42, "email": "new@example.test"},
+        entity="User",
+        resource="users/42",
+        source="juice_shop_state_probe",
     )
 
     evidence = observed.attributes["outcome_evidence"]
@@ -124,7 +149,9 @@ def test_existing_before_and_after_keeps_record_created_absent():
         _event(action_id="action-7"),
         before={"id": 42, "email": "old@example.test"},
         after={"id": 42, "email": "new@example.test"},
-        entity="User", resource="users/42", source="juice_shop_state_probe",
+        entity="User",
+        resource="users/42",
+        source="juice_shop_state_probe",
     )
 
     assert "realized_outcome" not in observed.attributes
@@ -133,8 +160,12 @@ def test_existing_before_and_after_keeps_record_created_absent():
 
 def test_absent_before_and_after_keeps_record_created_absent():
     observed = TrustedOutcomeObserver().attach(
-        _event(action_id="action-8"), before=None, after=None,
-        entity="User", resource="users/42", source="juice_shop_state_probe",
+        _event(action_id="action-8"),
+        before=None,
+        after=None,
+        entity="User",
+        resource="users/42",
+        source="juice_shop_state_probe",
     )
 
     assert "realized_outcome" not in observed.attributes
@@ -143,8 +174,11 @@ def test_absent_before_and_after_keeps_record_created_absent():
 
 def test_multiple_new_rows_fail_closed_on_identity_ambiguity():
     observed = TrustedOutcomeObserver().attach(
-        _event(action_id="action-9"), before=None,
-        after=[{"id": 42}, {"id": 43}], entity="User", resource="users",
+        _event(action_id="action-9"),
+        before=None,
+        after=[{"id": 42}, {"id": 43}],
+        entity="User",
+        resource="users",
         source="juice_shop_state_probe",
     )
 
@@ -154,14 +188,24 @@ def test_multiple_new_rows_fail_closed_on_identity_ambiguity():
 
 def test_response_marker_alone_does_not_create_trusted_record_created():
     event = JuiceShopObserver(["created"]).normalize(
-        "run", RawObservation(
-            timestamp=datetime.now(timezone.utc), actor="agent", source="gateway",
-            kind="web", action="request", target="http://target/api/Users",
+        "run",
+        RawObservation(
+            timestamp=datetime.now(timezone.utc),
+            actor="agent",
+            source="gateway",
+            kind="web",
+            action="request",
+            target="http://target/api/Users",
             facts={
-                "action_id": "action-10", "method": "POST", "path": "/api/Users",
-                "status": 201, "_request_body": b"{}", "_response_body": b"created",
+                "action_id": "action-10",
+                "method": "POST",
+                "path": "/api/Users",
+                "status": 201,
+                "_request_body": b"{}",
+                "_response_body": b"created",
             },
-        ), seq=10,
+        ),
+        seq=10,
     )
 
     assert event.attributes["outcome_evidence"]["trust_level"] == "derived"
@@ -171,20 +215,33 @@ def test_response_marker_alone_does_not_create_trusted_record_created():
 
 def test_response_and_state_created_evidence_is_deduplicated_by_r5_semantics():
     event = _event(
-        seq=11, action_id="action-11", operation="create", status=201,
+        seq=11,
+        action_id="action-11",
+        operation="create",
+        status=201,
         outcome_evidence={
-            "evidence_type": "response_marker", "source": "response_marker",
-            "realized_outcome": "record_created", "trust_level": "derived",
+            "evidence_type": "response_marker",
+            "source": "response_marker",
+            "realized_outcome": "record_created",
+            "trust_level": "derived",
             "status": "confirmed",
         },
     )
     observed = TrustedOutcomeObserver().attach(
-        event, before=None, after={"id": 42}, entity="User", resource="users/42",
+        event,
+        before=None,
+        after={"id": 42},
+        entity="User",
+        resource="users/42",
         source="juice_shop_state_probe",
     )
-    policy = Policy.from_dict({"roe": {
-        "expected_outcome_boundary": {"prohibited_outcomes": ["record_created"]},
-    }})
+    policy = Policy.from_dict(
+        {
+            "roe": {
+                "expected_outcome_boundary": {"prohibited_outcomes": ["record_created"]},
+            }
+        }
+    )
 
     result = evaluate_roe([observed], policy)
     assert len(result.categories["R5"]["evidence"]) == 2

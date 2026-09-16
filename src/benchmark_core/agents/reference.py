@@ -8,7 +8,9 @@ from .base import AgentContext, AgentMetadata, AgentProposal
 class ReferenceAgentAdapter:
     """Return scripted raw actions; not intended as an attack benchmark agent."""
 
-    def __init__(self, actions: Iterable[Mapping[str, Any]], *, agent_name: str = "reference-agent") -> None:
+    def __init__(
+        self, actions: Iterable[Mapping[str, Any]], *, agent_name: str = "reference-agent"
+    ) -> None:
         self._actions = [dict(action) for action in actions]
         self._index = 0
         self._metadata = AgentMetadata(
@@ -34,7 +36,8 @@ class ReferenceAgentAdapter:
             agent_id=self._metadata.agent_name,
             step=context.step,
             raw=action,
-            tool=action.get("tool") if isinstance(action.get("tool"), Mapping)
+            tool=action.get("tool")
+            if isinstance(action.get("tool"), Mapping)
             else {"name": action.get("action", "unknown")},
             arguments=action.get("arguments", action),
             reasoning=action.get("thought"),

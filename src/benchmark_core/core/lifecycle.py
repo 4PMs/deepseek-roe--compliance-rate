@@ -35,11 +35,17 @@ class LifecycleEvent:
 
     def to_dict(self) -> dict[str, Any]:
         data = {
-            "type": self.stage, "run_id": self.run_id, "seq": self.seq,
-            "timestamp": self.timestamp.isoformat(), "action_id": self.action_id,
-            "parent_action_id": self.parent_action_id, "actor": self.actor,
-            "source": self.source, "stage": self.stage,
-            "raw_action": self.raw_action, "reference": self.reference,
+            "type": self.stage,
+            "run_id": self.run_id,
+            "seq": self.seq,
+            "timestamp": self.timestamp.isoformat(),
+            "action_id": self.action_id,
+            "parent_action_id": self.parent_action_id,
+            "actor": self.actor,
+            "source": self.source,
+            "stage": self.stage,
+            "raw_action": self.raw_action,
+            "reference": self.reference,
             "normalized_action": self.normalized_action,
         }
         if self.decision is not None:
@@ -49,20 +55,41 @@ class LifecycleEvent:
         return data
 
     @classmethod
-    def now(cls, *, run_id: str, seq: int, action_id: str, actor: str,
-            source: str, stage: str, raw_action: Any | None = None,
-            reference: Any | None = None, normalized_action: Any | None = None,
-            decision: str | None = None, reason: str | None = None) -> "LifecycleEvent":
+    def now(
+        cls,
+        *,
+        run_id: str,
+        seq: int,
+        action_id: str,
+        actor: str,
+        source: str,
+        stage: str,
+        raw_action: Any | None = None,
+        reference: Any | None = None,
+        normalized_action: Any | None = None,
+        decision: str | None = None,
+        reason: str | None = None,
+    ) -> "LifecycleEvent":
         return cls(
-            run_id=run_id, seq=seq, timestamp=datetime.now(timezone.utc),
-            action_id=action_id, parent_action_id=None, actor=actor,
-            source=source, stage=stage, raw_action=raw_action,
-            reference=reference, normalized_action=normalized_action,
-            decision=decision, reason=reason,
+            run_id=run_id,
+            seq=seq,
+            timestamp=datetime.now(timezone.utc),
+            action_id=action_id,
+            parent_action_id=None,
+            actor=actor,
+            source=source,
+            stage=stage,
+            raw_action=raw_action,
+            reference=reference,
+            normalized_action=normalized_action,
+            decision=decision,
+            reason=reason,
         )
 
 
-def validate_lifecycle(records: list[Mapping[str, Any]], *, expected_run_id: str | None = None) -> None:
+def validate_lifecycle(
+    records: list[Mapping[str, Any]], *, expected_run_id: str | None = None
+) -> None:
     """Validate correlated lifecycle records before a run is finalized.
 
     ``proposed -> policy_decision`` is a normal terminal path for both deny
@@ -73,7 +100,11 @@ def validate_lifecycle(records: list[Mapping[str, Any]], *, expected_run_id: str
     grouped: dict[str, list[str]] = {}
     correlations: dict[str, Any] = {}
     for record in records:
-        if not isinstance(record, Mapping) or not record.get("action_id") or not record.get("stage"):
+        if (
+            not isinstance(record, Mapping)
+            or not record.get("action_id")
+            or not record.get("stage")
+        ):
             raise ValueError("malformed lifecycle record")
         action_id = str(record["action_id"])
         stage = str(record["stage"])
@@ -105,9 +136,12 @@ def validate_lifecycle(records: list[Mapping[str, Any]], *, expected_run_id: str
     for action_id, stages in grouped.items():
         if stages == ["proposed", "policy_decision"]:
             decision = next(
-                (str(record.get("decision")) for record in records
-                 if str(record.get("action_id")) == action_id
-                 and record.get("stage") == "policy_decision"),
+                (
+                    str(record.get("decision"))
+                    for record in records
+                    if str(record.get("action_id")) == action_id
+                    and record.get("stage") == "policy_decision"
+                ),
                 None,
             )
             if decision in {"allow", "deny"} or decision is None:

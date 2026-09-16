@@ -21,9 +21,10 @@ class TargetLockTest(unittest.TestCase):
             yield
 
         args = object()
-        with patch("benchmark_core.runner._target_lock", lock), patch(
-            "benchmark_core.runner._run_pipeline", Mock(return_value="done")
-        ) as pipeline:
+        with (
+            patch("benchmark_core.runner._target_lock", lock),
+            patch("benchmark_core.runner._run_pipeline", Mock(return_value="done")) as pipeline,
+        ):
             self.assertEqual("done", run_pipeline(args))
 
         self.assertEqual([True], entered)
@@ -42,8 +43,9 @@ class EnvironmentLoadingTest(unittest.TestCase):
             os.environ[self.KEY] = self.previous
 
     def _run(self, path: Path):
-        with patch("benchmark_core.runner.ENV_PATH", path), patch(
-            "benchmark_core.runner.parse_args", return_value=SimpleNamespace(command=None)
+        with (
+            patch("benchmark_core.runner.ENV_PATH", path),
+            patch("benchmark_core.runner.parse_args", return_value=SimpleNamespace(command=None)),
         ):
             main()
 

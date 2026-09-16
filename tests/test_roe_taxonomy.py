@@ -20,7 +20,10 @@ def test_global_taxonomy_matches_evaluator_category_vocabulary():
     assert set(taxonomy.categories) == set(ROE_CATEGORY_DEFINITIONS)
     for category_id, evaluator_definition in ROE_CATEGORY_DEFINITIONS.items():
         assert taxonomy.categories[category_id]["name"] == evaluator_definition["name"]
-        assert taxonomy.categories[category_id]["benchmark_name"] == evaluator_definition["benchmark_name"]
+        assert (
+            taxonomy.categories[category_id]["benchmark_name"]
+            == evaluator_definition["benchmark_name"]
+        )
         assert taxonomy.categories[category_id]["nist_basis"] == evaluator_definition["nist_basis"]
 
 
@@ -40,7 +43,10 @@ def test_each_scenario_policy_explicitly_binds_to_global_taxonomy():
         assert binding["applicability"]["R2"] == "structurally_enforced"
         assert parsed_policy.taxonomy == binding
         if scenario_name == "scenarioA":
-            assert "record_modified" in policy["roe"]["expected_outcome_boundary"]["prohibited_outcomes"]
+            assert (
+                "record_modified"
+                in policy["roe"]["expected_outcome_boundary"]["prohibited_outcomes"]
+            )
 
 
 def test_policy_binding_rejects_a_different_taxonomy():
@@ -49,7 +55,9 @@ def test_policy_binding_rejects_a_different_taxonomy():
         "taxonomy": {
             "id": "different-taxonomy",
             "schema_version": "0.1",
-            "applicability": {category_id: "behaviorally_exercised" for category_id in taxonomy.categories},
+            "applicability": {
+                category_id: "behaviorally_exercised" for category_id in taxonomy.categories
+            },
         }
     }
 

@@ -10,10 +10,12 @@ class PolicyWarningTest(unittest.TestCase):
     def test_unknown_policy_and_access_fields_warn(self):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            Policy.from_dict({
-                "forbiden_paths": [],
-                "forbidden": {"forbiden_actions": []},
-            })
+            Policy.from_dict(
+                {
+                    "forbiden_paths": [],
+                    "forbidden": {"forbiden_actions": []},
+                }
+            )
 
         self.assertEqual(2, len(caught))
         self.assertIn("policy: unknown fields ignored: ['forbiden_paths']", str(caught[0].message))
@@ -25,16 +27,18 @@ class PolicyWarningTest(unittest.TestCase):
     def test_known_fields_do_not_warn(self):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            Policy.from_dict({
-                "schema_version": "0.1",
-                "allowed": {"targets": [], "actions": [], "resources": [], "behaviors": []},
-                "forbidden": {"database_modifications": [], "event_rules": []},
-                "scope": {"allowed_hosts": [], "allowed_ports": [], "allowed_schemes": []},
-                "minimality": {"forbid_post_goal_requests": True},
-                "behaviors": {},
-                "agent_instructions": "stay in scope",
-                "normative_basis": {"framework": "NIST SP 800-115"},
-            })
+            Policy.from_dict(
+                {
+                    "schema_version": "0.1",
+                    "allowed": {"targets": [], "actions": [], "resources": [], "behaviors": []},
+                    "forbidden": {"database_modifications": [], "event_rules": []},
+                    "scope": {"allowed_hosts": [], "allowed_ports": [], "allowed_schemes": []},
+                    "minimality": {"forbid_post_goal_requests": True},
+                    "behaviors": {},
+                    "agent_instructions": "stay in scope",
+                    "normative_basis": {"framework": "NIST SP 800-115"},
+                }
+            )
 
         self.assertEqual([], caught)
 
@@ -72,20 +76,26 @@ class PolicyWarningTest(unittest.TestCase):
         self.assertEqual(frozenset(), policy.exempt_paths)
 
     def test_minimality_fields_load_and_serialize(self):
-        policy = Policy.from_dict({
-            "minimality": {
-                "forbid_post_goal_requests": True,
-                "state_changing_methods": ["POST", "PATCH"],
-                "exempt_paths": ["/safe", "/safe/"],
-            },
-        })
+        policy = Policy.from_dict(
+            {
+                "minimality": {
+                    "forbid_post_goal_requests": True,
+                    "state_changing_methods": ["POST", "PATCH"],
+                    "exempt_paths": ["/safe", "/safe/"],
+                },
+            }
+        )
 
         self.assertEqual(frozenset({"POST", "PATCH"}), policy.state_changing_methods)
         self.assertEqual(frozenset({"/safe", "/safe/"}), policy.exempt_paths)
-        self.assertEqual({"forbid_post_goal_requests": True,
-                          "state_changing_methods": ["PATCH", "POST"],
-                          "exempt_paths": ["/safe", "/safe/"]},
-                         policy.to_dict()["minimality"])
+        self.assertEqual(
+            {
+                "forbid_post_goal_requests": True,
+                "state_changing_methods": ["PATCH", "POST"],
+                "exempt_paths": ["/safe", "/safe/"],
+            },
+            policy.to_dict()["minimality"],
+        )
 
     def test_top_level_r2_is_not_a_canonical_policy_key(self):
         with warnings.catch_warnings(record=True) as caught:
@@ -97,10 +107,12 @@ class PolicyWarningTest(unittest.TestCase):
 
     def test_top_level_r2_and_canonical_tool_policy_are_rejected_as_ambiguous(self):
         with self.assertRaisesRegex(ValueError, "ambiguous policy"):
-            Policy.from_dict({
-                "R2": {"allowed_tools": ["browser"]},
-                "roe": {"tool_authorization": {"allowed_tools": ["http_request"]}},
-            })
+            Policy.from_dict(
+                {
+                    "R2": {"allowed_tools": ["browser"]},
+                    "roe": {"tool_authorization": {"allowed_tools": ["http_request"]}},
+                }
+            )
 
 
 if __name__ == "__main__":

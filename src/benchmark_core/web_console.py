@@ -48,29 +48,35 @@ def discover_options(project_root: Path = PROJECT_ROOT) -> dict[str, Any]:
         if conditions_dir.is_dir():
             for condition_path in sorted(conditions_dir.glob("*.yaml")):
                 condition = _read_yaml(condition_path)
-                conditions.append({
-                    "id": str(condition.get("id", condition_path.stem)),
-                    "group": str(condition.get("group", "unknown")),
-                    "delivery_phase": str(condition.get("delivery_phase", "unspecified")),
-                    "requested_operation": str(condition.get("requested_operation", "unspecified")),
-                    "target_resource": condition.get("target_resource"),
-                    "instruction": str(condition.get("instruction", "")),
-                })
-        scenarios.append({
-            "id": scenario_dir.name,
-            "status": str(scenario.get("status", "unspecified")),
-            "role": str(study.get("role", "unspecified")),
-            "eligibility": str(study.get("eligibility", "unspecified")),
-            "rationale": str(study.get("rationale", "")),
-            "experiment_enabled": bool(experiment.get("enabled", True)),
-            "remaining_requirements": list(scenario.get("remaining_requirements", [])),
-            "blockers": list(study.get("blockers", [])),
-            "defaults": {
-                "max_steps": (scenario.get("limits") or {}).get("max_steps"),
-                "timeout": (scenario.get("limits") or {}).get("timeout"),
-            },
-            "conditions": conditions,
-        })
+                conditions.append(
+                    {
+                        "id": str(condition.get("id", condition_path.stem)),
+                        "group": str(condition.get("group", "unknown")),
+                        "delivery_phase": str(condition.get("delivery_phase", "unspecified")),
+                        "requested_operation": str(
+                            condition.get("requested_operation", "unspecified")
+                        ),
+                        "target_resource": condition.get("target_resource"),
+                        "instruction": str(condition.get("instruction", "")),
+                    }
+                )
+        scenarios.append(
+            {
+                "id": scenario_dir.name,
+                "status": str(scenario.get("status", "unspecified")),
+                "role": str(study.get("role", "unspecified")),
+                "eligibility": str(study.get("eligibility", "unspecified")),
+                "rationale": str(study.get("rationale", "")),
+                "experiment_enabled": bool(experiment.get("enabled", True)),
+                "remaining_requirements": list(scenario.get("remaining_requirements", [])),
+                "blockers": list(study.get("blockers", [])),
+                "defaults": {
+                    "max_steps": (scenario.get("limits") or {}).get("max_steps"),
+                    "timeout": (scenario.get("limits") or {}).get("timeout"),
+                },
+                "conditions": conditions,
+            }
+        )
     return {
         "providers": list(_PROVIDER_OPTIONS),
         "scenarios": scenarios,
@@ -94,7 +100,11 @@ def _safe_identifier(value: Any, label: str, *, required: bool = True) -> str | 
 
 
 def _optional_number(
-    payload: Mapping[str, Any], name: str, cast: type[int] | type[float], *, minimum: float,
+    payload: Mapping[str, Any],
+    name: str,
+    cast: type[int] | type[float],
+    *,
+    minimum: float,
 ) -> int | float | None:
     value = payload.get(name)
     if value is None or value == "":
@@ -133,7 +143,8 @@ def validate_launch_eligibility(project_root: Path, payload: Mapping[str, Any]) 
 
 
 def build_runner_command(
-    project_root: Path, payload: Mapping[str, Any],
+    project_root: Path,
+    payload: Mapping[str, Any],
 ) -> tuple[list[str], str]:
     scenario_id = _safe_identifier(payload.get("scenario"), "scenario")
     scenario = _scenario_metadata(project_root, scenario_id)
@@ -233,12 +244,12 @@ class ConsoleJobManager:
             run_exists = (self.project_root / "runs" / run_id).exists()
             run_known = any(item["run_id"] == run_id for item in self._jobs.values())
             if run_exists or run_known:
-                raise FileExistsError(
-                    f"run {run_id!r} already exists; use a new run ID"
-                )
+                raise FileExistsError(f"run {run_id!r} already exists; use a new run ID")
             self._jobs[job_id] = job
         thread = threading.Thread(
-            target=self._run_process, args=(job_id, command), daemon=True,
+            target=self._run_process,
+            args=(job_id, command),
+            daemon=True,
             name=f"console-{job_id}",
         )
         thread.start()
@@ -287,7 +298,7 @@ class ConsoleJobManager:
             lines = self._jobs[job_id]["log_lines"]
             lines.append(line)
             if len(lines) > self.max_log_lines:
-                del lines[:len(lines) - self.max_log_lines]
+                del lines[: len(lines) - self.max_log_lines]
 
     def _update(self, job_id: str, **changes: Any) -> None:
         with self._lock:
@@ -313,7 +324,9 @@ class ConsoleJobManager:
 
 
 def create_app(
-    project_root: Path = PROJECT_ROOT, *, manager: ConsoleJobManager | None = None,
+    project_root: Path = PROJECT_ROOT,
+    *,
+    manager: ConsoleJobManager | None = None,
 ) -> Flask:
     app = Flask(__name__)
     job_manager = manager or ConsoleJobManager(project_root)

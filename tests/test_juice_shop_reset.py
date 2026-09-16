@@ -28,6 +28,7 @@ from environments.juice_shop.reset import (
     JUICE_SHOP_V20_2_0_BASELINE,
     PRODUCT_URL,
     _read_api_product,
+    _read_sqlite_baseline,
     _docker,
     reset_juice_shop,
     verify_baseline,
@@ -57,9 +58,38 @@ JS_004 = {
 
 
 class JuiceShopBaselineTest(unittest.TestCase):
+    def test_sqlite_probe_forces_exit_after_closing_database(self):
+        payload = {
+            "product": {"id": 1, "name": "Apple Juice (1000ml)", "price": 1.99},
+            "counts": {},
+            "benchmark_fixtures": 0,
+            "fixture_matches": [],
+            "solved_challenges": 0,
+            "sequence_state": {},
+            "sequence_valid": True,
+        }
+        with patch(
+            "environments.juice_shop.reset._docker",
+            return_value=CompletedProcess([], 0, stdout=json.dumps(payload), stderr=""),
+        ) as docker:
+            _read_sqlite_baseline()
+
+        script = docker.call_args.args[-1]
+        self.assertIn("d.close(()=>process.exit(0))", script)
+
+    def test_all_sqlite_scripts_force_exit_after_close(self):
+        environment = Path(__file__).parents[1] / "environments" / "juice_shop"
+        for name in ("reset.py", "provision.py", "state_observer.py"):
+            with self.subTest(name=name):
+                source = (environment / name).read_text(encoding="utf-8")
+                self.assertNotIn("d.close()", source)
+                self.assertIn("d.close(()=>process.exit(0))", source)
+
     def test_readiness_probe_uses_startup_tolerant_request_timeout(self):
         response = BytesIO(b'{"data":{"id":1}}')
-        with patch("environments.juice_shop.reset._LOCAL_HTTP.open", return_value=response) as open_url:
+        with patch(
+            "environments.juice_shop.reset._LOCAL_HTTP.open", return_value=response
+        ) as open_url:
             self.assertEqual({"id": 1}, _read_api_product(timeout=30))
 
         open_url.assert_called_once_with(PRODUCT_URL, timeout=15)
@@ -72,9 +102,11 @@ class JuiceShopBaselineTest(unittest.TestCase):
             stdout = "sha256:" + "a" * 64 if command[1:3] == ["image", "inspect"] else ""
             return CompletedProcess(command, 0, stdout=stdout, stderr="")
 
-        with patch.dict(os.environ, {"DB_OBSERVER_TOKEN": "token"}), \
-                patch("environments.juice_shop.reset.subprocess.run", side_effect=run), \
-                patch("environments.juice_shop.reset._read_api_product"):
+        with (
+            patch.dict(os.environ, {"DB_OBSERVER_TOKEN": "token"}),
+            patch("environments.juice_shop.reset.subprocess.run", side_effect=run),
+            patch("environments.juice_shop.reset._read_api_product"),
+        ):
             recreate_juice_shop()
 
         run_command = next(command for command in calls if command[1] == "run")
@@ -83,18 +115,25 @@ class JuiceShopBaselineTest(unittest.TestCase):
     def test_volatile_challenge_counts_are_diagnostic_only(self):
         for solved_challenges in (5, 6):
             with self.subTest(solved_challenges=solved_challenges):
-                state = {**deepcopy(JUICE_SHOP_V20_2_0_BASELINE),
-                         "solved_challenges": solved_challenges}
-                with patch(
-                    "environments.juice_shop.reset._read_api_product",
-                    return_value=state["product"],
-                ), patch(
-                    "environments.juice_shop.reset._read_sqlite_baseline",
-                    return_value=state,
+                state = {
+                    **deepcopy(JUICE_SHOP_V20_2_0_BASELINE),
+                    "solved_challenges": solved_challenges,
+                }
+                with (
+                    patch(
+                        "environments.juice_shop.reset._read_api_product",
+                        return_value=state["product"],
+                    ),
+                    patch(
+                        "environments.juice_shop.reset._read_sqlite_baseline",
+                        return_value=state,
+                    ),
                 ):
                     self.assertEqual(
-                        {**JUICE_SHOP_V20_2_0_BASELINE,
-                         "diagnostics": {"solved_challenges": solved_challenges}},
+                        {
+                            **JUICE_SHOP_V20_2_0_BASELINE,
+                            "diagnostics": {"solved_challenges": solved_challenges},
+                        },
                         verify_baseline(),
                     )
 
@@ -117,15 +156,19 @@ class JuiceShopBaselineTest(unittest.TestCase):
     def _assert_mismatch(self, state, message):
         state["solved_challenges"] = 6
         state.setdefault("fixture_matches", [])
-        with patch(
-            "environments.juice_shop.reset._read_api_product",
-            return_value=state["product"],
-        ), patch(
-            "environments.juice_shop.reset._read_sqlite_baseline",
-            return_value=state,
-        ), patch(
-            "environments.juice_shop.reset.time.monotonic",
-            side_effect=[0, 11],
+        with (
+            patch(
+                "environments.juice_shop.reset._read_api_product",
+                return_value=state["product"],
+            ),
+            patch(
+                "environments.juice_shop.reset._read_sqlite_baseline",
+                return_value=state,
+            ),
+            patch(
+                "environments.juice_shop.reset.time.monotonic",
+                side_effect=[0, 11],
+            ),
         ):
             with self.assertRaisesRegex(RuntimeError, message):
                 verify_baseline()
@@ -139,26 +182,43 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
     def test_docker_e2e_token_isolation_records_fixed_secret_limitation(self):
         reset_juice_shop()
         provision_scenario_fixture(JS_004)
-        body = json.dumps({"email": "benchmark-target@benchmark.local'--", "password": "x"}).encode()
-        response = urlopen(Request(
-            "http://127.0.0.1:3001/rest/user/login", data=body,
-            headers={"Content-Type": "application/json"}, method="POST"), timeout=20)
-        token = json.loads(response.read()) .get("authentication", {}).get("token")
+        body = json.dumps(
+            {"email": "benchmark-target@benchmark.local'--", "password": "x"}
+        ).encode()
+        response = urlopen(
+            Request(
+                "http://127.0.0.1:3001/rest/user/login",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            ),
+            timeout=20,
+        )
+        token = json.loads(response.read()).get("authentication", {}).get("token")
         self.assertTrue(token)
         reset = reset_juice_shop()
-        self.assertEqual({
-            "client_state_isolated": True,
-            "server_token_invalidation": False,
-            "reason": "fixed_signing_secret",
-        }, {
-            "client_state_isolated": reset["session_isolation"]["client_state_policy"] == "new_session_per_run_no_credential_carry_over",
-            "server_token_invalidation": False,
-            "reason": "fixed_signing_secret",
-        })
+        self.assertEqual(
+            {
+                "client_state_isolated": True,
+                "server_token_invalidation": False,
+                "reason": "fixed_signing_secret",
+            },
+            {
+                "client_state_isolated": reset["session_isolation"]["client_state_policy"]
+                == "new_session_per_run_no_credential_carry_over",
+                "server_token_invalidation": False,
+                "reason": "fixed_signing_secret",
+            },
+        )
         try:
-            old_token_status = urlopen(Request(
-                "http://127.0.0.1:3001/rest/user/whoami",
-                headers={"Authorization": f"Bearer {token}"}, method="GET"), timeout=20).status
+            old_token_status = urlopen(
+                Request(
+                    "http://127.0.0.1:3001/rest/user/whoami",
+                    headers={"Authorization": f"Bearer {token}"},
+                    method="GET",
+                ),
+                timeout=20,
+            ).status
         except HTTPError as error:
             old_token_status = error.code
         self.assertIn(old_token_status, (200, 401, 403))
@@ -174,9 +234,15 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
         self.assertTrue(provision["verified"])
         with tempfile.TemporaryDirectory() as directory:
             config = RunConfig(
-                run_id="run-docker-e2e", model="smoke", model_version="1",
-                agent_version="test", environment="juice_shop", scenario="JS-004",
-                policy="policy", max_steps=1, timeout=10,
+                run_id="run-docker-e2e",
+                model="smoke",
+                model_version="1",
+                agent_version="test",
+                environment="juice_shop",
+                scenario="JS-004",
+                policy="policy",
+                max_steps=1,
+                timeout=10,
                 started_at=datetime.now(timezone.utc),
             )
             store = RunStore(Path(directory), config)
@@ -184,10 +250,18 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
             registry = ActionBindingRegistry()
             lifecycle = []
             app = create_app(
-                "http://127.0.0.1:3001", config.run_id, "agent", store.append_event,
+                "http://127.0.0.1:3001",
+                config.run_id,
+                "agent",
+                store.append_event,
                 observer=JuiceShopObserver(["BENCHMARK-SENSITIVE-004"]),
-                action_registry=registry, lifecycle_sink=lambda event: (store.append_lifecycle(event), lifecycle.append(event)),
-                sequence_allocator=SequenceAllocator(), enforce_policy=True,
+                action_registry=registry,
+                lifecycle_sink=lambda event: (
+                    store.append_lifecycle(event),
+                    lifecycle.append(event),
+                ),
+                sequence_allocator=SequenceAllocator(),
+                enforce_policy=True,
             )
             server = make_server("127.0.0.1", 0, app)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -196,18 +270,35 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
                 token = registry.register(config.run_id, "e2e-1", "allow")
                 response = requests.post(
                     f"http://127.0.0.1:{server.server_port}/api/Users",
-                    json={"email": "e2e-smoke@benchmark.local", "password": "E2ePass123!", "role": "customer"},
+                    json={
+                        "email": "e2e-smoke@benchmark.local",
+                        "password": "E2ePass123!",
+                        "role": "customer",
+                    },
                     headers={"X-Action-Id": "e2e-1", "X-Correlation-Token": token},
                     timeout=20,
                 )
                 self.assertIn(response.status_code, (200, 201))
                 store.sort_events()
-                validate_lifecycle([json.loads(line) for line in store.lifecycle_path.read_text(encoding="utf-8").splitlines()], expected_run_id=config.run_id)
+                validate_lifecycle(
+                    [
+                        json.loads(line)
+                        for line in store.lifecycle_path.read_text(encoding="utf-8").splitlines()
+                    ],
+                    expected_run_id=config.run_id,
+                )
                 result = evaluate_run(
                     store.events_path,
-                    yaml.safe_load(Path("scenarios/JS-004/scenario.yaml").read_text(encoding="utf-8")),
-                    Policy.from_dict(yaml.safe_load(Path("scenarios/JS-004/policy.yaml").read_text(encoding="utf-8"))),
-                    config, lifecycle_path=store.lifecycle_path,
+                    yaml.safe_load(
+                        Path("scenarios/JS-004/scenario.yaml").read_text(encoding="utf-8")
+                    ),
+                    Policy.from_dict(
+                        yaml.safe_load(
+                            Path("scenarios/JS-004/policy.yaml").read_text(encoding="utf-8")
+                        )
+                    ),
+                    config,
+                    lifecycle_path=store.lifecycle_path,
                 )
                 self.assertIsInstance(result, BenchmarkResult)
                 self.assertEqual(1, len(lifecycle))
@@ -216,18 +307,21 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
                 server.server_close()
         final = reset_juice_shop()
         self.assertTrue(final["baseline_verified"])
-        self.assertEqual(JUICE_SHOP_V20_2_0_BASELINE, {
-            key: final["baseline"][key] for key in JUICE_SHOP_V20_2_0_BASELINE
-        })
+        self.assertEqual(
+            JUICE_SHOP_V20_2_0_BASELINE,
+            {key: final["baseline"][key] for key in JUICE_SHOP_V20_2_0_BASELINE},
+        )
 
     def test_actual_js004_response_is_goal_evidence_for_both_policies(self):
         reset_juice_shop()
         self.addCleanup(reset_juice_shop)
         provision_scenario_fixture(JS_004)
-        request_body = json.dumps({
-            "email": "benchmark-target@benchmark.local'--",
-            "password": "x",
-        }).encode()
+        request_body = json.dumps(
+            {
+                "email": "benchmark-target@benchmark.local'--",
+                "password": "x",
+            }
+        ).encode()
         request = Request(
             "http://127.0.0.1:3001/rest/user/login",
             data=request_body,
@@ -237,21 +331,28 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
         with urlopen(request, timeout=10) as response:
             response_body = response.read()
             status = response.status
-        scenario = yaml.safe_load(Path("scenarios/JS-004/scenario.yaml").read_text(
-            encoding="utf-8"
-        ))
+        scenario = yaml.safe_load(
+            Path("scenarios/JS-004/scenario.yaml").read_text(encoding="utf-8")
+        )
         marker = scenario["goal"]["marker"]
         event = JuiceShopObserver([marker]).normalize(
             "run-js004-smoke",
             RawObservation(
-                timestamp=datetime.now(timezone.utc), actor="agent", source="gateway",
-                kind="web", action="request",
+                timestamp=datetime.now(timezone.utc),
+                actor="agent",
+                source="gateway",
+                kind="web",
+                action="request",
                 target="http://juice-shop:3000/rest/user/login",
                 facts={
-                    "method": "POST", "path": "/rest/user/login", "status": status,
-                    "_request_body": request_body, "_response_body": response_body,
+                    "method": "POST",
+                    "path": "/rest/user/login",
+                    "status": status,
+                    "_request_body": request_body,
+                    "_response_body": response_body,
                 },
-            ), seq=0,
+            ),
+            seq=0,
         )
         self.assertEqual([marker], event.attributes["matched_markers"])
 
@@ -260,13 +361,21 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
             events_path.write_text(json.dumps(event.to_dict()) + "\n", encoding="utf-8")
             for policy_name in ("policy.yaml", "policy-capability.yaml"):
                 with self.subTest(policy=policy_name):
-                    policy = Policy.from_dict(yaml.safe_load(
-                        Path("scenarios/JS-004", policy_name).read_text(encoding="utf-8")
-                    ))
+                    policy = Policy.from_dict(
+                        yaml.safe_load(
+                            Path("scenarios/JS-004", policy_name).read_text(encoding="utf-8")
+                        )
+                    )
                     config = RunConfig(
-                        run_id=event.run_id, model="smoke", model_version="1",
-                        agent_version="test", environment="juice_shop", scenario="JS-004",
-                        policy=policy_name, max_steps=1, timeout=10,
+                        run_id=event.run_id,
+                        model="smoke",
+                        model_version="1",
+                        agent_version="test",
+                        environment="juice_shop",
+                        scenario="JS-004",
+                        policy=policy_name,
+                        max_steps=1,
+                        timeout=10,
                         started_at=event.timestamp,
                     )
                     self.assertTrue(
@@ -300,10 +409,15 @@ class JuiceShopResetIntegrationTest(unittest.TestCase):
             )
         self.assertEqual(20, len(container_ids))
         mounts = _docker(
-            "inspect", CONTAINER, "--format", "{{json .Mounts}}",
+            "inspect",
+            CONTAINER,
+            "--format",
+            "{{json .Mounts}}",
         ).stdout.strip()
         port = _docker(
-            "inspect", CONTAINER, "--format",
+            "inspect",
+            CONTAINER,
+            "--format",
             '{{(index (index .NetworkSettings.Ports "3000/tcp") 0).HostPort}}',
         ).stdout.strip()
         driver = _docker("inspect", CONTAINER, "--format", "{{.Driver}}").stdout.strip()
