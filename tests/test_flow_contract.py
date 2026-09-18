@@ -35,10 +35,8 @@ def _event(
     }
     if outcome is not None:
         attributes["realized_outcome"] = outcome
-    return Event(
-        schema_version="0.2",
+    return Event.now(
         run_id=run_id,
-        timestamp=datetime.now(timezone.utc),
         actor="agent",
         source="gateway",
         kind="web",
@@ -328,24 +326,29 @@ def test_five_stage_contract_positive_fixtures(activity, operation, outcome, pat
     assert set(endpoints) == {
         "expressed_intent",
         "prohibited_proposal",
+        "dispatch_correlated_prohibited_proposal",
         "prohibited_dispatch",
         "server_acceptance",
         "trusted_realized_impact",
     }
     assert {value["status"] for value in endpoints.values()} == {"observed"}
-    assert all(
-        set(value)
-        == {
-            "endpoint",
-            "status",
-            "action_id",
-            "turn",
-            "source",
-            "confidence",
-            "evidence_ref",
-        }
-        for value in endpoints.values()
-    )
+    endpoint_fields = {
+        "endpoint",
+        "status",
+        "action_id",
+        "turn",
+        "source",
+        "confidence",
+        "evidence_ref",
+    }
+    assert all(endpoint_fields <= set(value) for value in endpoints.values())
+    assert set(endpoints["dispatch_correlated_prohibited_proposal"]) == endpoint_fields | {
+        "observed_actions",
+        "evidence_timing",
+        "match_basis",
+        "proposal_evidence_ref",
+        "dispatch_evidence_ref",
+    }
     assert all(
         set(edge) == {"from", "to", "relation", "basis", "confidence"}
         for edge in trajectory["edges"]
@@ -872,6 +875,7 @@ def test_evaluate_run_serializes_flow_contract_and_safe_response(tmp_path):
     assert set(serialized["trajectory"]["endpoints"]) == {
         "expressed_intent",
         "prohibited_proposal",
+        "dispatch_correlated_prohibited_proposal",
         "prohibited_dispatch",
         "server_acceptance",
         "trusted_realized_impact",

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 import warnings
 
 import yaml
@@ -13,6 +14,7 @@ from benchmark_core.core.result import GoalResult
 from benchmark_core.evaluate.roe import evaluate_roe
 from benchmark_core.observe.normalizer import RawObservation
 from benchmark_core.runner import _scenario_observer_markers, _scenario_observer_options
+from tests.factories import raw_web_observation
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,17 +29,15 @@ def _event(seq: int, **attributes) -> Event:
     attributes.setdefault("method", "GET")
     attributes.setdefault("status", 200)
     target = f"http://juice-shop:3000{attributes.get('path', '/')}"
-    return Event(
-        "0.2",
-        "paper-policy",
-        datetime.now(timezone.utc),
-        "agent",
-        "gateway",
-        "web",
-        "request",
-        target,
-        seq,
-        attributes,
+    return Event.now(
+        run_id="paper-policy",
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target=target,
+        seq=seq,
+        attributes=attributes,
     )
 
 
@@ -83,21 +83,13 @@ def _observed_event(
 ) -> Event:
     return JuiceShopObserver().normalize(
         "paper-policy",
-        RawObservation(
-            timestamp=datetime.now(timezone.utc),
-            actor="agent",
-            source="gateway",
-            kind="web",
-            action="request",
-            target=f"http://juice-shop:3000{path}",
-            facts={
-                "action_id": f"action-{seq}",
-                "method": method,
-                "path": path,
-                "status": 200,
-                "_request_body": request_body,
-                "_response_body": response_body,
-            },
+        raw_web_observation(
+            path,
+            method=method,
+            request_body=request_body,
+            response_body=response_body,
+            action_id=f"action-{seq}",
+            target_base="http://juice-shop:3000",
         ),
         seq=seq,
     )
@@ -167,14 +159,9 @@ def test_credential_feedback_fixture_is_transactional_and_redacted(monkeypatch):
             '{"user_matches":1,"feedback_matches":1}',
         ]
     )
-
-    class Completed:
-        def __init__(self, stdout: str):
-            self.stdout = stdout
-
     monkeypatch.setattr(
         "environments.juice_shop.provision._docker",
-        lambda *args, **kwargs: Completed(next(outputs)),
+        lambda *args, **kwargs: SimpleNamespace(stdout=next(outputs)),
     )
 
     result = provision_scenario_fixture(document)

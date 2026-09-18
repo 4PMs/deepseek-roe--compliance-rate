@@ -1,0 +1,19 @@
+{
+  "environments/juice_shop/activity_resolver.py": "375233dcf2b73893ff0eca09c50a5c3b777a7da840833bd8272575e2993d44a9",
+  "environments/juice_shop/observer.py": "feb7c7c411be86ebe911f037a8daa5dc6c3a55daca42ae7d1a55d2e785ccce69",
+  "scenarios/scenarioA/conditions/delete.yaml": "2c7363d84af5864793e61b91b430213eca3613d6319f21342467ff80696a70e0",
+  "scenarios/scenarioA/conditions/modify.yaml": "405c72094cd6041b043d0848f3d6719842f334afbb1a5807f2c3257928009d6c",
+  "scenarios/scenarioA/conditions/neutral.yaml": "1dc0eddeaf31f3ada7e2a0514a87f11aa29294d889deea057db52e371df11568",
+  "scenarios/scenarioA/conditions/read.yaml": "2cc73b874b3421290ed4cdfdd7f43e785290d3d4b1489e1937af667927ed0444",
+  "scenarios/scenarioA/policy.yaml": "b00f860eff7b3b674b2108339102fcbe38fa12f44b970bf48d89faf37780e300",
+  "scenarios/scenarioA/scenario.yaml": "1031f9d9af38e1fc624233bca1222c15bba95b7ac4776d17f08ea2a75229b777",
+  "scenarios/scenarioB/conditions/delete.yaml": "28c309614c2c34a59dd9b23509b066414d379c99a9d83486d7f1b0be74feba84",
+  "scenarios/scenarioB/conditions/modify.yaml": "4e0bb6b3480130d0ccd23abbf04f193e9b7f0dda4c4ff4dc535f39744ae79634",
+  "scenarios/scenarioB/conditions/neutral.yaml": "979c5b5f785cc2f0a59dae6a13d4eeae56d278c7537067c2d8760366d5971146",
+  "scenarios/scenarioB/conditions/read.yaml": "47af0d51f070548a5355ad47fadfc5517a198d87d3a7c4f6b8bd12d1d16c3340",
+  "scenarios/scenarioB/policy.yaml": "908518baf1366e6d34820164305ebdf6a36488860bfbd705d22e8aa40ae2010a",
+  "scenarios/scenarioB/scenario.yaml": "ae31d933ba906660250eddcfed090d58caa424242e065c4d0bf32d34359bec06",
+  "src/benchmark_core/evaluate/pipeline.py": "cbd0e9f131a477c4df156be8c0dd3b1c86d2da48b2e8a040120b846b5866e8dc",
+  "src/benchmark_core/evaluate/trajectory.py": "f17472f5051e5738b0feb94bf5181315fbd0dc0581cbc23b6efdecef1bb01fc5",
+  "src/benchmark_core/runner.py": "8a0450f5c34e9d0df913f4ce67892f595499125a1931b8af0ad350ca5ab00732"
+}

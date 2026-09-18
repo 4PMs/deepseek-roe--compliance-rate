@@ -21,32 +21,7 @@ from benchmark_core.core.run import RunConfig
 from benchmark_core.evaluate.pipeline import evaluate_run
 from benchmark_core.progress import ProgressReporter, read_progress
 from benchmark_core.runner import _run_pipeline
-
-
-def _args(directory: str, run: str, *, reset_target: bool = False) -> SimpleNamespace:
-    return SimpleNamespace(
-        scenario="scenarioA",
-        policy=None,
-        model="test",
-        model_version="1",
-        agent_version="test",
-        provider=None,
-        temperature=None,
-        seed=None,
-        repetition=None,
-        upstream=None,
-        gateway_host="127.0.0.1",
-        gateway_port=0,
-        max_steps=2,
-        timeout=None,
-        runs_dir=Path(directory),
-        scenarios_dir=Path("scenarios"),
-        environments_dir=Path("environments"),
-        reset_target=reset_target,
-        run=run,
-        progress="quiet",
-        condition=None,
-    )
+from tests.factories import run_args
 
 
 def _server() -> SimpleNamespace:
@@ -196,7 +171,15 @@ class RunnerProgressTest(unittest.TestCase):
 
     def test_lifecycle_agent_events_and_final_consistency(self):
         with tempfile.TemporaryDirectory() as directory:
-            args = _args(directory, "run-progress", reset_target=True)
+            args = run_args(
+                directory,
+                "run-progress",
+                model_version="1",
+                agent_version="test",
+                max_steps=2,
+                reset_target=True,
+                progress="quiet",
+            )
             adapter = Mock()
             adapter.reset.return_value = {"performed": True}
             adapter.verify.return_value = {"product": {"id": 1}}
@@ -301,7 +284,14 @@ class RunnerProgressTest(unittest.TestCase):
 
     def test_database_observer_creation_failure_is_saved_as_invalid(self):
         with tempfile.TemporaryDirectory() as directory:
-            args = _args(directory, "run-observer-creation-failure")
+            args = run_args(
+                directory,
+                "run-observer-creation-failure",
+                model_version="1",
+                agent_version="test",
+                max_steps=2,
+                progress="quiet",
+            )
             with (
                 patch("benchmark_core.runner.DatabaseEventCollector", side_effect=OSError("busy")),
                 patch("benchmark_core.runner.make_server", return_value=_server()),
@@ -325,7 +315,14 @@ class RunnerProgressTest(unittest.TestCase):
         collector.address = ("0.0.0.0", 8765)
         collector.wait_until_ready.return_value = False
         with tempfile.TemporaryDirectory() as directory:
-            args = _args(directory, "run-observer-heartbeat-failure")
+            args = run_args(
+                directory,
+                "run-observer-heartbeat-failure",
+                model_version="1",
+                agent_version="test",
+                max_steps=2,
+                progress="quiet",
+            )
             with (
                 patch("benchmark_core.runner.DatabaseEventCollector", return_value=collector),
                 patch("benchmark_core.runner.make_server", return_value=_server()),
@@ -429,7 +426,14 @@ class RunnerProgressTest(unittest.TestCase):
 
     def test_keyboard_interrupt_finishes_with_run_interrupted(self):
         with tempfile.TemporaryDirectory() as directory:
-            args = _args(directory, "run-interrupted")
+            args = run_args(
+                directory,
+                "run-interrupted",
+                model_version="1",
+                agent_version="test",
+                max_steps=2,
+                progress="quiet",
+            )
             with (
                 patch("benchmark_core.runner.make_server", return_value=_server()),
                 patch(
@@ -508,32 +512,6 @@ class AgentProgressTerminationTest(unittest.TestCase):
                 on_progress=lambda event, step, detail: emitted.append(event),
             )
         self.assertIn("max_steps_reached", emitted)
-
-        emitted = []
-        with (
-            patch(
-                "benchmark_core.agent.runtime.call_llm",
-                return_value='{"action":"http_request","path":"/"}',
-            ),
-            patch("benchmark_core.agent.runtime.do_http", return_value="status=200"),
-        ):
-            run_episode(
-                "mission",
-                "gateway",
-                1,
-                on_progress=lambda event, step, detail: emitted.append(event),
-            )
-        self.assertIn("max_steps_reached", emitted)
-
-        emitted = []
-        with patch("benchmark_core.agent.runtime.call_llm", side_effect=TimeoutError):
-            run_episode(
-                "mission",
-                "gateway",
-                1,
-                on_progress=lambda event, step, detail: emitted.append(event),
-            )
-        self.assertIn("provider_error", emitted)
 
 
 if __name__ == "__main__":

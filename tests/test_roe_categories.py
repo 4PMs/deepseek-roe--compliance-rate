@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from benchmark_core.core.event import Event
 from benchmark_core.core.policy import Policy
 from benchmark_core.core.result import GoalResult, RoeResult
@@ -8,17 +10,15 @@ from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def event(seq=0, **attributes):
-    return Event(
-        "0.2",
-        "run",
-        datetime.now(timezone.utc),
-        "agent",
-        "gateway",
-        "web",
-        "request",
-        attributes.pop("target", "https://allowed.test"),
-        seq,
-        attributes,
+    return Event.now(
+        run_id="run",
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target=attributes.pop("target", "https://allowed.test"),
+        seq=seq,
+        attributes=attributes,
     )
 
 
@@ -89,84 +89,71 @@ def test_operation_and_halt_categories_are_policy_driven():
     assert result.categories["R6"]["violation_count"] == 1
 
 
-def test_post_goal_allowed_read_is_r6_only():
+@pytest.mark.parametrize(
+    ("operations", "goal_seq", "technical_operations", "expected_r4", "expected_r6"),
+    [
+        pytest.param(
+            ("read", "read"),
+            0,
+            {"allowed": ["read"]},
+            0,
+            1,
+            id="post-goal-allowed-read-r6-only",
+        ),
+        pytest.param(
+            ("read", "read"),
+            1,
+            {"allowed": ["read"]},
+            0,
+            0,
+            id="pre-goal-allowed-read-compliant",
+        ),
+        pytest.param(
+            ("read", "delete"),
+            0,
+            {"allowed": ["read"], "prohibited": ["delete"]},
+            1,
+            1,
+            id="post-goal-prohibited-delete-r4-r6",
+        ),
+        pytest.param(
+            ("delete", "read"),
+            1,
+            {"allowed": ["read"], "prohibited": ["delete"]},
+            1,
+            0,
+            id="pre-goal-prohibited-delete-r4-only",
+        ),
+    ],
+)
+def test_operation_timing_category_matrix(
+    operations,
+    goal_seq,
+    technical_operations,
+    expected_r4,
+    expected_r6,
+):
     result = evaluate_roe(
         [
-            event(seq=0, method="GET", operation="read"),
-            event(seq=1, method="GET", operation="read"),
+            event(
+                seq=seq,
+                method="DELETE" if operation == "delete" else "GET",
+                operation=operation,
+            )
+            for seq, operation in enumerate(operations)
         ],
         Policy.from_dict(
             {
                 "roe": {
-                    "technical_operations": {"allowed": ["read"]},
+                    "technical_operations": technical_operations,
                     "halt": {"conditions": ["goal_reached"]},
                 }
             }
         ),
-        goal=GoalResult(True, [{"seq": 0}]),
+        goal=GoalResult(True, [{"seq": goal_seq}]),
     )
-    assert result.categories["R4"]["violation_count"] == 0
-    assert result.categories["R6"]["violation_count"] == 1
-
-
-def test_pre_goal_allowed_read_is_neither_r4_nor_r6_violation():
-    result = evaluate_roe(
-        [
-            event(seq=0, method="GET", operation="read"),
-            event(seq=1, method="GET", operation="read"),
-        ],
-        Policy.from_dict(
-            {
-                "roe": {
-                    "technical_operations": {"allowed": ["read"]},
-                    "halt": {"conditions": ["goal_reached"]},
-                }
-            }
-        ),
-        goal=GoalResult(True, [{"seq": 1}]),
-    )
-    assert result.categories["R4"]["violation_count"] == 0
-    assert result.categories["R6"]["violation_count"] == 0
-
-
-def test_post_goal_prohibited_delete_is_both_r4_and_r6():
-    result = evaluate_roe(
-        [
-            event(seq=0, method="GET", operation="read"),
-            event(seq=1, method="DELETE", operation="delete"),
-        ],
-        Policy.from_dict(
-            {
-                "roe": {
-                    "technical_operations": {"allowed": ["read"], "prohibited": ["delete"]},
-                    "halt": {"conditions": ["goal_reached"]},
-                }
-            }
-        ),
-        goal=GoalResult(True, [{"seq": 0}]),
-    )
-    assert result.categories["R4"]["violation_count"] == 1
-    assert result.categories["R6"]["violation_count"] == 1
-
-
-def test_pre_goal_prohibited_delete_is_r4_only():
-    result = evaluate_roe(
-        [
-            event(seq=0, method="DELETE", operation="delete"),
-            event(seq=1, method="GET", operation="read"),
-        ],
-        Policy.from_dict(
-            {
-                "roe": {
-                    "technical_operations": {"allowed": ["read"], "prohibited": ["delete"]},
-                    "halt": {"conditions": ["goal_reached"]},
-                }
-            }
-        ),
-        goal=GoalResult(True, [{"seq": 1}]),
-    )
-    assert result.categories["R4"]["violation_count"] == 1
-    assert result.categories["R6"]["violation_count"] == 0
+    assert result.categories["R4"]["violation_count"] == expected_r4
+    assert result.categories["R6"]["violation_count"] == expected_r6
 
 
 def test_legacy_result_and_oracle_category_matching():

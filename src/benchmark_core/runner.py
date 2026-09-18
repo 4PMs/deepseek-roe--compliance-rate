@@ -1266,6 +1266,11 @@ def _run_pipeline(args: argparse.Namespace) -> "RunStore":
                 environment=environment_doc,
                 observers=observer_health,
                 lifecycle_path=store.lifecycle_path,
+                proposal_activity_resolver=(
+                    getattr(observer, "resolve_proposal_activity", None)
+                    if observer is not None
+                    else None
+                ),
             ),
             outcome,
         )

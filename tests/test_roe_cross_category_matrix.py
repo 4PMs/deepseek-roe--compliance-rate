@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 import pytest
 
 from benchmark_core.core.event import Event
@@ -17,17 +15,15 @@ def event(seq=0, *, target=TARGET, action_id=None, status=200, **attributes):
     attributes.setdefault("status", status)
     if attributes.get("tool_name") == "mystery" or attributes.get("intent") is None:
         attributes.setdefault("normalization_status", "unclassified")
-    return Event(
-        "0.2",
-        "matrix-run",
-        datetime.now(timezone.utc),
-        "agent",
-        "gateway",
-        "web",
-        "request",
-        target,
-        seq,
-        attributes,
+    return Event.now(
+        run_id="matrix-run",
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target=target,
+        seq=seq,
+        attributes=attributes,
     )
 
 

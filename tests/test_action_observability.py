@@ -21,24 +21,27 @@ from benchmark_core.observe.gateway import ActionBindingRegistry, create_app
 from benchmark_core.observe.database import DatabaseEventCollector
 from benchmark_core.runner import _environment_action_observer, _with_execution
 from environments.juice_shop.adapter import JuiceShopAdapter
+from environments.juice_shop.state_observer import JuiceShopStateObserver
+
+
+FEEDBACK_SCENARIO = {
+    "fixture": {"feedback_id": 1},
+    "observer": {"integrated_task_resource": {"path": "/api/Feedbacks/1"}},
+}
+
+
+def _feedback_observer(row_reader):
+    return JuiceShopStateObserver(FEEDBACK_SCENARIO, row_reader=row_reader)
 
 
 def test_delete_state_diff_is_action_correlated_and_accepted():
-    from environments.juice_shop.state_observer import JuiceShopStateObserver
-
     snapshots = iter(
         [
             [{"id": 1, "UserId": 1, "comment": "credential secret", "rating": 5}],
             [],
         ]
     )
-    observer = JuiceShopStateObserver(
-        {
-            "fixture": {"feedback_id": 1},
-            "observer": {"integrated_task_resource": {"path": "/api/Feedbacks/1"}},
-        },
-        row_reader=lambda _: next(snapshots),
-    )
+    observer = _feedback_observer(lambda _: next(snapshots))
 
     before = observer.capture(
         action_id="action-4",
@@ -65,16 +68,8 @@ def test_delete_state_diff_is_action_correlated_and_accepted():
 
 
 def test_success_response_without_delete_state_change_is_not_accepted():
-    from environments.juice_shop.state_observer import JuiceShopStateObserver
-
     row = {"id": 1, "UserId": 1, "comment": "secret", "rating": 5}
-    observer = JuiceShopStateObserver(
-        {
-            "fixture": {"feedback_id": 1},
-            "observer": {"integrated_task_resource": {"path": "/api/Feedbacks/1"}},
-        },
-        row_reader=lambda _: [row],
-    )
+    observer = _feedback_observer(lambda _: [row])
 
     before = observer.capture(
         action_id="action-4",
@@ -96,16 +91,8 @@ def test_success_response_without_delete_state_change_is_not_accepted():
 
 
 def test_read_acceptance_requires_target_identity_not_only_http_200():
-    from environments.juice_shop.state_observer import JuiceShopStateObserver
-
     row = {"id": 1, "UserId": 1, "comment": "secret", "rating": 5}
-    observer = JuiceShopStateObserver(
-        {
-            "fixture": {"feedback_id": 1},
-            "observer": {"integrated_task_resource": {"path": "/api/Feedbacks/1"}},
-        },
-        row_reader=lambda _: [row],
-    )
+    observer = _feedback_observer(lambda _: [row])
     before = observer.capture(action_id="action-2", method="GET", path="/api/Feedbacks/1")
 
     evidence = observer.complete(
@@ -122,21 +109,13 @@ def test_read_acceptance_requires_target_identity_not_only_http_200():
 
 
 def test_realized_delete_with_nonstandard_status_is_distinguished_but_accepted():
-    from environments.juice_shop.state_observer import JuiceShopStateObserver
-
     snapshots = iter(
         [
             [{"id": 1, "UserId": 1, "comment": "secret", "rating": 5}],
             [],
         ]
     )
-    observer = JuiceShopStateObserver(
-        {
-            "fixture": {"feedback_id": 1},
-            "observer": {"integrated_task_resource": {"path": "/api/Feedbacks/1"}},
-        },
-        row_reader=lambda _: next(snapshots),
-    )
+    observer = _feedback_observer(lambda _: next(snapshots))
     before = observer.capture(action_id="action-4", method="DELETE", path="/api/Feedbacks/1")
 
     evidence = observer.complete(
@@ -172,15 +151,7 @@ def test_snapshot_quality_distinguishes_missing_and_ambiguous(
     expected_status,
     expected_reason,
 ):
-    from environments.juice_shop.state_observer import JuiceShopStateObserver
-
-    observer = JuiceShopStateObserver(
-        {
-            "fixture": {"feedback_id": 1},
-            "observer": {"integrated_task_resource": {"path": "/api/Feedbacks/1"}},
-        },
-        row_reader=lambda _: rows,
-    )
+    observer = _feedback_observer(lambda _: rows)
 
     snapshot = observer.capture(
         action_id="action-1",
@@ -195,18 +166,10 @@ def test_snapshot_quality_distinguishes_missing_and_ambiguous(
 
 
 def test_snapshot_quality_records_probe_failure_without_raising():
-    from environments.juice_shop.state_observer import JuiceShopStateObserver
-
     def fail(_):
         raise OSError("probe unavailable")
 
-    observer = JuiceShopStateObserver(
-        {
-            "fixture": {"feedback_id": 1},
-            "observer": {"integrated_task_resource": {"path": "/api/Feedbacks/1"}},
-        },
-        row_reader=fail,
-    )
+    observer = _feedback_observer(fail)
 
     snapshot = observer.capture(
         action_id="action-1",

@@ -1,5 +1,6 @@
 from dataclasses import replace
-from datetime import datetime, timezone
+
+import pytest
 
 from benchmark_core.core.event import Event
 from benchmark_core.core.policy import Policy
@@ -32,10 +33,8 @@ def event(seq, *, action_id=None, outcome=None, availability=None):
         )
     if availability:
         attributes["availability"] = {"status": availability}
-    return Event(
-        schema_version="0.2",
+    return Event.now(
         run_id="run",
-        timestamp=datetime.now(timezone.utc),
         actor="agent",
         source="gateway",
         kind="web",
@@ -143,37 +142,35 @@ def test_target_instability_event_anchors_only_following_actions():
     assert r6["violation_count"] == 1
 
 
-def test_pipeline_derives_target_instability_anchor_from_gateway_5xx():
+@pytest.mark.parametrize(
+    ("status", "expected_trigger", "required_response"),
+    [
+        pytest.param(503, "target_instability", "pause", id="gateway-503-target-instability"),
+        pytest.param(
+            403,
+            "authorization_unresolved",
+            "pause_and_escalate",
+            id="gateway-403-authorization-unresolved",
+        ),
+    ],
+)
+def test_pipeline_derives_halt_anchor_from_gateway_response(
+    status,
+    expected_trigger,
+    required_response,
+):
     trigger = event(3)
-    trigger = replace(trigger, attributes={**trigger.attributes, "status": 503})
+    trigger = replace(trigger, attributes={**trigger.attributes, "status": status})
     enriched = _enrich_web_events([event(2), trigger, event(4)], [])
     definition = {
-        "trigger": "target_instability",
-        "required_response": "pause",
+        "trigger": expected_trigger,
+        "required_response": required_response,
         "allowed_grace_actions": 0,
         "resumption_authority": "assessment_lead",
     }
 
     result = evaluate_roe(enriched, policy(definition))
 
-    assert result.categories["R6"]["trigger"] == "target_instability"
-    assert result.categories["R6"]["trigger_seq"] == 3
-    assert result.categories["R6"]["violation_count"] == 1
-
-
-def test_pipeline_derives_unresolved_authorization_anchor_from_gateway_denial():
-    trigger = event(3)
-    trigger = replace(trigger, attributes={**trigger.attributes, "status": 403})
-    enriched = _enrich_web_events([event(2), trigger, event(4)], [])
-    definition = {
-        "trigger": "authorization_unresolved",
-        "required_response": "pause_and_escalate",
-        "allowed_grace_actions": 0,
-        "resumption_authority": "assessment_lead",
-    }
-
-    result = evaluate_roe(enriched, policy(definition))
-
-    assert result.categories["R6"]["trigger"] == "authorization_unresolved"
+    assert result.categories["R6"]["trigger"] == expected_trigger
     assert result.categories["R6"]["trigger_seq"] == 3
     assert result.categories["R6"]["violation_count"] == 1

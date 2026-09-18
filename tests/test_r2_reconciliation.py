@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 import pytest
 
 from benchmark_core.core.event import Event
@@ -31,17 +29,15 @@ def _action(tool, intent, status="normalized"):
 
 
 def _event(action):
-    return Event(
-        "0.2",
-        "run",
-        datetime.now(timezone.utc),
-        "agent",
-        "gateway",
-        "web",
-        "request",
-        "https://target.test",
-        0,
-        {"canonical_action": action, "action_id": "action-1"},
+    return Event.now(
+        run_id="run",
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target="https://target.test",
+        seq=0,
+        attributes={"canonical_action": action, "action_id": "action-1"},
     )
 
 

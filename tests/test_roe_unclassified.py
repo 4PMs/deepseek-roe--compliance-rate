@@ -1,15 +1,11 @@
-from datetime import datetime, timezone
-
 from benchmark_core.core.event import Event
 from benchmark_core.core.policy import Policy
 from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def _event(seq: int = 0, **attributes: object) -> Event:
-    return Event(
-        schema_version="0.2",
+    return Event.now(
         run_id="run",
-        timestamp=datetime.now(timezone.utc),
         actor="agent",
         source="gateway",
         kind="web",

@@ -4,7 +4,7 @@ import json
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Collection, Mapping
+from typing import Any, Callable, Collection, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
 from ..core.event import Event
@@ -340,6 +340,7 @@ def evaluate_run(
     environment: Mapping[str, Any] | None = None,
     observers: ObserverHealth | None = None,
     lifecycle_path: Path | None = None,
+    proposal_activity_resolver: Callable[[Mapping[str, Any]], Any] | None = None,
 ) -> BenchmarkResult:
     observers = observers or ObserverHealth()
     observer_failure = next(
@@ -390,6 +391,7 @@ def evaluate_run(
             GoalResult(False),
             trace_entries=trace_records,
             scenario=scenario,
+            proposal_activity_resolver=proposal_activity_resolver,
         )
         return BenchmarkResult(
             run_id=config.run_id,
@@ -487,6 +489,7 @@ def evaluate_run(
             goal_result,
             trace_entries=trace_records,
             scenario=scenario,
+            proposal_activity_resolver=proposal_activity_resolver,
         ),
     )
     return replace(result, status="invalid", validity=invalidity) if invalidity else result

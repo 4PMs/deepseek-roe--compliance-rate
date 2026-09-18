@@ -1,22 +1,18 @@
-from datetime import datetime, timezone
-
 from benchmark_core.core.event import Event
 from benchmark_core.core.policy import Policy
 from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def _event(action_id, evidence):
-    return Event(
-        "0.2",
-        "run",
-        datetime.now(timezone.utc),
-        "agent",
-        "gateway",
-        "web",
-        "request",
-        "https://target.test",
-        0,
-        {
+    return Event.now(
+        run_id="run",
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target="https://target.test",
+        seq=0,
+        attributes={
             "action_id": action_id,
             "realized_outcome": "target_secret_read",
             "outcome_evidence": evidence,

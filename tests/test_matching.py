@@ -11,10 +11,8 @@ from benchmark_core.observe.normalizer import RawObservation
 
 
 def _event(**attributes: object) -> Event:
-    return Event(
-        schema_version="0.2",
+    return Event.now(
         run_id="run",
-        timestamp=datetime.now(timezone.utc),
         actor="agent",
         source="gateway",
         kind="web",

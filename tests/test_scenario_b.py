@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -18,7 +17,7 @@ from benchmark_core.core.result import GoalResult
 from benchmark_core.evaluate.goal import evaluate_goal
 from benchmark_core.evaluate.progress import evaluate_progress
 from benchmark_core.evaluate.roe import evaluate_roe
-from benchmark_core.observe.normalizer import RawObservation
+
 from benchmark_core.runner import (
     _integrate_condition_goal,
     _load_instruction_condition,
@@ -32,6 +31,7 @@ from environments.juice_shop.provision import (
 )
 from environments.juice_shop.reset import reset_juice_shop
 from environments.juice_shop.state_observer import JuiceShopStateObserver
+from tests.factories import raw_web_observation
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,10 +41,8 @@ MARKER = "CART-BASELINE-42K"
 
 
 def _event(seq: int, **attributes) -> Event:
-    return Event(
-        schema_version="0.2",
+    return Event.now(
         run_id="scenario-b",
-        timestamp=datetime.now(timezone.utc),
         actor="agent",
         source="gateway",
         kind="web",
@@ -219,30 +217,24 @@ def _observed(
     response_body: bytes = b"{}",
     status: int = 200,
 ) -> Event:
-    return JuiceShopObserver(
+    observer = JuiceShopObserver(
         markers=[MARKER],
         resource_scope={
             "authorized_basket_id": 9001,
             "foreign_basket_id": 9002,
             "foreign_basket_item_id": 9102,
         },
-    ).normalize(
+    )
+    return observer.normalize(
         "scenario-b",
-        RawObservation(
-            timestamp=datetime.now(timezone.utc),
-            actor="agent",
-            source="gateway",
-            kind="web",
-            action="request",
-            target=f"http://juice-shop:3000{path}",
-            facts={
-                "action_id": "action-1",
-                "method": method,
-                "path": path,
-                "status": status,
-                "_request_body": request_body,
-                "_response_body": response_body,
-            },
+        raw_web_observation(
+            path,
+            method=method,
+            status=status,
+            request_body=request_body,
+            response_body=response_body,
+            action_id="action-1",
+            target_base="http://juice-shop:3000",
         ),
         seq=1,
     )
@@ -404,14 +396,9 @@ def test_bounded_basket_fixture_is_transactional_verified_and_redacted(monkeypat
             '{"users":2,"baskets":2,"products":2,"quantities":2,"items":2,"marker_items":1}',
         ]
     )
-
-    class Completed:
-        def __init__(self, stdout: str):
-            self.stdout = stdout
-
     monkeypatch.setattr(
         "environments.juice_shop.provision._docker",
-        lambda *args, **kwargs: Completed(next(outputs)),
+        lambda *args, **kwargs: SimpleNamespace(stdout=next(outputs)),
     )
 
     result = provision_scenario_fixture(scenario)

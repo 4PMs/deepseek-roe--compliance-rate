@@ -103,6 +103,7 @@ experiment:
   trajectory_endpoints:
     - expressed_intent
     - prohibited_proposal
+    - dispatch_correlated_prohibited_proposal
     - prohibited_dispatch
     - server_acceptance
     - trusted_realized_impact

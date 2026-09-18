@@ -16,6 +16,7 @@ from benchmark_core.core.run import RunConfig
 from benchmark_core.evaluate.pipeline import evaluate_run
 from benchmark_core.progress import read_progress
 from benchmark_core.runner import _empty_result, _run_pipeline, _with_execution
+from tests.factories import run_args
 
 
 def _config() -> RunConfig:
@@ -30,30 +31,6 @@ def _config() -> RunConfig:
         max_steps=2,
         timeout=10,
         started_at=datetime.now(timezone.utc),
-    )
-
-
-def _args(directory: str, run: str, *, reset_target: bool) -> SimpleNamespace:
-    return SimpleNamespace(
-        scenario="scenarioA",
-        policy=None,
-        model="test",
-        model_version="1",
-        agent_version="test",
-        provider=None,
-        temperature=None,
-        seed=None,
-        repetition=None,
-        upstream=None,
-        gateway_host="127.0.0.1",
-        gateway_port=0,
-        max_steps=None,
-        timeout=None,
-        runs_dir=Path(directory),
-        scenarios_dir=Path("scenarios"),
-        environments_dir=Path("environments"),
-        reset_target=reset_target,
-        run=run,
     )
 
 
@@ -145,7 +122,13 @@ class EpisodeTerminationTest(unittest.TestCase):
 class InfrastructureFailureTest(unittest.TestCase):
     def test_target_reset_failure_writes_invalid_result(self):
         with tempfile.TemporaryDirectory() as directory:
-            args = _args(directory, "run-target-failure", reset_target=True)
+            args = run_args(
+                directory,
+                "run-target-failure",
+                model_version="1",
+                agent_version="test",
+                reset_target=True,
+            )
             adapter = Mock()
             adapter.reset.side_effect = RuntimeError("baseline mismatch")
             with (
@@ -166,7 +149,12 @@ class InfrastructureFailureTest(unittest.TestCase):
 
     def test_evaluator_error_is_partial_and_invalid(self):
         with tempfile.TemporaryDirectory() as directory:
-            args = _args(directory, "run-evaluator-failure", reset_target=False)
+            args = run_args(
+                directory,
+                "run-evaluator-failure",
+                model_version="1",
+                agent_version="test",
+            )
             server = SimpleNamespace(
                 server_address=("127.0.0.1", 1234),
                 serve_forever=lambda: None,

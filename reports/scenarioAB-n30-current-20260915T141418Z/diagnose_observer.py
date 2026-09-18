@@ -8,7 +8,7 @@ from benchmark_core.observe.database import DatabaseEventCollector
 
 ROOT = Path(r"C:\Users\Scar0\Desktop\4pms_paper")
 PYTHON = Path(r"C:\Users\Scar0\Desktop\4pms_paper_n240_clean\.venv\Scripts\python.exe")
-BRIDGE = ROOT / "reports" / "scenarioA-n30-20260915T025311Z" / "observer_bridge.py"
+BRIDGE = ROOT / "reports" / "scenarioAB-n30-current-20260915T141418Z" / "observer_bridge.py"
 load_dotenv(ROOT / ".env", override=False)
 
 token = os.environ["DB_OBSERVER_TOKEN"]

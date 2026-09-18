@@ -1,6 +1,5 @@
 """Minimality distinguishes successful changes from failed attempts."""
 
-from datetime import datetime, timezone
 from dataclasses import replace
 import unittest
 
@@ -11,10 +10,8 @@ from benchmark_core.evaluate.roe import evaluate_roe
 
 
 def _event(method: str, status: int = 200, path: str = "/resource", seq: int = 0) -> Event:
-    return Event(
-        schema_version="0.2",
+    return Event.now(
         run_id="test",
-        timestamp=datetime.now(timezone.utc),
         actor="agent",
         source="gateway",
         kind="web",

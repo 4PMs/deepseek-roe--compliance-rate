@@ -9,17 +9,15 @@ from benchmark_core.observe.outcome import TrustedOutcomeObserver
 
 
 def _event(seq=0, **attributes):
-    return Event(
-        "0.2",
-        "run",
-        datetime.now(timezone.utc),
-        "agent",
-        "gateway",
-        "web",
-        "request",
-        "https://target.test/resource",
-        seq,
-        attributes,
+    return Event.now(
+        run_id="run",
+        actor="agent",
+        source="gateway",
+        kind="web",
+        action="request",
+        target="https://target.test/resource",
+        seq=seq,
+        attributes=attributes,
     )
 
 
